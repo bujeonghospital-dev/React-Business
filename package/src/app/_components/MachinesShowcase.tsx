@@ -1,545 +1,337 @@
 "use client";
+
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+const MachineryShowcase = () => {
+  const [hoveredSegment, setHoveredSegment] = useState<number | null>(null);
+  const prefersReducedMotion = useReducedMotion();
 
-type Machine = {
-  id: number;
-  name: string;
-  power: number;
-  speed: string;
-  precision: string;
-  image?: string;
-};
-
-type MachineCategory = "prePress" | "printing" | "postPress" | "specialty";
-
-const MachinesShowcase = () => {
-  const [activeCategory, setActiveCategory] = useState<"all" | MachineCategory>(
-    "all"
-  );
-  const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
-
-  const machines: Record<MachineCategory, Machine[]> = {
-    prePress: [
-      {
-        id: 1,
-        name: "Sample Box Cutting Machine",
-        power: 85,
-        speed: "150 pcs/min",
-        precision: "±0.1mm",
-        image: "/images/machine1.jpg",
-      },
-      {
-        id: 2,
-        name: "Computer-to-Plate (CTP)",
-        power: 95,
-        speed: "30 plates/hr",
-        precision: "2400 dpi",
-        image: "/images/machine2.jpg",
-      },
-    ],
-    printing: [
-      {
-        id: 3,
-        name: "5-Colors Printing Machine",
-        power: 88,
-        speed: "12,000 sph",
-        precision: "±0.05mm",
-        image: "/images/machine3.jpg",
-      },
-      {
-        id: 4,
-        name: "6-Colors Printing Machine",
-        power: 90,
-        speed: "15,000 sph",
-        precision: "±0.03mm",
-        image: "/images/machine4.jpg",
-      },
-      {
-        id: 5,
-        name: "8-Colors Printing Machine",
-        power: 98,
-        speed: "18,000 sph",
-        precision: "±0.02mm",
-        image: "/images/machine5.jpg",
-      },
-    ],
-    postPress: [
-      {
-        id: 6,
-        name: "Die Cutting Machine",
-        power: 92,
-        speed: "7,500 sph",
-        precision: "±0.1mm",
-        image: "/images/machine6.jpg",
-      },
-      {
-        id: 7,
-        name: "Auto Gluing Machine",
-        power: 87,
-        speed: "25,000 pcs/hr",
-        precision: "±0.2mm",
-        image: "/images/machine7.jpg",
-      },
-      {
-        id: 8,
-        name: "Laminating Machine",
-        power: 85,
-        speed: "50 m/min",
-        precision: "Uniform",
-        image: "/images/machine8.jpg",
-      },
-      {
-        id: 9,
-        name: "Hologram Sticker Machine",
-        power: 93,
-        speed: "80 m/min",
-        precision: "High-def",
-        image: "/images/machine9.jpg",
-      },
-    ],
-    specialty: [
-      {
-        id: 10,
-        name: "Corrugating Machine (B/E Flute)",
-        power: 89,
-        speed: "120 m/min",
-        precision: "±0.15mm",
-        image: "/images/machine10.jpg",
-      },
-      {
-        id: 11,
-        name: "Window Patching Machine",
-        power: 86,
-        speed: "8,000 sph",
-        precision: "±0.2mm",
-        image: "/images/machine11.jpg",
-      },
-      {
-        id: 12,
-        name: "Food Packaging Forming",
-        power: 94,
-        speed: "60 pcs/min",
-        precision: "Food-grade",
-        image: "/images/machine12.jpg",
-      },
-    ],
-  };
-
-  const categories: {
-    key: "all" | MachineCategory;
-    label: string;
-    gradient: string;
-  }[] = [
-    { key: "all", label: "ทั้งหมด", gradient: "from-slate-600 to-slate-800" },
-    {
-      key: "prePress",
-      label: "ก่อนพิมพ์",
-      gradient: "from-amber-500 to-orange-600",
-    },
-    {
-      key: "printing",
-      label: "งานพิมพ์",
-      gradient: "from-emerald-500 to-teal-600",
-    },
-    {
-      key: "postPress",
-      label: "หลังพิมพ์",
-      gradient: "from-rose-500 to-pink-600",
-    },
-    {
-      key: "specialty",
-      label: "พิเศษ",
-      gradient: "from-violet-500 to-purple-600",
-    },
+  const leftMachines = [
+    "Sample Box Cutting Machine",
+    "Computer-to-Plate (CTP)",
+    "5-Colors Printing Machine",
+    "6-Colors Printing Machine",
+    "8-Colors Printing Machine",
+    "Corrugating Machine (B flute, E flute)",
+    "Laminating Machine",
   ];
 
-  const getAllMachines = (): Machine[] => {
-    if (activeCategory === "all") {
-      return Object.values(machines).flat();
-    }
-    return machines[activeCategory as MachineCategory] || [];
-  };
+  const rightMachines = [
+    "Die Cutting Machine",
+    "Paper Stripping Machine",
+    "Auto Gluing Machine",
+    "Semi Auto Gluing Machine",
+    "Hologram Sticker Machine",
+    "Window Patching Machine",
+    "Food Packaging Forming Machine",
+  ];
 
-  const getGradientForMachine = (machineId: number) => {
-    if (machineId <= 2) return "from-amber-400 to-orange-500";
-    if (machineId <= 5) return "from-emerald-400 to-teal-500";
-    if (machineId <= 9) return "from-rose-400 to-pink-500";
-    return "from-violet-400 to-purple-500";
+  type Segment = {
+    id: number;
+    label: string;
+    imageSrc: string;
+  };
+  // 8 segments with images representing different machinery types
+  const segments: Segment[] = [
+    { id: 1, label: "Printing", imageSrc: "/images/technology/7-1_2160.jpg" },
+    { id: 2, label: "Cutting", imageSrc: "/images/technology/tpp-01.png" },
+    { id: 3, label: "Die Cut", imageSrc: "/images/technology/tpp-02.png" },
+    { id: 4, label: "Laminate", imageSrc: "/images/aboutus/Endeavor_1.png" },
+    { id: 5, label: "Gluing", imageSrc: "/images/technology/Endeavor_2.png" },
+    { id: 6, label: "Forming", imageSrc: "/images/technology/Endeavor_3.png" },
+    { id: 7, label: "Hologram", imageSrc: "/images/technology/tpp-02.png" },
+    { id: 8, label: "CTP", imageSrc: "/images/technology/vision_tpp_1.png" },
+  ];
+
+  const createSegmentPath = (index: number, total = 8) => {
+    const angle = 360 / total;
+    const startAngle = index * angle - 90;
+    const endAngle = (index + 1) * angle - 90;
+
+    const startRad = (startAngle * Math.PI) / 180;
+    const endRad = (endAngle * Math.PI) / 180;
+
+    const innerRadius = 25;
+    const outerRadius = 50;
+
+    const x1 = 50 + outerRadius * Math.cos(startRad);
+    const y1 = 50 + outerRadius * Math.sin(startRad);
+    const x2 = 50 + outerRadius * Math.cos(endRad);
+    const y2 = 50 + outerRadius * Math.sin(endRad);
+    const x3 = 50 + innerRadius * Math.cos(endRad);
+    const y3 = 50 + innerRadius * Math.sin(endRad);
+    const x4 = 50 + innerRadius * Math.cos(startRad);
+    const y4 = 50 + innerRadius * Math.sin(startRad);
+
+    return `M ${x4} ${y4} L ${x1} ${y1} A ${outerRadius} ${outerRadius} 0 0 1 ${x2} ${y2} L ${x3} ${y3} A ${innerRadius} ${innerRadius} 0 0 0 ${x4} ${y4} Z`;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 relative overflow-hidden">
-      {/* Decorative Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-br from-blue-50 to-purple-50 rounded-full opacity-40 blur-3xl"></div>
-        <div className="absolute -bottom-1/2 -left-1/2 w-full h-full bg-gradient-to-tr from-green-50 to-yellow-50 rounded-full opacity-40 blur-3xl"></div>
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-black-50 via-white to-purple-50">
+      {/* Subtle Background Pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+                           radial-gradient(circle at 80% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%)`,
+          }}></div>
       </div>
 
-      <div className="relative z-10 px-4 sm:px-6 lg:px-8 py-16 lg:py-24 mt-[0.5in]">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="text-center mb-20">
-          <h1 className="text-5xl lg:text-7xl font-black mb-6">
-            <span className="bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900 bg-clip-text text-transparent">
-              ศักยภาพเครื่องจักร
-            </span>
-          </h1>
-          <p className="text-xl lg:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            เทคโนโลยีการผลิตระดับโลก พร้อมส่งมอบคุณภาพสูงสุดในทุกกระบวนการ
-          </p>
-        </motion.div>
+      {/* Floating Dots Animation */}
+      {/* <div className="absolute top-20 left-1/2 transform -translate-x-1/2">
+        <div className="relative">
+          <div
+            className="absolute -top-20 w-2 h-2 bg-green-400 rounded-full animate-bounce"
+            style={{ animationDelay: "0s" }}></div>
+          <div
+            className="absolute -left-40 top-10 w-2 h-2 bg-purple-400 rounded-full animate-bounce"
+            style={{ animationDelay: "0.5s" }}></div>
+          <div
+            className="absolute -right-40 top-10 w-2 h-2 bg-pink-400 rounded-full animate-bounce"
+            style={{ animationDelay: "1s" }}></div>
+          <div
+            className="absolute -bottom-20 left-20 w-2 h-2 bg-blue-400 rounded-full animate-bounce"
+            style={{ animationDelay: "1.5s" }}></div>
+        </div>
+      </div> */}
 
-        {/* Category Tabs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="max-w-4xl mx-auto mb-16">
-          <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-2 flex flex-wrap justify-center gap-2">
-            {categories.map((cat) => {
-              const isActive = activeCategory === cat.key;
-              return (
-                <motion.button
-                  key={cat.key}
-                  onClick={() => setActiveCategory(cat.key)}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`relative px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
-                    isActive
-                      ? "text-white shadow-lg"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}>
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className={`absolute inset-0 bg-gradient-to-r ${cat.gradient} rounded-xl`}
-                      transition={{
-                        type: "spring",
-                        stiffness: 300,
-                        damping: 30,
-                      }}
-                    />
-                  )}
-                  <span className="relative z-10">{cat.label}</span>
-                </motion.button>
-              );
-            })}
+      {/* Main Content Container */}
+      <div className="relative z-10 flex items-center justify-center min-h-screen px-4 py-8">
+        <div className="max-w-7xl w-full">
+          <div className="mx-auto mb-8 max-w-3xl text-center md:mb-12">
+            <motion.h2
+              initial={
+                prefersReducedMotion
+                  ? { opacity: 1, y: 0 }
+                  : { opacity: 0, y: 12 }
+              }
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.6 }}
+              className="text-2xl font-extrabold tracking-tight text-neutral-900 sm:text-3xl md:text-4xl">
+              {"ศักยภาพเครื่องจักรของเรา"}
+            </motion.h2>
+            <motion.p
+              initial={
+                prefersReducedMotion
+                  ? { opacity: 1, y: 0 }
+                  : { opacity: 0, y: 12 }
+              }
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{
+                duration: prefersReducedMotion ? 0 : 0.6,
+                delay: prefersReducedMotion ? 0 : 0.05,
+              }}
+              className="mt-2 text-sm leading-relaxed text-neutral-600 sm:text-base">
+              {
+                "ครบทุกกระบวนการ ตั้งแต่ก่อนพิมพ์ พิมพ์ ไปจนถึงหลังพิมพ์เพื่อคุณภาพและความรวดเร็วที่ไว้วางใจ"
+              }
+            </motion.p>
           </div>
-        </motion.div>
-
-        {/* Machines Grid - Card Layout with Image Space */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 max-w-7xl mx-auto">
-          <AnimatePresence mode="popLayout">
-            {getAllMachines().map((machine, index) => (
-              <motion.div
-                key={machine.id}
-                layout
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -30 }}
-                transition={{ duration: 0.4, delay: index * 0.05 }}
-                whileHover={{ y: -8 }}
-                onClick={() => setSelectedMachine(machine)}
-                className="group cursor-pointer">
-                <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
-                  {/* Card Layout with Two Columns */}
-                  <div className="flex">
-                    {/* Left Column - Text Content */}
-                    <div className="flex-1 p-6">
-                      {/* Machine Number Badge */}
-                      <div
-                        className={`inline-flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-r ${getGradientForMachine(
-                          machine.id
-                        )} text-white font-bold text-sm mb-3`}>
-                        {machine.id}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+            {/* Left Column - Machine List */}
+            <div className="space-y-3 lg:space-y-4">
+              {leftMachines.map((machine, index) => (
+                <div
+                  key={index}
+                  className="group animate-fade-in-left"
+                  style={{
+                    animationDelay: `${index * 100}ms`,
+                    animationFillMode: "both",
+                  }}>
+                  <div className="relative bg-white/80 backdrop-blur-sm px-4 py-3 lg:px-6 lg:py-4 rounded-l-full shadow-md hover:shadow-lg transform hover:-translate-x-2 transition-all duration-300 border-r-4 border-transparent hover:border-red-400">
+                    <div className="flex items-center justify-between">
+                      <div className="text-[16px] text-gray-700 font-medium group-hover:text-red-600 transition-colors">
+                        {machine}
                       </div>
-
-                      {/* Machine Name */}
-                      <h3 className="text-lg font-bold text-gray-900 mb-4 leading-tight line-clamp-2">
-                        {machine.name}
-                      </h3>
-
-                      {/* Specs */}
-                      <div className="space-y-3">
-                        <div>
-                          <span className="text-xs text-gray-500 block">
-                            ความเร็ว
-                          </span>
-                          <span className="text-sm font-semibold text-gray-700">
-                            {machine.speed}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-xs text-gray-500 block">
-                            ความแม่นยำ
-                          </span>
-                          <span className="text-sm font-semibold text-gray-700">
-                            {machine.precision}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Power Meter */}
-                      <div className="mt-4">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs text-gray-600">
-                            ประสิทธิภาพ
-                          </span>
-                          <span
-                            className={`text-xs font-bold bg-gradient-to-r ${getGradientForMachine(
-                              machine.id
-                            )} bg-clip-text text-transparent`}>
-                            {machine.power}%
-                          </span>
-                        </div>
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${machine.power}%` }}
-                            transition={{ duration: 1, delay: index * 0.1 }}
-                            className={`h-full bg-gradient-to-r ${getGradientForMachine(
-                              machine.id
-                            )} rounded-full`}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right Column - Image Space */}
-                    <div className="w-48 bg-gradient-to-br from-gray-100 to-gray-50 relative overflow-hidden">
-                      {/* Image Placeholder Area */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        {/* Decorative Circle Background */}
-                        <div
-                          className={`absolute w-32 h-32 bg-gradient-to-br ${getGradientForMachine(
-                            machine.id
-                          )} opacity-10 rounded-full blur-2xl`}></div>
-
-                        {/* Image Container */}
-                        <div className="relative w-full h-full flex items-center justify-center p-4">
-                          {machine.image ? (
-                            <img
-                              src={machine.image}
-                              alt={machine.name}
-                              className="w-full h-full object-contain"
-                              onError={(e) => {
-                                e.currentTarget.style.display = "none";
-                                e.currentTarget.nextElementSibling?.classList.remove(
-                                  "hidden"
-                                );
-                              }}
-                            />
-                          ) : null}
-
-                          {/* Fallback Pattern when no image */}
-                          <div className={!machine.image ? "block" : "hidden"}>
-                            <svg
-                              width="120"
-                              height="120"
-                              viewBox="0 0 120 120"
-                              className="opacity-20">
-                              <rect
-                                x="10"
-                                y="30"
-                                width="100"
-                                height="60"
-                                rx="4"
-                                fill="currentColor"
-                                className="text-gray-400"
-                              />
-                              <circle
-                                cx="35"
-                                cy="60"
-                                r="8"
-                                fill="currentColor"
-                                className="text-gray-500"
-                              />
-                              <circle
-                                cx="60"
-                                cy="60"
-                                r="8"
-                                fill="currentColor"
-                                className="text-gray-500"
-                              />
-                              <circle
-                                cx="85"
-                                cy="60"
-                                r="8"
-                                fill="currentColor"
-                                className="text-gray-500"
-                              />
-                              <rect
-                                x="25"
-                                y="15"
-                                width="70"
-                                height="8"
-                                rx="2"
-                                fill="currentColor"
-                                className="text-gray-400"
-                              />
-                              <rect
-                                x="25"
-                                y="97"
-                                width="70"
-                                height="8"
-                                rx="2"
-                                fill="currentColor"
-                                className="text-gray-400"
-                              />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Gradient Overlay for depth */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-white/20 to-transparent pointer-events-none"></div>
+                      <div className="w-2 h-2 bg-gray-300 rounded-full group-hover:bg-red-400 transition-colors"></div>
                     </div>
                   </div>
-
-                  {/* Bottom Action Bar */}
-                  <div
-                    className={`h-1 bg-gradient-to-r ${getGradientForMachine(
-                      machine.id
-                    )} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left`}></div>
                 </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </motion.div>
+              ))}
+            </div>
 
-        {/* Modal for Selected Machine (Optional) */}
-        <AnimatePresence>
-          {selectedMachine && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-              onClick={() => setSelectedMachine(null)}>
-              <motion.div
-                initial={{ scale: 0.9, y: 20 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.9, y: 20 }}
-                className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-auto"
-                onClick={(e) => e.stopPropagation()}>
-                <div className="flex flex-col md:flex-row">
-                  {/* Image Section */}
-                  <div className="md:w-1/2 h-64 md:h-auto bg-gradient-to-br from-gray-100 to-gray-50 p-8 flex items-center justify-center">
-                    {selectedMachine.image ? (
-                      <img
-                        src={selectedMachine.image}
-                        alt={selectedMachine.name}
-                        className="max-w-full max-h-full object-contain"
+            {/* Center - Circular Icon Display */}
+            <div className="relative flex items-center justify-center py-8 lg:py-0">
+              {/* Outer Glow Effect */}
+              <div className="absolute w-80 h-80 lg:w-96 lg:h-96 rounded-full bg-gradient-to-br from-purple-100/50 to-blue-100/50 blur-2xl animate-pulse"></div>
+
+              {/* Main Circle Container */}
+              <div className="relative w-[28.8rem] h-[28.8rem] lg:w-[36rem] lg:h-[36rem]">
+                {/* Pizza-style Segments */}
+                <svg
+                  className="absolute inset-0 w-full h-full animate-scale-in"
+                  viewBox="0 0 100 100">
+                  <defs>
+                    {segments.map((segment, index) => (
+                      <clipPath
+                        id={`segment-clip-${segment.id}`}
+                        key={segment.id}>
+                        <path d={createSegmentPath(index)} />
+                      </clipPath>
+                    ))}
+                  </defs>
+
+                  {segments.map((segment, index) => {
+                    const path = createSegmentPath(index);
+                    const isHovered = hoveredSegment === segment.id;
+
+                    return (
+                      <g
+                        key={segment.id}
+                        className="cursor-pointer"
+                        onMouseEnter={() => setHoveredSegment(segment.id)}
+                        onMouseLeave={() => setHoveredSegment(null)}>
+                        <image
+                          href={segment.imageSrc}
+                          x="0"
+                          y="0"
+                          width="100"
+                          height="100"
+                          clipPath={`url(#segment-clip-${segment.id})`}
+                          preserveAspectRatio="xMidYMid slice"
+                        />
+                        <path
+                          d={path}
+                          fill="rgba(255, 255, 255, 0.65)"
+                          opacity={isHovered ? 0.35 : 0.55}
+                          style={{ transition: "opacity 0.3s ease" }}
+                        />
+                        <path
+                          d={path}
+                          fill="none"
+                          stroke="white"
+                          strokeWidth="0.8"
+                        />
+                      </g>
+                    );
+                  })}
+
+                  {/* White separator lines */}
+                  {[...Array(8)].map((_, i) => {
+                    const angle = ((i * 45 - 90) * Math.PI) / 180;
+                    return (
+                      <line
+                        key={i}
+                        x1={50 + 25 * Math.cos(angle)}
+                        y1={50 + 25 * Math.sin(angle)}
+                        x2={50 + 50 * Math.cos(angle)}
+                        y2={50 + 50 * Math.sin(angle)}
+                        stroke="white"
+                        strokeWidth="2"
                       />
-                    ) : (
-                      <div className="text-gray-400">
-                        <svg
-                          width="200"
-                          height="200"
-                          viewBox="0 0 120 120"
-                          className="opacity-20">
-                          <rect
-                            x="10"
-                            y="30"
-                            width="100"
-                            height="60"
-                            rx="4"
-                            fill="currentColor"
-                          />
-                          <circle
-                            cx="35"
-                            cy="60"
-                            r="8"
-                            fill="currentColor"
-                            className="text-gray-500"
-                          />
-                          <circle
-                            cx="60"
-                            cy="60"
-                            r="8"
-                            fill="currentColor"
-                            className="text-gray-500"
-                          />
-                          <circle
-                            cx="85"
-                            cy="60"
-                            r="8"
-                            fill="currentColor"
-                            className="text-gray-500"
-                          />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
+                    );
+                  })}
+                </svg>
 
-                  {/* Content Section */}
-                  <div className="md:w-1/2 p-8">
-                    <div
-                      className={`inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-r ${getGradientForMachine(
-                        selectedMachine.id
-                      )} text-white font-bold text-lg mb-4`}>
-                      {selectedMachine.id}
-                    </div>
-
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                      {selectedMachine.name}
-                    </h2>
-
-                    <div className="space-y-4">
-                      <div className="flex justify-between py-3 border-b border-gray-100">
-                        <span className="text-gray-600">ความเร็ว</span>
-                        <span className="font-semibold text-gray-900">
-                          {selectedMachine.speed}
-                        </span>
-                      </div>
-                      <div className="flex justify-between py-3 border-b border-gray-100">
-                        <span className="text-gray-600">ความแม่นยำ</span>
-                        <span className="font-semibold text-gray-900">
-                          {selectedMachine.precision}
-                        </span>
-                      </div>
-                      <div className="flex justify-between py-3 border-b border-gray-100">
-                        <span className="text-gray-600">ประสิทธิภาพ</span>
-                        <div className="flex items-center gap-3">
-                          <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full bg-gradient-to-r ${getGradientForMachine(
-                                selectedMachine.id
-                              )} rounded-full`}
-                              style={{ width: `${selectedMachine.power}%` }}
-                            />
-                          </div>
-                          <span className="font-semibold text-gray-900">
-                            {selectedMachine.power}%
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => setSelectedMachine(null)}
-                      className={`mt-8 w-full py-3 bg-gradient-to-r ${getGradientForMachine(
-                        selectedMachine.id
-                      )} text-white font-semibold rounded-xl hover:opacity-90 transition-opacity`}>
-                      ปิด
-                    </button>
+                {/* Center Logo */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-24 h-24 lg:w-28 lg:h-28 bg-white rounded-2xl shadow-xl flex items-center justify-center transform hover:scale-110 transition-transform duration-300">
+                    <span className="text-4xl lg:text-5xl font-bold text-red-500">
+                      TPP
+                    </span>
                   </div>
                 </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+
+                {/* Hover Label */}
+                {hoveredSegment && (
+                  <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-3 py-1 rounded-full text-sm animate-fade-in whitespace-nowrap">
+                    {segments.find((s) => s.id === hoveredSegment)?.label}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column - Machine List */}
+            <div className="space-y-3 lg:space-y-4">
+              {rightMachines.map((machine, index) => (
+                <div
+                  key={index}
+                  className="group animate-fade-in-right"
+                  style={{
+                    animationDelay: `${index * 100}ms`,
+                    animationFillMode: "both",
+                  }}>
+                  <div className="relative bg-white/80 backdrop-blur-sm px-4 py-3 lg:px-6 lg:py-4 rounded-r-full shadow-md hover:shadow-lg transform hover:translate-x-2 transition-all duration-300 border-l-4 border-transparent hover:border-red-400">
+                    <div className="flex items-center justify-between">
+                      <div className="w-2 h-2 bg-gray-300 rounded-full group-hover:bg-red-400 transition-colors"></div>
+                      <div className="text-[16px] text-gray-700 font-medium text-right group-hover:text-red-600 transition-colors">
+                        {machine}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
+
+      <style jsx>{`
+        @keyframes fade-in-left {
+          0% {
+            opacity: 0;
+            transform: translateX(-30px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        @keyframes fade-in-right {
+          0% {
+            opacity: 0;
+            transform: translateX(30px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        @keyframes scale-in {
+          0% {
+            opacity: 0;
+            transform: scale(0.8);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes fade-in {
+          0% {
+            opacity: 0;
+            transform: translateY(10px) translateX(-50%);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) translateX(-50%);
+          }
+        }
+
+        .animate-fade-in-left {
+          animation: fade-in-left 0.6s ease-out;
+        }
+
+        .animate-fade-in-right {
+          animation: fade-in-right 0.6s ease-out;
+        }
+
+        .animate-scale-in {
+          animation: scale-in 0.8s ease-out;
+        }
+
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 };
 
-export default MachinesShowcase;
+export default MachineryShowcase;

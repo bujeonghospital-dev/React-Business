@@ -103,10 +103,10 @@ const QCEquipmentDashboard = () => {
   return (
     <div className="min-h-screen bg-white p-8 pt-[1.5in]">
       {/* Header */}
-      <div className="mb-12">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2 inline-block pb-1 border-b-4 border-red-600">
+      <div className="mb-12 flex justify-center">
+        <h1 className="text-3xl font-bold text-gray-800 mb-2 inline-block pb-1 border-b-4 border-red-600 text-center">
           การตรวจคุณภาพ
-        </h1>{" "}
+        </h1>
       </div>
 
       {/* Main Grid */}

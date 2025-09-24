@@ -579,7 +579,7 @@ const OurCustomers: React.FC = () => {
         const progress = currentStep / steps;
 
         setCounters({
-          customers: Math.round(73 * progress),
+          customers: Math.round(100 * progress),
           years: Math.round(42 * progress),
           satisfaction: Math.round(98 * progress),
         });
@@ -624,20 +624,20 @@ const OurCustomers: React.FC = () => {
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">
       {/* Hero Section */}
-      <section className="relative mt-[1in] pt-24 pb-12 bg-gradient-to-b from-gray-50 to-white">
+      <section className="relative pt-24 pb-8 bg-gradient-to-b from-gray-50 to-white">
         <div className="container mx-auto px-4">
           <div className="text-center animate-fade-in">
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 relative inline-block title-underline">
               ลูกค้าของเรา
             </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto mt-8 mb-12">
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto mt-6 mb-8">
               ด้วยความไว้วางใจจากองค์กรชั้นนำทั่วประเทศ
               เราภูมิใจที่ได้เป็นส่วนหนึ่งในความสำเร็จของลูกค้ามากกว่า 20 ปี
             </p>
 
             {/* Stats */}
-            <div className="flex flex-wrap justify-center gap-8 md:gap-16 mt-12 mb-16">
-              <div className="bg-white rounded-2xl shadow-lg p-8 min-w-[200px] transform hover:scale-105 transition-transform duration-300">
+            <div className="flex flex-wrap justify-center gap-6 md:gap-12 mt-6 mb-8">
+              <div className="bg-white rounded-2xl shadow-lg p-6 min-w-[180px] transform hover:scale-105 transition-transform duration-300">
                 <div className="flex items-center justify-center mb-4">
                   <Users className="w-8 h-8 text-blue-600" />
                 </div>
@@ -647,7 +647,7 @@ const OurCustomers: React.FC = () => {
                 <div className="text-gray-600 mt-2">ลูกค้าที่ไว้วางใจ</div>
               </div>
 
-              <div className="bg-white rounded-2xl shadow-lg p-8 min-w-[200px] transform hover:scale-105 transition-transform duration-300">
+              <div className="bg-white rounded-2xl shadow-lg p-6 min-w-[180px] transform hover:scale-105 transition-transform duration-300">
                 <div className="flex items-center justify-center mb-4">
                   <Award className="w-8 h-8 text-green-600" />
                 </div>
@@ -657,7 +657,7 @@ const OurCustomers: React.FC = () => {
                 <div className="text-gray-600 mt-2">ปีประสบการณ์</div>
               </div>
 
-              <div className="bg-white rounded-2xl shadow-lg p-8 min-w-[200px] transform hover:scale-105 transition-transform duration-300">
+              <div className="bg-white rounded-2xl shadow-lg p-6 min-w-[180px] transform hover:scale-105 transition-transform duration-300">
                 <div className="flex items-center justify-center mb-4">
                   <TrendingUp className="w-8 h-8 text-red-600" />
                 </div>
@@ -672,16 +672,16 @@ const OurCustomers: React.FC = () => {
       </section>
 
       {/* Customers Grid */}
-      <section className="py-16 px-4">
+      <section className="py-4 px-4">
         <div className="container mx-auto max-w-7xl">
-          <h2 className="text-3xl font-semibold text-center text-gray-900 mb-12">
+          {/* <h2 className="text-3xl font-semibold text-center text-gray-900 mb-12">
             ลูกค้าที่ไว้วางใจเรา
-          </h2>
+          </h2> */}
 
           <div
             id="logo-grid"
-            className="observe-animation bg-white rounded-3xl border border-gray-200 shadow-xl p-6 md:p-10">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
+            className="observe-animation bg-white rounded-3xl border border-gray-200 shadow-xl p-4 md:p-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
               {customerLogos.map((logo, index) => (
                 <LogoCard
                   key={index}
@@ -696,7 +696,7 @@ const OurCustomers: React.FC = () => {
           </div>
 
           {/* Trust Badge */}
-          <div className="mt-16 text-center bg-gray-50 rounded-2xl p-8">
+          {/* <div className="mt-16 text-center bg-gray-50 rounded-2xl p-8">
             <h3 className="text-2xl font-semibold text-gray-900 mb-4">
               ความไว้วางใจที่ยั่งยืน
             </h3>
@@ -707,7 +707,7 @@ const OurCustomers: React.FC = () => {
               ติดต่อเรา
               <ChevronRight className="w-5 h-5" />
             </button>
-          </div>
+          </div> */}
         </div>
       </section>
 
@@ -788,9 +788,9 @@ const LogoCard: React.FC<LogoCardProps> = ({
   return (
     <div
       className={`
-        bg-white border-2 border-gray-100 rounded-xl p-4
+        bg-white border-2 border-gray-100 rounded-xl p-3
         flex items-center justify-center
-        min-h-[100px] sm:min-h-[110px] md:min-h-[120px]
+        min-h-[90px] sm:min-h-[100px] md:min-h-[110px]
         transition-all duration-300 ease-out
         hover:shadow-xl hover:border-blue-400 hover:-translate-y-1
         cursor-pointer relative overflow-hidden

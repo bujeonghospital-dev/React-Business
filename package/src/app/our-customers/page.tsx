@@ -623,19 +623,6 @@ const OurCustomers: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">
-      {/* Background Pattern */}
-      <div
-        className="fixed inset-0 opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage: `
-            repeating-linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000),
-            repeating-linear-gradient(-45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000)
-          `,
-          backgroundSize: "30px 30px",
-          backgroundPosition: "0 0, 15px 15px",
-        }}
-      />
-
       {/* Hero Section */}
       <section className="relative mt-[1in] pt-24 pb-12 bg-gradient-to-b from-gray-50 to-white">
         <div className="container mx-auto px-4">

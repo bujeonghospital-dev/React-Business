@@ -1,301 +1,207 @@
 "use client";
 
-import Image from "next/image";
-import React from "react";
-import "animate.css"; // แนะนำให้นำไป import รวมที่ layout.tsx ได้เช่นกัน
+import React, { useEffect, useState } from "react";
 
-// ===============
-// AnimateOnView: เพิ่มคลาส animate.css เมื่อเข้าหน้าจอ
-// ===============
-function AnimateOnView({
-  children,
-  effect = "animate__fadeInUp",
-  delay = 0,
-  once = true,
-  className = "",
-}: {
-  children: React.ReactNode;
-  effect?: string;
-  delay?: number;
-  once?: boolean;
-  className?: string;
-}) {
-  const ref = React.useRef<HTMLDivElement | null>(null);
-  const [visible, setVisible] = React.useState(false);
-
-  React.useEffect(() => {
-    if (!ref.current) return;
-    const el = ref.current;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            setVisible(true);
-            if (once) obs.unobserve(el);
-          } else if (!once) {
-            setVisible(false);
-          }
-        });
-      },
-      { threshold: 0.15 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [once]);
-
-  const style: React.CSSProperties = delay
-    ? { animationDelay: `${delay}ms` }
-    : {};
-
-  return (
-    <div
-      ref={ref}
-      style={style}
-      className={[
-        className,
-        visible ? `animate__animated ${effect}` : "opacity-0 translate-y-3",
-      ].join(" ")}
-    >
-      {children}
-    </div>
-  );
-}
-
-// ===============
-// Data
-// ===============
-type CertItem = {
+type Badge = {
+  id: string;
   title: string;
-  body: string;
-  badges?: { src: string; alt: string }[];
+  desc?: string;
+  src: string;
+  box?: [number, number];
 };
 
-const leftColumn: CertItem[] = [
-  {
-    title: "GHPs & HACCP",
-    body: "แนวปฏิบัติด้านสุขลักษณะที่ดีและระบบวิเคราะห์อันตรายและจุดควบคุมวิกฤต เพื่อความปลอดภัยของอาหารในทุกขั้นตอน",
-    badges: [
-      { src: "/images/cert/ghp.png", alt: "GHPs" },
-      { src: "/images/cert/haccp.png", alt: "HACCP" },
-      { src: "/images/cert/gmp.png", alt: "GMP" },
-    ],
-  },
-  {
-    title: "ISO/TS 22002-1 (PAS 220)",
-    body: "มาตรฐานโปรแกรมพื้นฐานก่อนการผลิตสำหรับอุตสาหกรรมอาหาร เพื่อสนับสนุนระบบความปลอดภัยของอาหาร ISO 22000.",
-    badges: [{ src: "/images/cert/iso22002.png", alt: "ISO/TS 22002-1" }],
-  },
-  {
-    title: "ISO 9001",
-    body: "ระบบบริหารคุณภาพที่มุ่งเน้นลูกค้าและการปรับปรุงอย่างต่อเนื่อง ครอบคลุมกระบวนการหลักทั้งหมดขององค์กร.",
-    badges: [{ src: "/images/cert/iso9001.png", alt: "ISO 9001" }],
-  },
-  {
-    title: "ISO 14001",
-    body: "ระบบการจัดการสิ่งแวดล้อมเพื่อลดผลกระทบต่อสิ่งแวดล้อมอย่างเป็นระบบและยั่งยืน.",
-    badges: [{ src: "/images/cert/iso14001.png", alt: "ISO 14001" }],
-  },
-  {
-    title: "Carbon Footprint Reduction",
-    body: "โครงการลดการปล่อยก๊าซเรือนกระจกขององค์กรและผลิตภัณฑ์ พร้อมแนวทางติดตามและเปิดเผยข้อมูลอย่างโปร่งใส.",
-    badges: [{ src: "/images/cert/tgo.png", alt: "TGO" }],
-  },
-  {
-    title: "ISO 50001",
-    body: "ระบบการจัดการพลังงานเพื่อเพิ่มประสิทธิภาพการใช้พลังงาน ลดต้นทุน และลดการปล่อยก๊าซเรือนกระจก.",
-    badges: [{ src: "/images/cert/iso50001.png", alt: "ISO 50001" }],
-  },
-  {
-    title: "Halal",
-    body: "ได้รับการรับรองฮาลาล เหมาะสมต่อผู้บริโภคมุสลิม ครอบคลุมทุกขั้นตอนการผลิตอย่างเคร่งครัด.",
-    badges: [{ src: "/images/cert/halal.png", alt: "Halal" }],
-  },
-  {
-    title: "SEDEX / SMETA & ARAVO (URSA)",
-    body: "มาตรฐานด้านจริยธรรม แรงงาน และความยั่งยืนในห่วงโซ่อุปทาน ผ่านการประเมินและแพลตฟอร์มจัดการซัพพลายเออร์.",
-    badges: [{ src: "/images/cert/sedex.png", alt: "Sedex" }],
-  },
-  {
-    title: "GMP Plus",
-    body: "แนวทางการผลิตที่ดีสำหรับอาหารสัตว์เพื่อความปลอดภัยตลอดห่วงโซ่อุปทาน.",
-    badges: [{ src: "/images/cert/gmpplus.png", alt: "GMP+" }],
-  },
-  {
-    title: "RTRS",
-    body: "มาตรฐาน Round Table on Responsible Soy: ถั่วเหลืองอย่างรับผิดชอบ ครอบคลุมสิ่งแวดล้อม สังคม และเศรษฐกิจ.",
-    badges: [{ src: "/images/cert/rtrs.png", alt: "RTRS" }],
-  },
-];
-
-const rightColumn: CertItem[] = [
-  {
-    title: "ISO 22000",
-    body: "ระบบบริหารความปลอดภัยของอาหาร ครอบคลุมการควบคุมความเสี่ยงในทุกขั้นตอนของกระบวนการผลิต.",
-    badges: [{ src: "/images/cert/iso22000.png", alt: "ISO 22000" }],
-  },
-  {
-    title: "FSSC 22000",
-    body: "Food Safety System Certification มาตรฐานความปลอดภัยอาหารระดับสากลที่อ้างอิง ISO 22000 และ ISO/TS 22002-1.",
-    badges: [{ src: "/images/cert/fssc22000.png", alt: "FSSC 22000" }],
-  },
-  {
-    title: "ISO 45001",
-    body: "มาตรฐานอาชีวอนามัยและความปลอดภัยในการทำงาน เพื่อสภาพแวดล้อมการทำงานที่ปลอดภัยและยั่งยืน.",
-    badges: [{ src: "/images/cert/iso45001.png", alt: "ISO 45001" }],
-  },
-  {
-    title: "Carbon Footprint of Products",
-    body: "แสดงปริมาณก๊าซเรือนกระจกต่อหนึ่งหน่วยผลิตภัณฑ์ เพื่อความโปร่งใสและทางเลือกที่ยั่งยืนให้ผู้บริโภค.",
-    badges: [{ src: "/images/cert/cfp.png", alt: "CFP" }],
-  },
-  {
-    title: "Green Industry",
-    body: "โรงงานอุตสาหกรรมเชิงนิเวศ พัฒนาอย่างต่อเนื่องสู่ความยั่งยืน ลดผลกระทบต่อสิ่งแวดล้อม และเติบโตไปพร้อมชุมชน.",
-    badges: [{ src: "/images/cert/greenindustry.png", alt: "Green Industry" }],
-  },
-  {
-    title: "ISO/IEC 17025",
-    body: "ความสามารถห้องปฏิบัติการทดสอบและสอบเทียบ ครอบคลุมความถูกต้องและความน่าเชื่อถือของผลทดสอบ.",
-    badges: [{ src: "/images/cert/iso17025.png", alt: "ISO/IEC 17025" }],
-  },
-  {
-    title: "Kosher",
-    body: "การรับรองโคเชอร์สำหรับผู้บริโภคชาวยิว ดูแลการคัดเลือกวัตถุดิบและกระบวนการผลิตตามหลักศาสนา.",
-    badges: [{ src: "/images/cert/kosher.png", alt: "Kosher" }],
-  },
-  {
-    title: "อย. Quality Award 2017–2025",
-    body: "รางวัลคุณภาพจากสำนักงานคณะกรรมการอาหารและยา สะท้อนมาตรฐานความปลอดภัยและคุณภาพต่อเนื่องหลายปี.",
-    badges: [{ src: "/images/cert/fda-th.png", alt: "Thai FDA" }],
-  },
-  {
-    title: "AOCS APPROVED CHEMIST",
-    body: "นักเคมีที่ได้รับอนุมัติจาก American Oil Chemists' Society ชี้วัดความเชี่ยวชาญในการทดสอบน้ำมันและไขมัน.",
-    badges: [{ src: "/images/cert/aocs.png", alt: "AOCS" }],
-  },
-  {
-    title: "มาตรฐานแรงงานไทย มรท.8001-2563",
-    body: "ยกระดับคุณภาพชีวิตแรงงาน ดูแลสิทธิมนุษยชน ความปลอดภัย และความเป็นธรรมในสถานประกอบการ.",
-    badges: [{ src: "/images/cert/tsl.png", alt: "Thai Labor Standard" }],
-  },
-];
-
-// ใช้คอนเทนเนอร์ที่ปรับ padding ได้
-function SectionContainer({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={[
-        "mx-auto w-full max-w-[1280px] px-4 md:px-6 lg:px-8",
-        className,
-      ].join(" ")}
-    >
-      {children}
-    </div>
-  );
+function publicUrl(p: string) {
+  return p.startsWith("/") ? p : `/${p}`;
 }
-// ===============
-// Hero (เวอร์ชันเดียวพอ)
-// ===============
-function Hero() {
+
+const BADGES: Badge[] = [
+  {
+    id: "iso9001-ukas",
+    title: "QMS — ISO 9001 : 2015",
+    desc: "UKAS / SGS System Certification",
+    src: "images/certifications/iso9001-ukas.png",
+    box: [414, 240],
+  },
+  {
+    id: "iso14001-ukas",
+    title: "EMS — ISO 14001 : 2015",
+    desc: "UKAS / SGS System Certification",
+    src: "images/certifications/iso14001-ukas.png",
+    box: [414, 240],
+  },
+  {
+    id: "ghp-badge",
+    title: "GHP — Good Hygiene Practice",
+    desc: "ACFS Thailand Accreditation",
+    src: "images/certifications/ghp-badge.png",
+    box: [414, 240],
+  },
+  {
+    id: "haccp-badge",
+    title: "HACCP — Hazard Analysis Critical Control Point",
+    desc: "ACFS Thailand Accreditation",
+    src: "images/certifications/haccp-badge.png",
+    box: [414, 240],
+  },
+  {
+    id: "sgsco-badge",
+    title: "SGS&CO — Certified Print Facility",
+    desc: "Graphic Measures International",
+    src: "images/certifications/sgsco-badge.png",
+    box: [392, 267],
+  },
+  {
+    id: "fsc-badge",
+    title: "FSC — Forest Stewardship Council (CoC)",
+    desc: "Chain of Custody",
+    src: "images/certifications/fsc-badge.png",
+    box: [414, 240],
+  },
+  {
+    id: "green-industry-badge",
+    title: "Green Industry — Level 3",
+    desc: "กระทรวงอุตสาหกรรม (Green System)",
+    src: "images/certifications/green-industry-badge.png",
+    box: [314, 240],
+  },
+  {
+    id: "gmi-badge",
+    title: "GMI — Certified Print Facility",
+    desc: "Graphic Measures International",
+    src: "images/certifications/gmi-badge.png",
+    box: [400, 400],
+  },
+];
+
+export default function QualityBadgesAnimatedPage() {
+  const [isVisible, setIsVisible] = useState(false);
+  const [hoveredBadge, setHoveredBadge] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
+
   return (
-    <section className="relative -mt-px overflow-hidden rounded-b-2xl sm:rounded-b-3xl certification-bg-image">
-      {/* ห้ามใส่ overlay ซ้ำใน JSX อีกแล้ว */}
-      <SectionContainer className="min-h-[clamp(420px,36vw,700px)] px-2 md:px-3 lg:px-4">
-        <div className="grid grid-cols-12 h-full">
-          <div className="col-span-12 md:col-start-9 md:col-span-4 flex items-center justify-end text-right">
-            <AnimateOnView
-              effect="animate__fadeInDown"
-              className="w-full max-w-[720px]"
-            >
-              {/* <p className="text-sm font-medium tracking-wide text-emerald-800/80">
-        
-              </p> */}
-              <h1 className="mt-2 text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight text-emerald-900">
-                การรับรองคุณภาพ
-              </h1>
-              <p className="mt-3 text-emerald-900/80 text-sm sm:text-base">
-                มุ่งมั่นพัฒนามาตรฐานการผลิต ควบคุมคุณภาพและความปลอดภัย
-                ตามข้อกำหนดสากล เพื่อความเชื่อมั่นของลูกค้าและผู้บริโภค
-              </p>
-            </AnimateOnView>
+    <main className="min-h-screen bg-gradient-to-b from-white via-blue-50/30 to-white pt-10 md:pt-12 flex flex-col overflow-hidden">
+      {/* Animated background elements */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+        <div className="absolute top-40 right-10 w-96 h-96 bg-purple-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse animation-delay-2000"></div>
+        <div className="absolute bottom-20 left-1/2 w-80 h-80 bg-green-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse animation-delay-4000"></div>
+      </div>
+
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16">
+        {/* Header with fade-in animation */}
+        <header
+          className={`text-center mt-2 md:mt-4 transition-all duration-1000 transform ${
+            isVisible
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 -translate-y-10"
+          }`}>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-neutral-900 mb-6">
+            <span className="block">การรับรองคุณภาพ</span>
+            <span className="block mt-2 text-3xl md:text-4xl bg-gradient-to-r from-red-400 to-red-600 bg-clip-text text-transparent">
+              มาตรฐานระดับสากล
+            </span>
+          </h1>
+
+          {/* Main description with stagger animation */}
+          <div
+            className={`max-w-4xl mx-auto space-y-4 transition-all duration-1000 delay-300 transform ${
+              isVisible
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 translate-y-10"
+            }`}>
+            <p className="text-lg md:text-xl text-neutral-700 leading-relaxed">
+              TPP ดำเนินงานภายใต้มาตรฐานที่ได้รับการยอมรับในระดับสากล
+              พร้อมพัฒนาคุณภาพการผลิตและบรรจุภัณฑ์อย่างต่อเนื่อง
+              เพื่อสร้างความมั่นใจให้กับลูกค้าในทุกขั้นตอนการทำงาน
+            </p>
+            <p className="text-base md:text-lg text-neutral-600 leading-relaxed">
+              ด้วยความมุ่งมั่นของผู้บริหารและทีมงาน ใส่ใจในทุกรายละเอียด
+              เพื่อส่งมอบบรรจุภัณฑ์คุณภาพสูงที่สอดคล้องกับมาตรฐานและระบบคุณภาพที่สำคัญในอุตสาหกรรม
+            </p>
           </div>
-        </div>
-      </SectionContainer>
-    </section>
-  );
-}
+        </header>
 
-// ===============
-// Card
-// ===============
-function CertCard({ item, index }: { item: CertItem; index: number }) {
-  return (
-    <AnimateOnView delay={Math.min(index * 60, 360)} effect="animate__fadeInUp">
-      <article className="rounded-2xl border border-emerald-100 bg-white shadow-sm hover:shadow-md transition-shadow p-5 sm:p-6">
-        <h3 className="text-lg sm:text-xl font-bold text-emerald-900">
-          {item.title}
-        </h3>
-        <p className="mt-2 text-[13px] sm:text-sm leading-relaxed text-emerald-900/80">
-          {item.body}
-        </p>
+        {/* Badges grid with stagger animation */}
+        <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {BADGES.map((b, index) => (
+            <figure
+              key={b.id}
+              className={`group relative rounded-2xl border border-neutral-200 bg-white shadow-sm hover:shadow-2xl transition-all duration-500 p-6 cursor-pointer transform hover:-translate-y-2 ${
+                isVisible
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 translate-y-10"
+              }`}
+              style={{
+                transitionDelay: `${index * 100 + 500}ms`,
+              }}
+              onMouseEnter={() => setHoveredBadge(b.id)}
+              onMouseLeave={() => setHoveredBadge(null)}>
+              {/* Gradient overlay on hover */}
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
-        {item.badges?.length ? (
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            {item.badges.map((b, i) => (
+              {/* Badge container with scale animation */}
               <div
-                key={i}
-                className="relative h-6 w-14 grayscale contrast-125 opacity-90"
-                title={b.alt}
-              >
-                <Image
-                  src={b.src}
-                  alt={b.alt}
-                  fill
-                  className="object-contain"
+                className={`relative mx-auto w-full bg-gradient-to-br from-white to-gray-50 rounded-xl ring-1 ring-neutral-200 overflow-hidden transition-transform duration-500 ${
+                  hoveredBadge === b.id ? "scale-105" : "scale-100"
+                }`}
+                style={{
+                  aspectRatio: `${b.box?.[0] ?? 414} / ${b.box?.[1] ?? 240}`,
+                  maxWidth: b.box?.[0] ?? 414,
+                }}>
+                <img
+                  src={publicUrl(b.src)}
+                  alt={b.title}
+                  loading="lazy"
+                  className="h-full w-full object-contain p-4"
                 />
+
+                {/* Shine effect on hover */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 transform -translate-x-full group-hover:translate-x-full"></div>
               </div>
-            ))}
-          </div>
-        ) : null}
-      </article>
-    </AnimateOnView>
-  );
-}
 
-// ===============
-// Page
-// ===============
-export default function QualityCertificationsPage() {
-  return (
-    <main className="bg-white pt-0 mt-0">
-      <Hero />
+              {/* Caption with enhanced typography */}
+              <figcaption className="relative mt-4 text-center">
+                <div className="font-bold text-neutral-900 text-sm lg:text-base group-hover:text-blue-600 transition-colors duration-300">
+                  {b.title}
+                </div>
+                {b.desc && (
+                  <div className="mt-1 text-xs lg:text-sm text-neutral-500 group-hover:text-neutral-700 transition-colors duration-300">
+                    {b.desc}
+                  </div>
+                )}
+              </figcaption>
 
-      {/* CONTENT GRID */}
-      <SectionContainer>
-        <div className="py-8 sm:py-10 md:py-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 items-start gap-5 sm:gap-6 md:gap-8">
-            {/* Left column */}
-            <div className="space-y-4 sm:space-y-6">
-              {leftColumn.map((it, i) => (
-                <CertCard key={it.title} item={it} index={i} />
-              ))}
-            </div>
-
-            {/* Right column */}
-            <div className="space-y-4 sm:space-y-6">
-              {rightColumn.map((it, i) => (
-                <CertCard key={it.title} item={it} index={i} />
-              ))}
-            </div>
-          </div>
+              {/* Badge indicator */}
+              <div className="absolute top-3 right-3 w-2 h-2 bg-green-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping"></span>
+              </div>
+            </figure>
+          ))}
         </div>
-      </SectionContainer>
+      </section>
+
+      <style jsx>{`
+        @keyframes pulse {
+          0%,
+          100% {
+            opacity: 0.2;
+          }
+          50% {
+            opacity: 0.3;
+          }
+        }
+
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
     </main>
   );
 }

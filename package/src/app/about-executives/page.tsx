@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import BoardDirectory from "./BoardDirectory";
 
 export const metadata: Metadata = {
-  title: "คณะกรรมการ / ผู้บริหาร  | TPP",
+  title: "คณะกรรมการ / ผู้บริหาร ",
   description: "หน้าแสดงคณะกรรมการ / ผู้บริหาร",
 };
 

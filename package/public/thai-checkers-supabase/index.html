@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>หมากฮอสออนไลน์ - Thai Checkers (Supabase)</title>
+
+    <!-- Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="card login-screen">
+      <h1>🎯 หมากฮอส</h1>
+      <h2>Thai Checkers Online</h2>
+      <p class="subtitle">Powered by Supabase</p>
+
+      <div class="input-group">
+        <label for="playerName">ชื่อผู้เล่น / Player Name</label>
+        <input
+          id="playerName"
+          type="text"
+          placeholder="ใส่ชื่อของคุณ..."
+          maxlength="20" />
+      </div>
+
+      <div class="input-group">
+        <label for="roomCode">รหัสห้อง / Room Code (สำหรับเข้าร่วม)</label>
+        <input
+          id="roomCode"
+          type="text"
+          placeholder="เช่น ABC123"
+          maxlength="6"
+          style="text-transform: uppercase" />
+      </div>
+
+      <div class="button-group">
+        <button id="createBtn" class="btn btn-primary">
+          สร้างห้อง / Create
+        </button>
+        <button id="joinBtn" class="btn btn-secondary">เข้าร่วม / Join</button>
+      </div>
+
+      <div class="instructions">
+        <h3>📖 วิธีเล่น</h3>
+        <ul>
+          <li>สร้างห้องและแชร์รหัสให้เพื่อน</li>
+          <li>หรือเข้าร่วมด้วยรหัสห้อง</li>
+          <li>คลิกเลือกหมาก แล้วคลิกช่องที่ต้องการเดิน</li>
+          <li>กินหมากฝ่ายตรงข้ามให้หมดเพื่อชนะ</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Game Container -->
+    <div id="gameContainer" class="card game-container" style="display: none">
+      <div class="player-info">
+        <div id="player1Info" class="player">
+          <div class="player-piece player1-piece"></div>
+          <span id="player1Name" class="player-name">Player 1</span>
+        </div>
+        <div id="player2Info" class="player">
+          <div class="player-piece player2-piece"></div>
+          <span id="player2Name" class="player-name">Waiting...</span>
+        </div>
+      </div>
+
+      <div id="roomCodeDisplay" class="room-code" style="display: none">
+        Room: <span id="roomCodeText"></span>
+      </div>
+
+      <div id="board" class="board"></div>
+
+      <div class="connection-status">
+        <span id="connectionStatus" class="status-waiting">
+          รอผู้เล่นอีกคน... / Waiting...
+        </span>
+      </div>
+    </div>
+
+    <!-- Win Screen -->
+    <div id="winScreen" class="win-screen" style="display: none">
+      <div class="win-content">
+        <h2 id="winnerText">🎉 Winner! 🎉</h2>
+        <button class="btn btn-primary">เล่นใหม่ / New Game</button>
+      </div>
+    </div>
+
+    <!-- Load JavaScript -->
+    <script src="supabase-client.js"></script>
+    <script src="game.js"></script>
+  </body>
+</html>

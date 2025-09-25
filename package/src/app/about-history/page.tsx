@@ -82,7 +82,7 @@ const historyOverlayText = ` ก่อตั้งขึ้นเมื่อว
 export default function HistoryPage() {
   return (
     <main className="min-h-screen bg-white text-neutral-800">
-      <Hero />
+      <Video />
       <TimelineSection
         leftItems={milestonesLeft}
         rightItems={milestonesRight}
@@ -92,7 +92,7 @@ export default function HistoryPage() {
 }
 
 // ===== Sections =====
-function Hero() {
+function Video() {
   return (
     <section className="relative w-full min-h-[60vh] md:min-h-[70vh] lg:min-h-screen isolate">
       <div className="absolute inset-0 -z-10">

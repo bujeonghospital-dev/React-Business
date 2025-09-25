@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Hero from "@/components/Home/Video";
+import Video from "@/components/Home/Video";
 import Aboutus from "@/components/Home/AboutUs";
 import Dedicated from "@/components/Home/Detail";
 import Insta from "@/components/Home/News";
@@ -14,6 +14,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import "../app/globals.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "THAI PACKAGING & PRINTING PCL",

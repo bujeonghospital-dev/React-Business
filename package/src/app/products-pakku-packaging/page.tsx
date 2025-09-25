@@ -19,17 +19,17 @@ const slides = [
   {
     id: 1,
     src: "/images/pakku-packaging/packaging__1.png",
-    alt: "Hero – Pakku Packaging 1",
+    alt: "Video – Pakku Packaging 1",
   },
   {
     id: 2,
     src: "/images/pakku-packaging/packaging__2.png",
-    alt: "Hero – Pakku Packaging 2",
+    alt: "Video – Pakku Packaging 2",
   },
   {
     id: 3,
     src: "/images/pakku-packaging/packaging__3.png",
-    alt: "Hero – Pakku Packaging 3",
+    alt: "Video – Pakku Packaging 3",
   },
 ];
 

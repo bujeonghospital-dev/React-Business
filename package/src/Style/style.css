@@ -44,7 +44,7 @@ a {
 
 /* -------------------------------------------------- */
 .about-bg-image {
-  background-image: url("/images/team/ABOUT _BD.png");
+  background-image: url("/images/team/ABOUT_BD.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -288,7 +288,7 @@ nav > .dropdown > a.btn,
 nav > .dropdown > span.btn {
   background-color: transparent !important;
   color: #000000 !important;
-  padding: 38px 15px;
+  padding: 21px 15px;
   border-radius: 0;
 }
 
@@ -568,23 +568,6 @@ nav > .dropdown > span.btn:active {
 
 /* -------------------------------------GPT 5---------------------------------------------------- */
 /* ==== Breakpoint Controller: 1600px ==== */
-/* mobile-first: <1600px */
-.desktop-1600 {
-  display: none !important;
-}
-.mobile-1600 {
-  display: flex !important;
-}
-
-/* ≥1600px = โชว์เดสก์ท็อป, ซ่อนมือถือ */
-@media (min-width: 1600px) {
-  .desktop-1600 {
-    display: flex !important;
-  }
-  .mobile-1600 {
-    display: none !important;
-  }
-}
 
 /* ให้เอกสารสูงเต็ม เพื่อ fallback กรณีบางเบราว์เซอร์ */
 html,
@@ -842,44 +825,47 @@ body {
 }
 /* ----------------------------------------------------------------------------------------------------------- */
 /* === Mobile-first: ไม่บังคับสูงเต็มจอ === */
-.hero-video {
+.Video-video {
   position: relative;
   overflow: hidden;
   min-height: 0 !important;
-  aspect-ratio: 16 / 9; /* เพื่อไม่ให้คอนเทนเนอร์ยุบ */
+  aspect-ratio: 16 / 9; /* mobile default */
 }
 
-/* พื้นหลังวิดีโอ/รูป */
-.hero-video > .bg-media,
-.hero-video > .bg-fallback {
+/* Media layers: always cover the Video-video container */
+.Video-video > .bg-media,
+.Video-video > .bg-fallback {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center 40%;
-  z-index: -1;
+  z-index: -1; /* keep behind overlay content */
 }
 
-/* ลด motion */
-.hero-video > .bg-fallback {
+/* fallback image hidden by default (video preferred) */
+.Video-video > .bg-fallback {
   display: none;
 }
+
+/* Respect reduced motion: swap to image fallback */
 @media (prefers-reduced-motion: reduce) {
-  .hero-video > video.bg-media {
+  .Video-video > video.bg-media {
     display: none;
   }
-  .hero-video > img.bg-fallback {
+  .Video-video > img.bg-fallback {
     display: block;
   }
 }
 
-/* ไล่โทน */
-.hero-video::after {
+/* tonal gradient over media (below overlay content) */
+.Video-video::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 0; /* sits above media (z:-1) but below content overlay (z>0) */
   background: linear-gradient(
     to top,
     rgba(0, 0, 0, 0.38),
@@ -888,31 +874,24 @@ body {
   );
 }
 
-/* กันรอยบากล่าง */
-@supports (padding: max(0px)) {
-  .hero-video {
-    padding-bottom: max(0px, env(safe-area-inset-bottom));
+/* Make Video full-viewport on desktop (adjust for fixed header) */
+@media (min-width: 1200px) {
+  .Video-video {
+    aspect-ratio: auto !important;
+    height: 100dvh;
+    min-height: calc(
+      100dvh - var(--header-h)
+    ); /* header-h ถ้ามี header แบบ fixed */
   }
 }
 
-/* ===== Desktop และจอใหญ่ขึ้นไป ===== */
-:root {
-  --header-h: 0px;
-} /* ถ้า header “fixed/overlay” ให้ใส่ความสูงจริง เช่น 88px */
-
-@media (min-width: 768px) {
-  .hero-video {
-    /* เอาอัตราส่วนออก และบังคับให้เต็มจอ */
-    aspect-ratio: auto !important;
-    min-height: calc(100dvh - var(--header-h)) !important;
+/* Optionally keep full-cover behavior for non-PC widths too (if desired) */
+@media (max-width: 1199px) {
+  .Video-video {
+    /* keep mobile aspect by default, but ensure a reasonable minimum */
+    min-height: 280px;
   }
-
-  /* fallback เผื่อเบราว์เซอร์ไม่รองรับ dvh */
-  @supports not (height: 100dvh) {
-    .hero-video {
-      min-height: calc(100vh - var(--header-h)) !important;
-    }
-  }
+  /* the media layers are already absolute and cover the container */
 }
 
 /* ------------------------------------------------------------------------------------------------------------------------------------------ */
@@ -997,34 +976,30 @@ body {
   content: "▲";
 }
 
-/* ลูกศรโปร่งใสสำหรับลิงก์ปกติ (จัดแนวให้กว้างเท่ากัน) */
 .drawer-nav > div > .drawer-item::after {
   content: "▼";
-  opacity: 0; /* มองไม่เห็น แต่กันระยะไว้ */
+  opacity: 0;
   margin-left: 0.5rem;
   font-size: 0.9em;
 }
 
-/* === ไฮไลต์แบบ "เม็ดแคปซูล" หลังข้อความ โดยไม่ทำให้กว้างขึ้น === */
 .drawer-nav > div > .drawer-item::before,
 .drawer-details > summary::before {
   content: "";
   position: absolute;
-  /* ขยายพื้นหลังรอบข้อความเล็กน้อย แต่ไม่เพิ่มความกว้างจริงขององค์ประกอบ */
   left: -10px;
   right: -10px;
   top: -6px;
   bottom: -6px;
-  background: #eef5fb; /* ฟ้าอ่อนแบบในภาพ */
-  border-radius: 999px; /* มุมโค้งมาก ๆ */
+  background: #eef5fb;
+  border-radius: 999px;
   opacity: 0;
   transform: scale(0.98);
   transition: opacity 0.15s ease, transform 0.15s ease;
-  pointer-events: none; /* ไม่บังการคลิก */
-  z-index: -1; /* อยู่หลังตัวอักษร */
+  pointer-events: none;
+  z-index: -1;
 }
 
-/* แสดงไฮไลต์เมื่อ 'ชี้เมาส์' หรือ 'โฟกัส' */
 .drawer-nav > div > .drawer-item:hover::before,
 .drawer-details > summary:hover::before,
 .drawer-nav > div > .drawer-item:focus-visible::before,
@@ -1033,13 +1008,11 @@ body {
   transform: none;
 }
 
-/* สีตัวอักษรตอนชี้ (โทนแดงเข้ม) */
 .drawer-nav > div > .drawer-item:hover,
 .drawer-details > summary:hover {
   color: #b91c1c;
 }
 
-/* === จุดนำหน้ารายการย่อย (ใช้ของเดิมได้) === */
 .drawer-sub .drawer-item {
   position: relative;
   padding-left: 1.25rem;
@@ -1191,8 +1164,8 @@ body {
 } */
 
 /* ---------------------------------------------------------------------------------------------------------- */
-/* พื้นหลัง HERO ฝั่งขวา – ใช้ภาพเป็น background */
-.oman-hero-bg {
+/* พื้นหลัง Video ฝั่งขวา – ใช้ภาพเป็น background */
+.oman-Video-bg {
   background-image: url("/images/subsidiaries/Oman_Cargo_mapPx.png");
   background-size: contain; /* ถ้าอยากเห็นภาพครบไม่ครอป เปลี่ยนเป็น contain */
   background-position: center; /* ปรับเป็น right bottom ได้ถ้าอยากชิดมุมขวาล่าง */
@@ -1201,12 +1174,12 @@ body {
 
 /* ให้มีความสูงขั้นต่ำเวลาหน้าจอเตี้ย ไม่ให้กล่องฟีบ */
 @media (max-width: 767px) {
-  .oman-hero-bg {
+  .oman-Video-bg {
     min-height: 280px;
   }
 }
 @media (min-width: 768px) {
-  .oman-hero-bg {
+  .oman-Video-bg {
     min-height: 420px;
   }
 }
@@ -1231,4 +1204,278 @@ body {
 /* ขนาดบังคับ */
 .fs-42 {
   font-size: 42px !important;
+}
+/* --------------------------------------------------------------------------------------------------------------------------- */
+
+/* เพิ่มตัวแปรและคอนเทนเนอร์ที่เป็นกลางสำหรับทุกหน้า */
+:root {
+  /* ขนาด breakpoints */
+  --bp-sm: 600px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+
+  /* spacing / typography */
+  --space-sm: 12px;
+  --space-md: 20px;
+  --space-lg: 32px;
+
+  --container-max: 1200px;
+  --gutter: clamp(12px, 2vw, 48px);
+
+  --fs-base: clamp(14px, 1.6vw, 18px);
+  --fs-lg: clamp(18px, 2.4vw, 28px);
+}
+
+/* Centered responsive container */
+.container {
+  width: min(100%, var(--container-max));
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+  box-sizing: border-box;
+}
+
+/* Fluid typography base */
+html {
+  font-size: 100%;
+}
+body {
+  font-size: var(--fs-base);
+}
+
+/* Images & media helpers */
+.img-responsive,
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+/* Helpers for background images (keep aspect & positioning) */
+.bg-cover {
+  background-size: cover !important;
+  background-position: center !important;
+}
+.bg-contain {
+  background-size: contain !important;
+  background-position: center !important;
+}
+
+/* Utility for stacking columns on small screens */
+.stack {
+  display: grid;
+  gap: var(--space-md);
+}
+.stack.cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+.stack.cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+@media (max-width: var(--bp-md)) {
+  .stack.cols-2,
+  .stack.cols-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Specific adjustments for existing components */
+
+/* Video / hero: keep aspect on small, fill on large */
+.Video-video {
+  min-height: 0 !important;
+  aspect-ratio: 16 / 9;
+}
+@media (min-width: var(--bp-md)) {
+  .Video-video {
+    aspect-ratio: auto !important;
+    min-height: calc(60dvh - var(--header-h));
+  }
+}
+@media (min-width: var(--bp-lg)) {
+  .Video-video {
+    min-height: calc(80dvh - var(--header-h));
+  }
+}
+
+/* Oman / background image responsiveness */
+.about-bg-image,
+.oman-Video-bg {
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+/* Make the plane/image area responsive: fallback becomes visible below */
+.zoom-immune-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+/* Ensure video panel images scale and don't overflow */
+#Video-panel img.absolute,
+#Video-panel .Video-background {
+  max-width: 100%;
+  max-height: 100%;
+  width: 100%;
+  height: auto;
+}
+
+/* Investor grid responsive improvements */
+.investor-grid {
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+}
+@media (min-width: 768px) {
+  .investor-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1200px) {
+  .investor-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* IR grid */
+.ir-grid {
+  grid-template-columns: repeat(1, 1fr);
+  gap: 24px;
+}
+@media (min-width: 600px) {
+  .ir-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1100px) {
+  .ir-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Navigation / drawer tweaks on small screens already present, ensure overflow safe */
+.drawer-nav {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Board / square scaling (if using fixed pixel squares, switch to relative) */
+.board {
+  grid-template-columns: repeat(8, minmax(36px, 1fr));
+  grid-auto-rows: minmax(36px, 1fr);
+  gap: 4px;
+}
+@media (min-width: 768px) {
+  .board {
+    grid-template-columns: repeat(8, minmax(48px, 1fr));
+    grid-auto-rows: minmax(48px, 1fr);
+  }
+}
+@media (min-width: 1200px) {
+  .board {
+    grid-template-columns: repeat(8, 60px);
+    grid-auto-rows: 60px;
+    gap: 2px;
+  }
+}
+
+/* Small helpers */
+.hide-sm {
+  display: none !important;
+}
+@media (min-width: var(--bp-md)) {
+  .hide-sm {
+    display: initial !important;
+  }
+}
+
+.show-sm {
+  display: initial;
+}
+@media (min-width: var(--bp-md)) {
+  .show-sm {
+    display: none;
+  }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Video background: apply full-cover behavior only on non-PC screens */
+@media (max-width: 1199px) {
+  .Video-video > .bg-media,
+  .Video-video > .bg-fallback {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 40%;
+    z-index: -1;
+  }
+
+  /* hide fallback by default (video shown) */
+  .Video-video > .bg-fallback {
+    display: none;
+  }
+}
+
+/* If user prefers reduced motion on non-PC, swap to fallback image */
+@media (max-width: 1199px) and (prefers-reduced-motion: reduce) {
+  .Video-video > video.bg-media {
+    display: none;
+  }
+  .Video-video > img.bg-fallback {
+    display: block;
+  }
+}
+
+.ir-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+.ir-card img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.ir-card img.z-0 {
+  z-index: 0;
+  pointer-events: none;
+}
+.ir-card img.z-10 {
+  z-index: 10;
+  transition: opacity 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.ir-card > .pointer-events-none,
+.ir-card > .overlay {
+  z-index: 20;
+}
+
+.ir-card:hover img.z-10,
+.ir-card:focus-within img.z-10 {
+  transform: scale(1.02);
+  transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
 }

@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 
-interface HeroProps {
+interface VideoProps {
   setIsLoading?: (val: boolean) => void; // optional เผื่อบางหน้ายังไม่ได้ส่งมา
 }
 
-export default function Hero({ setIsLoading }: HeroProps) {
+export default function Video({ setIsLoading }: VideoProps) {
   const [ready, setReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -34,8 +34,8 @@ export default function Hero({ setIsLoading }: HeroProps) {
   return (
     <section
       id="main-banner"
-      className="hero-video mt-5"
-      aria-label="Company hero video">
+      className="Video-video mt-5"
+      aria-label="Company Video video">
       <video
         ref={videoRef}
         className="bg-media"

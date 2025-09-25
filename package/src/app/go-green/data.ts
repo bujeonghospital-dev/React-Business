@@ -32,6 +32,6 @@ export const SAMPLE_FEATURES: Feature[] = [
   {
     icon: "/images/go-green/icons/property-document_14001_1.png",
     title: "Green standard",
-    lines: ["ปฏิบัติตามมาตรฐานสิ่งแวดล้อม", "ISO 14001 เป็นต้น"],
+    lines: ["ปฏิบัติตามมาตรฐานสิ่งแวดล้อม", "ISO 14001"],
   },
 ];

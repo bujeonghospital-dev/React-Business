@@ -38,19 +38,17 @@ export default function AboutPhilosophy() {
 
   return (
     <>
-      {/* ส่วนบน */}
       <section className="relative w-full overflow-hidden min-h-[55svh] md:min-h-[60svh] lg:min-h-[70svh]">
         <Image
-          src="/images/aboutus/vision_tpp.png"
+          src="/images/aboutus/vision_tpp_1.png"
           alt="Tree with kids"
           fill
           className="absolute inset-0 -z-10 object-cover object-center"
           priority
         />
-        <div className="relative mx-auto max-w-screen-md px-4 sm:px-6 py-10 text-center text-green-800">
+        <div className="relative md:absolute md:right-6 lg:right-12 md:top-12 lg:top-16 mx-auto md:mx-0 md:ml-0 max-w-screen-md md:max-w-md lg:max-w-lg px-4 sm:px-6 md:pr-4 lg:pr-8 py-10 text-center md:text-right text-green-800">
           <h2 className="my-heading sm:text-3xl mb-3 fs-3 text-end text-black fx-clip-reveal">
             วิสัยทัศน์
-            {/* เส้นใต้กวาดเข้าแบบชิดขวา */}
             <span
               aria-hidden
               className="block fx-underline fx-underline-in mt-2 w-24 ml-auto"

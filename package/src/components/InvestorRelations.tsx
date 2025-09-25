@@ -141,21 +141,23 @@ export default function InvestorRelations() {
               "
               data-ani="fadeInUp slow"
               style={{ animationDelay: `${baseDelay + i * step}ms` }}>
+              {/* animated background as CSS background (fills container reliably) */}
               {item.animatedImg && (
-                <img
-                  src={item.animatedImg}
-                  alt={`${item.title} (animated)`}
-                  className="absolute inset-0 w-full h-full object-cover z-0"
-                  loading="lazy"
+                <div
+                  className="absolute inset-0 bg-center bg-cover z-0"
+                  style={{ backgroundImage: `url(${item.animatedImg})` }}
+                  aria-hidden="true"
                 />
               )}
 
-              <img
-                src={item.staticImg}
-                alt={item.title}
-                className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-500 ${
+              {/* static image as overlay background (covers fully, fades on hover) */}
+              <div
+                className={`absolute inset-0 bg-center bg-cover z-10 transition-opacity duration-500 ${
                   item.animatedImg ? "md:group-hover:opacity-0" : ""
                 }`}
+                style={{ backgroundImage: `url(${item.staticImg})` }}
+                role="img"
+                aria-label={item.title}
               />
 
               <div

@@ -13,7 +13,7 @@ export default function Logo({ className = "", style }: LogoProps) {
           {/* Desktop: >=lg (1024px) ใช้โลโก้แนวนอน */}
           <source
             media="(min-width: 1024px)"
-            srcSet="/images/logo/LOGO-TPP-SIDE_3.png"
+            srcSet="/images/logo/LOGO-TPP-SIDE_4.png"
           />
 
           {/* Tablet: >=md (768px) ใช้โลโก้แนวตั้ง */}

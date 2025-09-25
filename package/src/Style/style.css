@@ -829,10 +829,10 @@ body {
   position: relative;
   overflow: hidden;
   min-height: 0 !important;
-  aspect-ratio: 16 / 9; /* เพื่อไม่ให้คอนเทนเนอร์ยุบ */
+  aspect-ratio: 16 / 9; /* mobile default */
 }
 
-/* พื้นหลังวิดีโอ/รูป */
+/* Media layers: always cover the Video-video container */
 .Video-video > .bg-media,
 .Video-video > .bg-fallback {
   position: absolute;
@@ -841,13 +841,15 @@ body {
   height: 100%;
   object-fit: cover;
   object-position: center 40%;
-  z-index: -1;
+  z-index: -1; /* keep behind overlay content */
 }
 
-/* ลด motion */
+/* fallback image hidden by default (video preferred) */
 .Video-video > .bg-fallback {
   display: none;
 }
+
+/* Respect reduced motion: swap to image fallback */
 @media (prefers-reduced-motion: reduce) {
   .Video-video > video.bg-media {
     display: none;
@@ -857,12 +859,13 @@ body {
   }
 }
 
-/* ไล่โทน */
+/* tonal gradient over media (below overlay content) */
 .Video-video::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 0; /* sits above media (z:-1) but below content overlay (z>0) */
   background: linear-gradient(
     to top,
     rgba(0, 0, 0, 0.38),
@@ -871,31 +874,24 @@ body {
   );
 }
 
-/* กันรอยบากล่าง */
-@supports (padding: max(0px)) {
+/* Make Video full-viewport on desktop (adjust for fixed header) */
+@media (min-width: 1200px) {
   .Video-video {
-    padding-bottom: max(0px, env(safe-area-inset-bottom));
+    aspect-ratio: auto !important;
+    height: 100dvh;
+    min-height: calc(
+      100dvh - var(--header-h)
+    ); /* header-h ถ้ามี header แบบ fixed */
   }
 }
 
-/* ===== Desktop และจอใหญ่ขึ้นไป ===== */
-:root {
-  --header-h: 0px;
-} /* ถ้า header “fixed/overlay” ให้ใส่ความสูงจริง เช่น 88px */
-
-@media (min-width: 768px) {
+/* Optionally keep full-cover behavior for non-PC widths too (if desired) */
+@media (max-width: 1199px) {
   .Video-video {
-    /* เอาอัตราส่วนออก และบังคับให้เต็มจอ */
-    aspect-ratio: auto !important;
-    min-height: calc(100dvh - var(--header-h)) !important;
+    /* keep mobile aspect by default, but ensure a reasonable minimum */
+    min-height: 280px;
   }
-
-  /* fallback เผื่อเบราว์เซอร์ไม่รองรับ dvh */
-  @supports not (height: 100dvh) {
-    .Video-video {
-      min-height: calc(100vh - var(--header-h)) !important;
-    }
-  }
+  /* the media layers are already absolute and cover the container */
 }
 
 /* ------------------------------------------------------------------------------------------------------------------------------------------ */
@@ -1421,4 +1417,74 @@ img {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Video background: apply full-cover behavior only on non-PC screens */
+@media (max-width: 1199px) {
+  .Video-video > .bg-media,
+  .Video-video > .bg-fallback {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 40%;
+    z-index: -1;
+  }
+
+  /* hide fallback by default (video shown) */
+  .Video-video > .bg-fallback {
+    display: none;
+  }
+}
+
+/* If user prefers reduced motion on non-PC, swap to fallback image */
+@media (max-width: 1199px) and (prefers-reduced-motion: reduce) {
+  .Video-video > video.bg-media {
+    display: none;
+  }
+  .Video-video > img.bg-fallback {
+    display: block;
+  }
+}
+
+/* ให้ภาพในการ์ดยืดเต็มกล่อง โดยไม่ทำลายกล่องเดิม */
+.ir-card {
+  position: relative; /* เรียงชั้นภาพให้ถูกต้อง */
+  overflow: hidden; /* ตัดเนื้อหาที่ล้น และรักษา border-radius ของการ์ด */
+  border-radius: 16px; /* ยืนยันค่ามุมให้แน่นอน (ตรงกับ JSX) */
+}
+
+.ir-card img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.ir-card img.z-0 {
+  z-index: 0;
+  pointer-events: none;
+}
+.ir-card img.z-10 {
+  z-index: 10;
+  transition: opacity 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* เผื่อมีกรอบ/เงา ต้องไม่ให้ภาพไปทับ */
+.ir-card > .pointer-events-none,
+.ir-card > .overlay {
+  z-index: 20;
+}
+
+/* หากต้องการให้ภาพเคลื่อน/สเกลนุ่ม ๆ ขณะโฮเวอร์ (ไม่บังคับ) */
+.ir-card:hover img.z-10,
+.ir-card:focus-within img.z-10 {
+  transform: scale(1.02);
+  transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
 }

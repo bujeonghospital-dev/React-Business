@@ -98,7 +98,7 @@ export default function OmanAirStyleLayout() {
   const inverseZoom = 1 / zoomLevel;
 
   return (
-    <main className="min-h-dvh w-full overflow-x-hidden bg-neutral-100 p-0 ps">
+    <main className="min-h-dvh w-full overflow-x-hidden bg-white p-0 ps pt-[120px] sm:pt-[120px] md:pt-[110px] lg:pt-[110px] xl:pt-[105px]">
       <style jsx>{`
         /* AOS-style Animations */
         [data-aos^="fade"][data-aos^="fade"] {
@@ -279,9 +279,15 @@ export default function OmanAirStyleLayout() {
           width: 100%;
           height: 100%;
           overflow: hidden;
-          border-radius: 1rem;
+          border-radius: 0.75rem;
           transform-origin: 0 0;
           will-change: transform;
+        }
+
+        @media (min-width: 768px) {
+          .zoom-immune-container {
+            border-radius: 1rem;
+          }
         }
 
         .Video-background {
@@ -292,17 +298,24 @@ export default function OmanAirStyleLayout() {
           bottom: 0;
           width: 100%;
           height: 100%;
-          background-image: url("/images/subsidiaries/Oman_Cargo_mapPx.png");
-          background-size: cover;
+          background-image: url("/images/subsidiaries/Cargo_Map_36677-hd_2.png");
+          background-size: auto;
           background-position: center center;
           background-repeat: no-repeat;
-          background-attachment: fixed;
           image-rendering: -webkit-optimize-contrast;
           image-rendering: crisp-edges;
           transform: scale(${inverseZoom});
-          transform-origin: top left;
+          transform-origin: center center;
           width: ${100 * zoomLevel}%;
           height: ${100 * zoomLevel}%;
+          min-width: 928px;
+          min-height: 703px;
+        }
+
+        @media (min-width: 768px) {
+          .Video-background {
+            transform-origin: center center;
+          }
         }
 
         .fixed-aspect {
@@ -342,23 +355,116 @@ export default function OmanAirStyleLayout() {
         html {
           scroll-behavior: smooth;
         }
+
+        /* Clean spacing for header */
+        main {
+          background: linear-gradient(to bottom, #ffffff 0%, #ffffff 100%);
+          position: relative;
+          z-index: 1;
+        }
+
+        /* Ensure content doesn't overlap with header */
+        section {
+          position: relative;
+          z-index: 2;
+        }
+
+        /* Mobile screens */
+        @media (max-width: 640px) {
+          main {
+            padding-top: 120px !important;
+          }
+
+          .zoom-immune-container {
+            min-height: 350px !important;
+            overflow: visible;
+            background-color: #dbeafe !important; /* Light blue for non-PC */
+            border: 3px solid #3b82f6 !important; /* Blue border */
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+
+          .zoom-immune-container img {
+            max-width: 95% !important;
+            max-height: 90% !important;
+            object-fit: contain !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+          }
+        }
+
+        /* Tablet and medium screens (iPad, etc.) */
+        @media (min-width: 641px) and (max-width: 1199px) {
+          main {
+            padding-top: 110px !important;
+          }
+
+          .zoom-immune-container {
+            min-height: 450px !important;
+            overflow: visible;
+            background-color: #dbeafe !important; /* Light blue for non-PC */
+            border: 2px solid #3b82f6 !important; /* Blue border */
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+
+          .zoom-immune-container img {
+            max-width: 95% !important;
+            max-height: 95% !important;
+            object-fit: contain !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+          }
+
+          .Video-background {
+            background-size: contain !important;
+          }
+        }
+
+        /* PC screens (≥1200px) - Original size */
+        @media (min-width: 1200px) {
+          main {
+            padding-top: 105px !important;
+          }
+
+          .zoom-immune-container {
+            background-color: transparent !important;
+            border: none !important;
+          }
+
+          .Video-background {
+            background-size: auto !important;
+          }
+        }
+
+        /* Touch-friendly interactions */
+        @media (hover: none) and (pointer: coarse) {
+          .ps:hover > .ps__rail-x,
+          .ps:hover > .ps__rail-y {
+            opacity: 0;
+          }
+        }
       `}</style>
 
-      <section className="h-full w-full bg-white p-6 md:p-8">
-        <div className="grid h-full items-stretch gap-6 lg:grid-cols-2">
-          <div className="order-1 space-y-5 lg:order-1">
+      <section className="h-full w-full bg-white p-3 sm:p-4 md:p-6 lg:p-8 pb-8">
+        <div className="grid h-full items-stretch gap-3 sm:gap-4 md:gap-6 lg:grid-cols-2">
+          <div className="order-1 space-y-3 sm:space-y-4 md:space-y-5">
             {/* Company info card with fade-up animation */}
             <article
               id="company-card"
               data-aos="fade-up"
               data-aos-delay="100"
-              className={`rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/10 ${
+              className={`rounded-xl lg:rounded-2xl bg-white p-3 sm:p-4 md:p-5 shadow-sm ring-1 ring-black/10 ${
                 isVisible["company-card"] ? "aos-animate" : ""
               }`}>
-              <h3 className="text-xl font-extrabold text-neutral-900">
+              <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 mb-2">
                 บริษัทในเครือ
               </h3>
-              <div className="mt-2 text-base leading-6 text-neutral-700">
+              <div className="text-sm sm:text-base leading-relaxed text-neutral-700">
                 <p>
                   บริษัท ทีพีพี อินเตอร์เนชั่นแนล จำกัด
                   <br />
@@ -383,17 +489,17 @@ export default function OmanAirStyleLayout() {
               id="contact-card"
               data-aos="fade-up"
               data-aos-delay="200"
-              className={`rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/10 ${
+              className={`rounded-xl lg:rounded-2xl bg-white p-3 sm:p-4 md:p-5 shadow-sm ring-1 ring-black/10 ${
                 isVisible["contact-card"] ? "aos-animate" : ""
               }`}>
-              <h3 className="text-xl font-extrabold text-neutral-900">
+              <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 mb-3">
                 กรุณาเยี่ยมชมเราได้ที่
               </h3>
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
                 <div
                   data-aos="fade-right"
                   data-aos-delay="300"
-                  className={`text-base leading-6 text-neutral-700 ${
+                  className={`text-sm sm:text-base leading-relaxed text-neutral-700 ${
                     isVisible["contact-card"] ? "aos-animate" : ""
                   }`}>
                   <p>
@@ -454,37 +560,120 @@ export default function OmanAirStyleLayout() {
             id="Video-panel"
             data-aos="fade-left"
             data-aos-delay="200"
-            className={`order-2 lg:order-2 h-full min-h-[400px] ${
+            className={`order-2 h-full min-h-[350px] sm:min-h-[450px] lg:min-h-[500px] xl:min-h-[600px] 2xl:min-h-[703px] ${
               isVisible["Video-panel"] ? "aos-animate" : ""
             }`}>
-            <div className="zoom-immune-container h-full">
-              <div
-                className="Video-background"
-                role="img"
-                aria-label="Oman Air Route Map"
-                style={{
-                  transform: `scale(${inverseZoom})`,
-                  width: `${100 * zoomLevel}%`,
-                  height: `${100 * zoomLevel}%`,
-                }}
-              />
+            <div className="zoom-immune-container h-full relative bg-gray-100 border-2 border-blue-500">
+              {/* Auto-detect and render appropriate version */}
+              {viewportSize.width < 1200 ? (
+                // Non-PC screens (Mobile, Tablet, Small Desktop)
+                <div className="w-full h-full flex items-center justify-center bg-blue-50">
+                  <img
+                    src="/images/subsidiaries/Cargo_Map_36677-hd_2.png"
+                    alt="Oman Air Route Map"
+                    className="max-w-full max-h-full object-contain border-2 border-blue-400"
+                    style={{
+                      width: "auto",
+                      height: "auto",
+                      display: "block",
+                      maxWidth: "100%",
+                      maxHeight: "100%",
+                    }}
+                    onError={(
+                      e: React.SyntheticEvent<HTMLImageElement, Event>
+                    ) => {
+                      const img = e.currentTarget;
+                      console.log("Non-PC Image failed to load:", img.src);
+                      img.style.display = "none";
+                      const next = img.nextElementSibling as HTMLElement | null;
+                      if (next) next.style.display = "block";
+                    }}
+                    onLoad={() => {
+                      console.log("Non-PC Image loaded successfully");
+                    }}
+                  />
+
+                  {/* Fallback text for non-PC */}
+                  <div
+                    style={{ display: "none" }}
+                    className="text-center p-4 bg-red-100 border-2 border-red-500 rounded">
+                    <p className="text-sm font-bold">IMAGE NOT FOUND</p>
+                    <p className="text-xs">
+                      Path: /images/subsidiaries/Cargo_Map_36677-hd_2.png
+                    </p>
+                    <p className="text-xs">Non-PC Screen Detected</p>
+                  </div>
+                </div>
+              ) : (
+                // PC screens (≥1200px) - Original size
+                <>
+                  <img
+                    src="/images/subsidiaries/Cargo_Map_36677-hd_2.png"
+                    alt="Oman Air Route Map"
+                    className="absolute inset-0 w-full h-full object-contain"
+                    style={{
+                      transform:
+                        zoomLevel !== 1 ? `scale(${inverseZoom})` : "none",
+                      transformOrigin: "center center",
+                      objectFit: "none",
+                      objectPosition: "center center",
+                    }}
+                  />
+
+                  {/* Fallback background method for PC */}
+                  <div
+                    className="Video-background absolute inset-0"
+                    role="img"
+                    aria-label="Oman Air Route Map Fallback"
+                    style={{
+                      transform:
+                        zoomLevel !== 1 ? `scale(${inverseZoom})` : "none",
+                      width: zoomLevel !== 1 ? `${100 * zoomLevel}%` : "100%",
+                      height: zoomLevel !== 1 ? `${100 * zoomLevel}%` : "100%",
+                      zIndex: -1,
+                    }}
+                  />
+                </>
+              )}
             </div>
           </div>
         </div>
       </section>
 
       {/* Debug Panel with flip animation */}
-      {zoomLevel !== 1 && (
-        <div
-          data-aos="flip-up"
-          className="fixed bottom-4 right-4 bg-black/80 text-white p-3 rounded-lg text-xs font-mono aos-animate">
-          <div>Zoom: {(zoomLevel * 100).toFixed(0)}%</div>
-          <div>Inverse: {inverseZoom.toFixed(2)}</div>
-          <div>
-            Viewport: {viewportSize.width}x{viewportSize.height}
-          </div>
+      {/* <div
+        data-aos="flip-up"
+        className="fixed bottom-2 right-2 sm:bottom-4 sm:right-4 bg-blue-600/90 text-white p-2 sm:p-3 rounded-lg text-xs font-mono aos-animate max-w-[260px] sm:max-w-none z-50">
+        <div>Zoom: {(zoomLevel * 100).toFixed(0)}%</div>
+        <div className="hidden sm:block">Inverse: {inverseZoom.toFixed(2)}</div>
+        <div className="text-[10px] sm:text-xs">
+          Screen: {viewportSize.width}x{viewportSize.height}
         </div>
-      )}
+        <div className="text-[10px] sm:text-xs">
+          Type:{" "}
+          {viewportSize.width < 641
+            ? "Mobile"
+            : viewportSize.width < 1200
+            ? "Tablet/Small"
+            : "PC"}
+        </div>
+        <div className="text-[10px] sm:text-xs">
+          Method: {viewportSize.width < 1200 ? "Adaptive-IMG" : "Original-Size"}
+        </div>
+        <div className="text-[10px] sm:text-xs">
+          Padding:{" "}
+          {viewportSize.width < 641
+            ? "120px"
+            : viewportSize.width < 1200
+            ? "110px"
+            : "105px"}
+        </div>
+        <div className="text-[8px] sm:text-[10px] text-cyan-200">
+          {viewportSize.width < 1200
+            ? "Non-PC: Image scaled to fit"
+            : "PC: Original size maintained"}
+        </div>
+      </div> */}
     </main>
   );
 }

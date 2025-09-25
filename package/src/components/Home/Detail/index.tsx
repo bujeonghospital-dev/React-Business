@@ -158,23 +158,25 @@ export default function Dedicated() {
               "
               data-ani="fadeInUp slow"
               style={{ animationDelay: `${baseDelay + i * step}ms` }}>
+              {/* animated background as CSS background (fills container reliably) */}
               {item.animatedImg && (
-                <img
-                  src={item.animatedImg}
-                  alt={`${item.title} (animated)`}
-                  className="absolute inset-0 w-full h-full object-cover z-0"
-                  loading="lazy"
+                <div
+                  className="absolute inset-0 bg-center bg-cover z-0"
+                  style={{ backgroundImage: `url(${item.animatedImg})` }}
+                  aria-hidden="true"
                 />
               )}
 
-              <img
-                src={item.staticImg}
-                alt={`${item.title} (static)`}
+              {/* static image as overlay background (covers fully, fades on hover) */}
+              <div
                 className={`
-                  absolute inset-0 w-full h-full object-cover z-10
+                  absolute inset-0 bg-center bg-cover z-10
                   transition-opacity duration-500 ease-[cubic-bezier(.22,.61,.36,1)]
                   ${item.animatedImg ? "md:group-hover:opacity-0" : ""}
                 `}
+                style={{ backgroundImage: `url(${item.staticImg})` }}
+                role="img"
+                aria-label={item.title}
               />
 
               <div
@@ -201,7 +203,6 @@ export default function Dedicated() {
                 {item.title}
               </p>
 
-              {/* ยกขึ้นเล็กน้อยตอนโฮเวอร์ */}
               <div className="absolute inset-0 transition-transform duration-500 ease-[cubic-bezier(.22,.61,.36,1)] group-hover:-translate-y-0.5" />
             </div>
           ))}

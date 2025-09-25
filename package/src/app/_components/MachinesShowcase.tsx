@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
@@ -31,9 +31,8 @@ const MachineryShowcase = () => {
     label: string;
     imageSrc: string;
   };
-  // 8 segments with images representing different machinery types
   const segments: Segment[] = [
-    { id: 1, label: "Printing", imageSrc: "/images/technology/7-1_2160.jpg" },
+    { id: 1, label: "Printing", imageSrc: "/images/technology/7-1.jpg" },
     { id: 2, label: "Cutting", imageSrc: "/images/technology/tpp-01.png" },
     { id: 3, label: "Die Cut", imageSrc: "/images/technology/tpp-02.png" },
     { id: 4, label: "Laminate", imageSrc: "/images/aboutus/Endeavor_1.png" },
@@ -97,9 +96,9 @@ const MachineryShowcase = () => {
       </div> */}
 
       {/* Main Content Container */}
-      <div className="relative z-10 flex items-center justify-center min-h-screen px-4 py-8">
+      <div className="relative z-10 flex items-center justify-center min-h-screen px-4 py-8 mt-6">
         <div className="max-w-7xl w-full">
-          <div className="mx-auto mb-8 max-w-3xl text-center md:mb-12">
+          <div className="mx-auto mb-8 max-w-3xl text-center md:mb-12 ">
             <motion.h2
               initial={
                 prefersReducedMotion
@@ -109,7 +108,7 @@ const MachineryShowcase = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: prefersReducedMotion ? 0 : 0.6 }}
-              className="text-2xl font-extrabold tracking-tight text-neutral-900 sm:text-3xl md:text-4xl">
+              className="text-2xl font-extrabold tracking-tight text-neutral-900 sm:text-3xl md:text-4xl inline-block border-b-4 border-red-600 ">
               {"ศักยภาพเครื่องจักรของเรา"}
             </motion.h2>
             <motion.p
@@ -130,9 +129,9 @@ const MachineryShowcase = () => {
               }
             </motion.p>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-x-16 xl:gap-x-24 2xl:gap-x-32 items-center">
             {/* Left Column - Machine List */}
-            <div className="space-y-3 lg:space-y-4">
+            <div className="space-y-3 lg:space-y-4 lg:pr-6 xl:pr-10 2xl:pr-14">
               {leftMachines.map((machine, index) => (
                 <div
                   key={index}
@@ -159,93 +158,36 @@ const MachineryShowcase = () => {
               <div className="absolute w-80 h-80 lg:w-96 lg:h-96 rounded-full bg-gradient-to-br from-purple-100/50 to-blue-100/50 blur-2xl animate-pulse"></div>
 
               {/* Main Circle Container */}
-              <div className="relative w-[28.8rem] h-[28.8rem] lg:w-[36rem] lg:h-[36rem]">
-                {/* Pizza-style Segments */}
-                <svg
-                  className="absolute inset-0 w-full h-full animate-scale-in"
-                  viewBox="0 0 100 100">
-                  <defs>
-                    {segments.map((segment, index) => (
-                      <clipPath
-                        id={`segment-clip-${segment.id}`}
-                        key={segment.id}>
-                        <path d={createSegmentPath(index)} />
-                      </clipPath>
-                    ))}
-                  </defs>
+              {/* Center - Circular Icon Display */}
+              <div className="relative flex items-center justify-center py-8 lg:py-0 shrink-0">
+                {/* Outer Glow Effect */}
+                <div className="absolute w-80 h-80 lg:w-96 lg:h-96 rounded-full bg-gradient-to-br from-purple-100/50 to-blue-100/50 blur-2xl animate-pulse"></div>
 
-                  {segments.map((segment, index) => {
-                    const path = createSegmentPath(index);
-                    const isHovered = hoveredSegment === segment.id;
+                {/* Main Circle Container */}
+                <div className="relative w-[28.8rem] h-[28.8rem] lg:w-[36rem] lg:h-[36rem]">
+                  {/* Main Circular Image */}
+                  <img
+                    src="/images/technology/machinery-circle.png"
+                    alt="Machinery Showcase"
+                    className="absolute inset-0 w-full h-full object-contain animate-scale-in"
+                  />
 
-                    return (
-                      <g
-                        key={segment.id}
-                        className="cursor-pointer"
-                        onMouseEnter={() => setHoveredSegment(segment.id)}
-                        onMouseLeave={() => setHoveredSegment(null)}>
-                        <image
-                          href={segment.imageSrc}
-                          x="0"
-                          y="0"
-                          width="100"
-                          height="100"
-                          clipPath={`url(#segment-clip-${segment.id})`}
-                          preserveAspectRatio="xMidYMid slice"
-                        />
-                        <path
-                          d={path}
-                          fill="rgba(255, 255, 255, 0.65)"
-                          opacity={isHovered ? 0.35 : 0.55}
-                          style={{ transition: "opacity 0.3s ease" }}
-                        />
-                        <path
-                          d={path}
-                          fill="none"
-                          stroke="white"
-                          strokeWidth="0.8"
-                        />
-                      </g>
-                    );
-                  })}
-
-                  {/* White separator lines */}
-                  {[...Array(8)].map((_, i) => {
-                    const angle = ((i * 45 - 90) * Math.PI) / 180;
-                    return (
-                      <line
-                        key={i}
-                        x1={50 + 25 * Math.cos(angle)}
-                        y1={50 + 25 * Math.sin(angle)}
-                        x2={50 + 50 * Math.cos(angle)}
-                        y2={50 + 50 * Math.sin(angle)}
-                        stroke="white"
-                        strokeWidth="2"
+                  {/* Center Logo */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-24 h-24 lg:w-28 lg:h-28 bg-white rounded-2xl shadow-xl flex items-center justify-center transform hover:scale-110 transition-transform duration-300">
+                      <img
+                        className="bg-fallback"
+                        src="/images/logo/logo.png"
+                        alt=""
                       />
-                    );
-                  })}
-                </svg>
-
-                {/* Center Logo */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-24 h-24 lg:w-28 lg:h-28 bg-white rounded-2xl shadow-xl flex items-center justify-center transform hover:scale-110 transition-transform duration-300">
-                    <span className="text-4xl lg:text-5xl font-bold text-red-500">
-                      TPP
-                    </span>
+                    </div>
                   </div>
                 </div>
-
-                {/* Hover Label */}
-                {hoveredSegment && (
-                  <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-3 py-1 rounded-full text-sm animate-fade-in whitespace-nowrap">
-                    {segments.find((s) => s.id === hoveredSegment)?.label}
-                  </div>
-                )}
               </div>
             </div>
 
             {/* Right Column - Machine List */}
-            <div className="space-y-3 lg:space-y-4">
+            <div className="space-y-3 lg:space-y-4 lg:pl-6 xl:pl-10 2xl:pl-14">
               {rightMachines.map((machine, index) => (
                 <div
                   key={index}

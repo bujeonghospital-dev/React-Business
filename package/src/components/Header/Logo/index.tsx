@@ -13,7 +13,7 @@ export default function Logo({ className = "", style }: LogoProps) {
           {/* Desktop: >=lg (1024px) ใช้โลโก้แนวนอน */}
           <source
             media="(min-width: 1024px)"
-            srcSet="/images/logo/LOGO-TPP-SIDE_4.png"
+            srcSet="/images/logo/LOGO-TPP-SIDE_8.png"
           />
 
           {/* Tablet: >=md (768px) ใช้โลโก้แนวตั้ง */}
@@ -40,7 +40,7 @@ export default function Logo({ className = "", style }: LogoProps) {
                        /* Large Desktop */
                        xl:w-[205px] xl:h-[185px]
                        /* Extra Large */
-                       2xl:w-[230px] 2xl:h-[207px]"
+                       2xl:w-[195px] 2xl:h-[184px]"
             loading="eager"
           />
         </picture>

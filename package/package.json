@@ -13,6 +13,7 @@
     "@iconify/icons-ion": "^1.2.10",
     "@iconify/react": "^5.0.1",
     "@supabase/supabase-js": "^2.57.4",
+    "@tanem/react-nprogress": "^5.0.55",
     "@vercel/speed-insights": "^1.2.0",
     "animate.css": "^4.1.1",
     "aos": "^2.3.4",

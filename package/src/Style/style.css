@@ -1479,3 +1479,87 @@ img {
   transform: scale(1.02);
   transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
+
+/* === Fluid system (default, responsive) === */
+:root {
+  /* fluid typography & spacing tuned toward 1920 baseline */
+  --container-max: 1440px; /* เปลี่ยนเป็น 1536/1920 ถ้าต้องการเต็มจอ */
+  --gutter: clamp(12px, 2vw, 48px);
+
+  --fz-base: clamp(14px, 1.2vw, 16px);
+  --fz-lg: clamp(18px, 2.2vw, 28px);
+  --space-sm: clamp(8px, 1vw, 16px);
+  --space-md: clamp(16px, 1.6vw, 32px);
+}
+
+/* center container used across layout */
+.container {
+  width: min(100%, var(--container-max));
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+  box-sizing: border-box;
+}
+
+/* base font-size for document (fluid) */
+html {
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  font-size: var(--fz-base);
+}
+
+/* helpers for images/backgrounds */
+.img-responsive,
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+.bg-cover {
+  background-size: cover !important;
+  background-position: center !important;
+}
+
+/* === Accessibility: respect reduced motion globally === */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* === Scaled Canvas helpers (optional: use on a dedicated "show" page) ===
+   Usage: wrap your whole page in <div class="scaled-canvas-wrapper"><div class="scaled-canvas">...1920×1080 layout...</div></div>
+   Then run JS to set scale (see ScaledCanvas component below) */
+.scaled-canvas-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: inherit;
+}
+
+.scaled-canvas {
+  width: 1920px;
+  height: 1080px;
+  transform-origin: top left;
+  will-change: transform;
+  /* make inner content render crisply on scaled transforms */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* optional: clamp font sizes inside scaled-canvas to avoid extremely small text on heavy downscale */
+/* you can override these per-page inside the container */
+.scaled-canvas :where(h1, h2, h3, p, button, a, span) {
+  /* use rems relative to 16px baseline inside canvas (do not use vw here) */
+  font-size: inherit;
+}

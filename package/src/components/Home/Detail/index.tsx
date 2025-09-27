@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useRef } from "react";
+import ScaledCanvas from "../../ScaledCanvas";
 import "animate.css";
 
 // ====== Data ======
@@ -110,104 +111,108 @@ export default function Dedicated() {
       io.observe(el);
     });
 
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+    };
   }, []);
 
   // ——— ปรับความนุ่มและความช้าแบบรวม ———
   const motionVars = {
-    ["--animate-duration" as any]: "0.7s", // ใส่ "slow" => ~1.4s
+    ["--animate-duration" as any]: "0.7s",
     ["--animate-delay" as any]: "0s",
   } as React.CSSProperties;
 
   // สเต็ปหน่วงให้ค่อย ๆ ทยอยโผล่
-  const baseDelay = 150; // เดิม 40
-  const step = 120; // เดิม 60
+  const baseDelay = 150;
+  const step = 120;
 
   return (
-    <section
-      ref={sectionRef}
-      data-ded
-      className="relative bg-cover bg-center dark:bg-darkmode overflow-hidden py-10"
-      style={motionVars}>
-      <div className="awe-parallax awe-static" />
-      <div className="overlay-color-1" />
+    <ScaledCanvas>
+      <section
+        ref={sectionRef}
+        data-ded
+        className="relative bg-cover bg-center dark:bg-darkmode overflow-hidden py-10"
+        style={motionVars}>
+        <div className="awe-parallax awe-static" />
+        <div className="overlay-color-1" />
 
-      <div className="mx-auto w-full max-w-[1400px] px-4">
-        {/* หัวข้อ: ช้าลงและนุ่ม */}
-        <h2 className="tpp-section-title opacity-0" data-ani="fadeInUp slow">
-          สินค้าและบริการของเรา
-        </h2>
+        <div className="mx-auto w-full max-w-[1400px] px-4">
+          {/* หัวข้อ: ช้าลงและนุ่ม */}
+          <h2 className="tpp-section-title opacity-0" data-ani="fadeInUp slow">
+            สินค้าและบริการของเรา
+          </h2>
 
-        <div className="mt-6 md:mt-8" />
+          <div className="mt-6 md:mt-8" />
 
-        {/* การ์ด: เคลื่อนช้า เนียน และสเต็ปชัด */}
-        <div
-          className="
-            grid justify-center
-            gap-2 md:gap-3
-            grid-cols-[repeat(auto-fit,minmax(320px,320px))]
-          ">
-          {cards.map((item, i) => (
-            <div
-              key={i}
-              className="
-                group relative w-[320px] h-[420px]
-                shadow-lg rounded-[16px] overflow-hidden cursor-pointer
-                will-change-[transform,opacity] opacity-0
-                transition-transform duration-500 ease-[cubic-bezier(.22,.61,.36,1)]
-              "
-              data-ani="fadeInUp slow"
-              style={{ animationDelay: `${baseDelay + i * step}ms` }}>
-              {/* animated background as CSS background (fills container reliably) */}
-              {item.animatedImg && (
-                <div
-                  className="absolute inset-0 bg-center bg-cover z-0"
-                  style={{ backgroundImage: `url(${item.animatedImg})` }}
-                  aria-hidden="true"
-                />
-              )}
-
-              {/* static image as overlay background (covers fully, fades on hover) */}
+          {/* การ์ด: เคลื่อนช้า เนียน และสเต็ปชัด */}
+          <div
+            className="
+              grid justify-center
+              gap-2 md:gap-3
+              grid-cols-[repeat(auto-fit,minmax(320px,320px))]
+            ">
+            {cards.map((item, i) => (
               <div
-                className={`
+                key={i}
+                className="
+                  group relative w-[320px] h-[420px]
+                  shadow-lg rounded-[16px] overflow-hidden cursor-pointer
+                  will-change-[transform,opacity] opacity-0
+                  transition-transform duration-500 ease-[cubic-bezier(.22,.61,.36,1)]
+                "
+                data-ani="fadeInUp slow"
+                style={{ animationDelay: `${baseDelay + i * step}ms` }}>
+                {/* animated background as CSS background (fills container reliably) */}
+                {item.animatedImg && (
+                  <div
+                    className="absolute inset-0 bg-center bg-cover z-0"
+                    style={{ backgroundImage: `url(${item.animatedImg})` }}
+                    aria-hidden="true"
+                  />
+                )}
+
+                {/* static image as overlay background (covers fully, fades on hover) */}
+                <div
+                  className={`
                   absolute inset-0 bg-center bg-cover z-10
                   transition-opacity duration-500 ease-[cubic-bezier(.22,.61,.36,1)]
                   ${item.animatedImg ? "md:group-hover:opacity-0" : ""}
                 `}
-                style={{ backgroundImage: `url(${item.staticImg})` }}
-                role="img"
-                aria-label={item.title}
-              />
+                  style={{ backgroundImage: `url(${item.staticImg})` }}
+                  role="img"
+                  aria-label={item.title}
+                />
 
-              <div
-                className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent z-20 opacity-0"
-                data-ani="fadeIn slow"
-                style={{ animationDelay: `${baseDelay + i * step + 120}ms` }}
-              />
+                <div
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent z-20 opacity-0"
+                  data-ani="fadeIn slow"
+                  style={{ animationDelay: `${baseDelay + i * step + 120}ms` }}
+                />
 
-              <p
-                className="
-                  absolute bottom-0 left-0 m-3
-                  text-white text-xl md:text-2xl
-                  font-extrabold drop-shadow-lg z-30 opacity-0
-                "
-                data-ani="fadeInUp slow"
-                style={{
-                  animationDelay: `${baseDelay + i * step + 80}ms`,
-                  textShadow: `
+                <p
+                  className="
+                    absolute bottom-0 left-0 m-3
+                    text-white text-xl md:text-2xl
+                    font-extrabold drop-shadow-lg z-30 opacity-0
+                  "
+                  data-ani="fadeInUp slow"
+                  style={{
+                    animationDelay: `${baseDelay + i * step + 80}ms`,
+                    textShadow: `
                     2px 2px 6px rgba(0,0,0,0.8),
                     0px 0px 12px #fff,
                     0px 4px 16px rgba(0,0,0,0.8)
                   `,
-                }}>
-                {item.title}
-              </p>
+                  }}>
+                  {item.title}
+                </p>
 
-              <div className="absolute inset-0 transition-transform duration-500 ease-[cubic-bezier(.22,.61,.36,1)] group-hover:-translate-y-0.5" />
-            </div>
-          ))}
+                <div className="absolute inset-0 transition-transform duration-500 ease-[cubic-bezier(.22,.61,.36,1)] group-hover:-translate-y-0.5" />
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </ScaledCanvas>
   );
 }

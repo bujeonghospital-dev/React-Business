@@ -1,0 +1,45 @@
+import { useEffect, useRef } from "react";
+
+export default function ScaledCanvas({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let rafId = 0;
+
+    function applyScale() {
+      const el = ref.current;
+      if (!el) return; // ป้องกัน null
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const scale = Math.min(w / 1920, h / 1080);
+      el.style.transform = `scale(${scale})`;
+    }
+
+    const handler = () => {
+      // debounce via rAF to avoid layout thrash on continuous resize
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(applyScale);
+    };
+
+    handler(); // initial
+    window.addEventListener("resize", handler);
+    window.addEventListener("orientationchange", handler);
+    return () => {
+      window.removeEventListener("resize", handler);
+      window.removeEventListener("orientationchange", handler);
+      cancelAnimationFrame(rafId);
+    };
+  }, []);
+
+  return (
+    <div className="scaled-canvas-wrapper" aria-hidden={false}>
+      <div ref={ref} className="scaled-canvas">
+        {children}
+      </div>
+    </div>
+  );
+}

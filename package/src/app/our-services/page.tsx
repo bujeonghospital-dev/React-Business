@@ -1,4 +1,5 @@
 "use client";
+import ScaledCanvas from "../../components/ScaledCanvas";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -152,8 +153,7 @@ function Carousel({ images, alt }: { images: string[]; alt: string }) {
       onClick={onClick}
       className={`absolute ${
         dir === "left" ? "left-2" : "right-2"
-      } top-1/2 -translate-y-1/2 w-12 h-16 grid place-items-center rounded-xl bg-black/25 md:bg-transparent shadow-[0_10px_24px_rgba(0,0,0,.25)] backdrop-blur-sm hover:scale-105 transition`}
-    >
+      } top-1/2 -translate-y-1/2 w-12 h-16 grid place-items-center rounded-xl bg-black/25 md:bg-transparent shadow-[0_10px_24px_rgba(0,0,0,.25)] backdrop-blur-sm hover:scale-105 transition`}>
       <svg width="20" height="36" viewBox="0 0 20 36" fill="none">
         <defs>
           <linearGradient id={`g-${dir}`} x1="0" y1="0" x2="1" y2="1">
@@ -183,8 +183,7 @@ function Carousel({ images, alt }: { images: string[]; alt: string }) {
       onKeyDown={onKeyDown}
       className="relative overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-sm select-none"
       onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
+      onMouseLeave={() => setHover(false)}>
       {/* แทร็คสไลด์ */}
       <div
         className={`relative ${CAROUSEL.aspect}`}
@@ -196,8 +195,7 @@ function Carousel({ images, alt }: { images: string[]; alt: string }) {
         style={{
           touchAction: "pan-y",
           cursor: drag.active ? "grabbing" : "grab",
-        }}
-      >
+        }}>
         <div className="absolute inset-0 flex" style={trackStyle}>
           {images.map((src, idx) => {
             const isActive = idx === index;
@@ -379,8 +377,7 @@ function SectionHeading({ label, id }: { label: string; id?: string }) {
     <h2
       id={id}
       style={{ scrollMarginTop: offset }}
-      className="text-2xl md:text-4xl font-extrabold tracking-tight text-neutral-900"
-    >
+      className="text-2xl md:text-4xl font-extrabold tracking-tight text-neutral-900">
       {label}
     </h2>
   );
@@ -406,8 +403,7 @@ function FeatureTile({
         scrollToCentered(el);
         history.replaceState(null, "", anchor);
       }}
-      className="group relative block aspect-[4/3] overflow-hidden rounded-2xl shadow-sm ring-1 ring-black/5 transition hover:shadow-lg"
-    >
+      className="group relative block aspect-[4/3] overflow-hidden rounded-2xl shadow-sm ring-1 ring-black/5 transition hover:shadow-lg">
       <Image
         src={img}
         alt={title}
@@ -468,63 +464,67 @@ function ProcessSection({
    ====== */
 export default function ProcessPage() {
   return (
-    <main className="bg-white scroll-smooth">
-      {/* ===== Feature banner (4 tiles) ===== */}
-      <section className="relative">
-        <div className="mx-auto max-w-7xl px-4 py-8 md:py-12">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {FEATURES.map((f) => (
-              <FeatureTile key={f.title} {...f} />
-            ))}
+    <ScaledCanvas>
+      (
+      <main className="bg-white scroll-smooth">
+        {/* ===== Feature banner (4 tiles) ===== */}
+        <section className="relative">
+          <div className="mx-auto max-w-7xl px-4 py-8 md:py-12">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {FEATURES.map((f) => (
+                <FeatureTile key={f.title} {...f} />
+              ))}
+            </div>
+
+            {/* Intro paragraph */}
+            <div className="mt-8 md:mt-10">
+              <p className="text-neutral-700 leading-7 md:text-[17px]">
+                บริษัทไทยการพิมพ์และบรรจุภัณฑ์
+                มุ่งเน้นคุณภาพและความละเอียดในทุกขั้นตอนตั้งแต่การพัฒนา ออกแบบ
+                เตรียมพิมพ์ การพิมพ์ จนถึงหลังพิมพ์
+                เพื่อให้ลูกค้าได้รับผลงานที่ตรงตามความต้องการ
+                และมาตรฐานอุตสาหกรรม
+                พร้อมทีมบริการที่ดูแลคุณตลอดกระบวนการอย่างใกล้ชิด
+              </p>
+            </div>
           </div>
+        </section>
 
-          {/* Intro paragraph */}
-          <div className="mt-8 md:mt-10">
-            <p className="text-neutral-700 leading-7 md:text-[17px]">
-              บริษัทไทยการพิมพ์และบรรจุภัณฑ์
-              มุ่งเน้นคุณภาพและความละเอียดในทุกขั้นตอนตั้งแต่การพัฒนา ออกแบบ
-              เตรียมพิมพ์ การพิมพ์ จนถึงหลังพิมพ์
-              เพื่อให้ลูกค้าได้รับผลงานที่ตรงตามความต้องการ และมาตรฐานอุตสาหกรรม
-              พร้อมทีมบริการที่ดูแลคุณตลอดกระบวนการอย่างใกล้ชิด
-            </p>
-          </div>
-        </div>
-      </section>
+        {/* ===== Process sections ===== */}
+        {SECTIONS.map((s) => (
+          <ProcessSection key={s.id} {...s} />
+        ))}
 
-      {/* ===== Process sections ===== */}
-      {SECTIONS.map((s) => (
-        <ProcessSection key={s.id} {...s} />
-      ))}
-
-      {/* ===== CTA / Footer band (optional) ===== */}
-      <section className="bg-neutral-50">
-        <div className="mx-auto max-w-7xl px-4 py-12 md:py-16">
-          <div className="rounded-2xl bg-white p-6 md:p-10 shadow-sm ring-1 ring-black/5">
-            <div className="grid grid-cols-1 items-center gap-6 md:grid-cols-12">
-              <div className="md:col-span-8">
-                <h3 className="text-xl md:text-2xl font-extrabold tracking-tight text-neutral-900">
-                  สนใจงานพิมพ์หรือบรรจุภัณฑ์สำหรับสินค้าแบรนด์ของคุณ?
-                </h3>
-                <p className="mt-2 text-neutral-600">
-                  พูดคุยกับผู้เชี่ยวชาญของเราเพื่อวางแผนงาน ตั้งแต่งบประมาณ
-                  วัสดุ ไปจนถึงการรีดประสิทธิภาพ
-                  ในการผลิตให้คุ้มค่าและสวยงามที่สุด
-                </p>
-              </div>
-              <div className="md:col-span-4">
-                <div className="flex md:justify-end">
-                  <Link
-                    href="#contact"
-                    className="inline-flex items-center justify-center rounded-xl bg-[#D6001C] px-5 py-3 text-white font-semibold shadow-sm hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D6001C]/40"
-                  >
-                    ติดต่อเรา
-                  </Link>
+        {/* ===== CTA / Footer band (optional) ===== */}
+        <section className="bg-neutral-50">
+          <div className="mx-auto max-w-7xl px-4 py-12 md:py-16">
+            <div className="rounded-2xl bg-white p-6 md:p-10 shadow-sm ring-1 ring-black/5">
+              <div className="grid grid-cols-1 items-center gap-6 md:grid-cols-12">
+                <div className="md:col-span-8">
+                  <h3 className="text-xl md:text-2xl font-extrabold tracking-tight text-neutral-900">
+                    สนใจงานพิมพ์หรือบรรจุภัณฑ์สำหรับสินค้าแบรนด์ของคุณ?
+                  </h3>
+                  <p className="mt-2 text-neutral-600">
+                    พูดคุยกับผู้เชี่ยวชาญของเราเพื่อวางแผนงาน ตั้งแต่งบประมาณ
+                    วัสดุ ไปจนถึงการรีดประสิทธิภาพ
+                    ในการผลิตให้คุ้มค่าและสวยงามที่สุด
+                  </p>
+                </div>
+                <div className="md:col-span-4">
+                  <div className="flex md:justify-end">
+                    <Link
+                      href="#contact"
+                      className="inline-flex items-center justify-center rounded-xl bg-[#D6001C] px-5 py-3 text-white font-semibold shadow-sm hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D6001C]/40">
+                      ติดต่อเรา
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
-    </main>
+        </section>
+      </main>
+      )
+    </ScaledCanvas>
   );
 }

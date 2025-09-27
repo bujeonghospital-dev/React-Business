@@ -80,6 +80,11 @@ const Header = () => {
         scrolled ? "shadow-md" : "",
       ].join(" ")}>
       <div className="w-full">
+        <style>{`
+          /* ซ่อนตัวอักษร/ตัวอักขระที่อาจโผล่มารอบโลโก้ (เช่นวงเล็บ) */
+          .logo-wrapper { font-size: 0; line-height: 0; }
+          .logo-wrapper img, .logo-wrapper svg { font-size: initial; line-height: initial; }
+        `}</style>
         {/* Language Switcher Top Bar */}
         <div className="bg-gray-50 border-b border-gray-200">
           <div className="max-w-screen-2xl mx-auto px-3 md:px-4 lg:px-6 py-0.5">
@@ -107,7 +112,7 @@ const Header = () => {
             </nav>
 
             {/* Logo - Always visible, size responsive */}
-            <div className="flex-1 xl:flex-none flex items-center xl:px-4 2xl:px-8">
+            <div className="logo-wrapper flex-1 xl:flex-none flex items-center xl:px-4 2xl:px-8">
               <Logo className="w-[120px] sm:w-[140px] md:w-[160px] lg:w-[180px] xl:w-[190px] h-auto" />
             </div>
 

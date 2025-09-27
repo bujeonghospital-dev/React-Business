@@ -1,3 +1,4 @@
+import ScaledCanvas from "../components/ScaledCanvas";
 // package/src/app/layout.tsx
 import "./globals.css";
 import localFont from "next/font/local";

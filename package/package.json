@@ -51,7 +51,9 @@
     "next-sitemap": "^4.2.3",
     "postcss": "^8",
     "tailwindcss": "^4.1.2",
-    "typescript": "^5"
+    "ts-morph": "^27.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
   },
   "engines": {
     "node": ">=18.17.0"

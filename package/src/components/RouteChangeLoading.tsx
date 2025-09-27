@@ -1,3 +1,4 @@
+import ScaledCanvas from "./ScaledCanvas";
 "use client";
 import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -28,12 +29,12 @@ export default function RouteChangeLoading({
       tRef.current = null;
     }, minDuration);
 
-    return () => {
-      if (tRef.current) {
-        clearTimeout(tRef.current);
-        tRef.current = null;
-      }
-    };
+    return (<ScaledCanvas>() => {
+            if (tRef.current) {
+              clearTimeout(tRef.current);
+              tRef.current = null;
+            }
+          }</ScaledCanvas>);
     // รวม searchParams เพื่อให้จับ query string ด้วย
   }, [pathname, searchParams, showLoading, hideLoading, minDuration]);
 

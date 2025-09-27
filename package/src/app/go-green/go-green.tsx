@@ -1,6 +1,6 @@
 import ScaledCanvas from "../../components/ScaledCanvas";
 // src/components/GoGreenSection.tsx
-"use client";
+("use client");
 import Image from "next/image";
 import React from "react";
 import { motion, useReducedMotion, Variants } from "framer-motion";
@@ -106,7 +106,8 @@ export default function GoGreenSection({
     imagePosition === "left" ? "md:order-2" : "md:order-1"
   }`;
 
-  return <ScaledCanvas>(
+  return (
+    <ScaledCanvas>
       <section
         aria-label="Go Green – sustainability overview"
         className="
@@ -121,7 +122,11 @@ export default function GoGreenSection({
               variants={imageZoomIn}
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: false, amount: 0.18, margin: "-10% 0% -10% 0%" }}
+              viewport={{
+                once: false,
+                amount: 0.18,
+                margin: "-10% 0% -10% 0%",
+              }}
               className={`relative h-full min-h-[300px] sm:min-h-[420px] overflow-hidden will-change-transform ${imageColOrder}`}>
               <div className="absolute inset-0">
                 <Image
@@ -223,7 +228,8 @@ export default function GoGreenSection({
           </div>
         </div>
       </section>
-    )</ScaledCanvas>;
+    </ScaledCanvas>
+  );
 }
 
 // ===== Sample data (unchanged) =====

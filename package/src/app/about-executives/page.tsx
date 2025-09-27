@@ -1,3 +1,4 @@
+import ScaledCanvas from "../../components/ScaledCanvas";
 import type { Metadata } from "next";
 import BoardDirectory from "./BoardDirectory";
 
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <BoardDirectory />;
+  return <ScaledCanvas><BoardDirectory /></ScaledCanvas>;
 }

@@ -1,6 +1,4 @@
-// app/_components/Reveal.tsx
 "use client";
-
 import React, {
   useEffect,
   useRef,
@@ -71,7 +69,9 @@ export default function Reveal<T extends ElementType = "div">(
     );
 
     io.observe(el);
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+    };
   }, [once, threshold]);
 
   const mergedStyle: CSSProperties = {

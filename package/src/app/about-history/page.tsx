@@ -1,10 +1,11 @@
+import ScaledCanvas from "../../components/ScaledCanvas";
 // app/about/history/page.tsx
 import Image from "next/image";
 import { Metadata } from "next";
 import Reveal from "@/app/_components/Reveal";
 
 export const metadata: Metadata = {
-  title: "ประวัติองค์กร | TPP",
+  title: "ประวัติองค์กร",
   description: "หน้าแสดงประวัติองค์กรและพัฒนาการที่สำคัญในรูปแบบไทม์ไลน์",
 };
 
@@ -81,13 +82,17 @@ const historyOverlayText = ` ก่อตั้งขึ้นเมื่อว
 // ===== Page =====
 export default function HistoryPage() {
   return (
-    <main className="min-h-screen bg-white text-neutral-800">
-      <Video />
-      <TimelineSection
-        leftItems={milestonesLeft}
-        rightItems={milestonesRight}
-      />
-    </main>
+    <ScaledCanvas>
+      (
+      <main className="min-h-screen bg-white text-neutral-800">
+        <Video />
+        <TimelineSection
+          leftItems={milestonesLeft}
+          rightItems={milestonesRight}
+        />
+      </main>
+      )
+    </ScaledCanvas>
   );
 }
 

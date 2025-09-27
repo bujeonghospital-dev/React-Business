@@ -68,15 +68,28 @@ export default function NavProgress({
     return () => {
       document.removeEventListener("click", onClick, true);
       window.removeEventListener("popstate", onPopState);
+      if (killTimer.current) {
+        clearTimeout(killTimer.current);
+        killTimer.current = null;
+      }
     };
   }, [showLoading, hideLoading, killMs]);
 
   // ซ่อนหลัง URL เปลี่ยน (ถือเป็น "นำทางเสร็จ")
   useEffect(() => {
     if (minTimer.current) clearTimeout(minTimer.current);
-    minTimer.current = setTimeout(() => hideLoading(), minDuration);
+    minTimer.current = setTimeout(() => {
+      hideLoading();
+      if (killTimer.current) {
+        clearTimeout(killTimer.current);
+        killTimer.current = null;
+      }
+    }, minDuration);
     return () => {
-      if (minTimer.current) clearTimeout(minTimer.current);
+      if (minTimer.current) {
+        clearTimeout(minTimer.current);
+        minTimer.current = null;
+      }
     };
   }, [pathname, searchParams, hideLoading, minDuration]);
 

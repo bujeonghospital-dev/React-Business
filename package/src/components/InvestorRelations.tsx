@@ -1,4 +1,5 @@
 "use client";
+import ScaledCanvas from "./ScaledCanvas";
 import React, { useEffect, useRef } from "react";
 import "animate.css";
 
@@ -104,96 +105,94 @@ export default function InvestorRelations() {
       io.observe(el);
     });
 
-    return () => io.disconnect();
+    // cleanup: disconnect observer
+    return () => {
+      io.disconnect();
+    };
   }, []);
 
   // ——— ปรับให้ช้าและนุ่มขึ้น ———
   const motionVars = {
-    ["--animate-duration" as any]: "0.7s", // พื้นฐาน 0.7s; เมื่อใส่ "slow" จะ ~1.4s
+    ["--animate-duration" as any]: "0.7s",
     ["--animate-delay" as any]: "0s",
   } as React.CSSProperties;
 
-  const baseDelay = 150; // เดิม 40 → ช้าลง
-  const step = 120; // เดิม 60 → เว้นระยะการ์ดให้หายใจ
+  const baseDelay = 150;
+  const step = 120;
 
   return (
-    <section
-      ref={sectionRef}
-      data-iri
-      className="relative z-10 isolate bg-cover bg-center dark:bg-darkmode overflow-hidden py-10"
-      style={motionVars}>
-      <div className="mx-auto w-full max-w-[1400px] px-4">
-        <h2 className="tpp-section-title opacity-0" data-ani="fadeInUp slow">
-          นักลงทุนสัมพันธ์
-        </h2>
+    <ScaledCanvas>
+      <section
+        ref={sectionRef}
+        data-iri
+        className="relative z-10 isolate bg-cover bg-center dark:bg-darkmode overflow-hidden py-10"
+        style={motionVars}>
+        <div className="mx-auto w-full max-w-[1400px] px-4">
+          <h2 className="tpp-section-title opacity-0" data-ani="fadeInUp slow">
+            minimally
+          </h2>
 
-        <div className="mt-6 md:mt-8" />
+          <div className="mt-6 md:mt-8" />
 
-        <div className="grid justify-center gap-3 grid-cols-[repeat(auto-fit,minmax(320px,320px))]">
-          {data.map((item, i) => (
-            <div
-              key={i}
-              className="
-                group relative w-[320px] h-[420px]
-                shadow-lg rounded-[16px] overflow-hidden cursor-pointer
-                will-change-[transform,opacity] opacity-0
-                transition-transform duration-500
-              "
-              data-ani="fadeInUp slow"
-              style={{ animationDelay: `${baseDelay + i * step}ms` }}>
-              {/* animated background as CSS background (fills container reliably) */}
-              {item.animatedImg && (
-                <div
-                  className="absolute inset-0 bg-center bg-cover z-0"
-                  style={{ backgroundImage: `url(${item.animatedImg})` }}
-                  aria-hidden="true"
-                />
-              )}
-
-              {/* static image as overlay background (covers fully, fades on hover) */}
+          <div className="grid justify-center gap-3 grid-cols-[repeat(auto-fit,minmax(320px,320px))]">
+            {data.map((item, i) => (
               <div
-                className={`absolute inset-0 bg-center bg-cover z-10 transition-opacity duration-500 ${
-                  item.animatedImg ? "md:group-hover:opacity-0" : ""
-                }`}
-                style={{ backgroundImage: `url(${item.staticImg})` }}
-                role="img"
-                aria-label={item.title}
-              />
-
-              <div
-                className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent z-20 opacity-0"
-                data-ani="fadeIn slow"
-                style={{ animationDelay: `${baseDelay + i * step + 120}ms` }}
-              />
-
-              <p
-                className="absolute bottom-0 left-0 m-3 text-white text-2xl md:text-3xl font-extrabold drop-shadow-lg z-30 opacity-0"
+                key={i}
+                className="group relative w-[320px] h-[420px] shadow-lg rounded-[16px] overflow-hidden cursor-pointer will-change-[transform,opacity] opacity-0 transition-transform duration-500"
                 data-ani="fadeInUp slow"
-                style={{
-                  animationDelay: `${baseDelay + i * step + 80}ms`,
-                  textShadow: `
+                style={{ animationDelay: `${baseDelay + i * step}ms` }}>
+                {item.animatedImg && (
+                  <div
+                    className="absolute inset-0 bg-center bg-cover z-0"
+                    style={{ backgroundImage: `url(${item.animatedImg})` }}
+                    aria-hidden="true"
+                  />
+                )}
+
+                <div
+                  className={`absolute inset-0 bg-center bg-cover z-10 transition-opacity duration-500 ${
+                    item.animatedImg ? "md:group-hover:opacity-0" : ""
+                  }`}
+                  style={{ backgroundImage: `url(${item.staticImg})` }}
+                  role="img"
+                  aria-label={item.title}
+                />
+
+                <div
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent z-20 opacity-0"
+                  data-ani="fadeIn slow"
+                  style={{ animationDelay: `${baseDelay + i * step + 120}ms` }}
+                />
+
+                <p
+                  className="absolute bottom-0 left-0 m-3 text-white text-2xl md:text-3xl font-extrabold drop-shadow-lg z-30 opacity-0"
+                  data-ani="fadeInUp slow"
+                  style={{
+                    animationDelay: `${baseDelay + i * step + 80}ms`,
+                    textShadow: `
                     2px 2px 6px rgba(0,0,0,0.8),
                     0px 0px 12px #fff,
                     0px 4px 16px rgba(0,0,0,0.8)
                   `,
-                }}>
-                {item.title}
-              </p>
+                  }}>
+                  {item.title}
+                </p>
 
-              <div className="absolute inset-0 transition-transform duration-500 group-hover:-translate-y-0.5" />
-            </div>
-          ))}
-        </div>
+                <div className="absolute inset-0 transition-transform duration-500 group-hover:-translate-y-0.5" />
+              </div>
+            ))}
+          </div>
 
-        <div className="flex justify-center mt-6">
-          <button
-            className="ir-btn ir-btn-glow opacity-0"
-            data-ani="fadeInUp slow"
-            style={{ animationDelay: "240ms" }}>
-            ดูทั้งหมด
-          </button>
+          <div className="flex justify-center mt-6">
+            <button
+              className="ir-btn ir-btn-glow opacity-0"
+              data-ani="fadeInUp slow"
+              style={{ animationDelay: "240ms" }}>
+              ดูทั้งหมด
+            </button>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </ScaledCanvas>
   );
 }

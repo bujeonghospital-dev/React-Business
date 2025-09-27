@@ -1,3 +1,4 @@
+import ScaledCanvas from "../components/ScaledCanvas";
 import React, { useState } from "react";
 import Video from "@/components/Home/Video";
 import Aboutus from "@/components/Home/AboutUs";
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
 };
 
 export default function Home() {
-  return <ClientApp />;
+  return (<ScaledCanvas><ClientApp /></ScaledCanvas>);
 }
 
 // *ALL

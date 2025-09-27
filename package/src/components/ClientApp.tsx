@@ -1,4 +1,5 @@
 "use client";
+import ScaledCanvas from "./ScaledCanvas";
 import { useState } from "react";
 import Video from "@/components/Home/Video";
 import Aboutus from "@/components/Home/AboutUs";
@@ -11,26 +12,28 @@ export default function ClientApp() {
   const [isLoading, setIsLoading] = useState(true);
 
   return (
-    <main
-      className="
-        relative isolate
-        min-w-0 max-w-[100vw]
-        overflow-x-hidden">
-      <Video setIsLoading={setIsLoading} />
+    <ScaledCanvas>
+      <main
+        className="
+          relative isolate
+          min-w-0 max-w-[100vw]
+          overflow-x-hidden">
+        <Video setIsLoading={setIsLoading} />
 
-      <div className="h-[96px]" aria-hidden />
+        <div className="h-[96px]" aria-hidden />
 
-      <div className="flex flex-col gap-[1in] [&>*]:!my-0">
-        <Aboutus />
-        <GoGreenVideo />
-      </div>
-      <section className="min-w-0 max-w-[100vw] overflow-x-hidden pb-0">
-        <Dedicated />
-      </section>
-      <div className="-mt-8">
-        <InvestorRelations />
-      </div>
-      <Insta />
-    </main>
+        <div className="flex flex-col gap-[1in] [&>*]:!my-0">
+          <Aboutus />
+          <GoGreenVideo />
+        </div>
+        <section className="min-w-0 max-w-[100vw] overflow-x-hidden pb-0">
+          <Dedicated />
+        </section>
+        <div className="-mt-8">
+          <InvestorRelations />
+        </div>
+        <Insta />
+      </main>
+    </ScaledCanvas>
   );
 }

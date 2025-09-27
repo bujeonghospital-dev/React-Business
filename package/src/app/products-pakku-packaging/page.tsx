@@ -1,4 +1,5 @@
 "use client";
+import ScaledCanvas from "../../components/ScaledCanvas";
 
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -221,94 +222,44 @@ export default function PakkuCatalogPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-slate-900">
-      <section className="relative isolate w-screen left-1/2 -ml-[50vw]">
-        <div className="relative h-[min(72vh,750px)]">
-          {slides.map((s, i) => (
-            <img
-              key={s.id}
-              src={s.src}
-              alt={s.alt}
-              className={`absolute inset-0 block h-full w-full object-cover transition-opacity duration-700 ${
-                i === index ? "opacity-100" : "opacity-0"
-              }`}
-            />
-          ))}
-
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-white/70 px-2 py-1">
-            <div className="flex items-center gap-1.5">
-              {slides.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setIndex(i)}
-                  className={`h-1.5 rounded-full transition-all ${
-                    i === index ? "w-5 bg-emerald-600" : "w-2.5 bg-slate-300"
-                  }`}
-                  aria-label={`สไลด์ที่ ${i + 1}`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-[280px_1fr]">
-        <aside className="hidden md:block">
-          <div className="sticky top-[88px] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-              แถบหมวดสินค้า
-            </div>
-            <div className="space-y-3">
-              {sidebar.map((sec) => (
-                <SidebarSection
-                  key={sec.title}
-                  title={sec.title}
-                  icon={sec.icon}
-                  items={sec.items}
-                />
-              ))}
-            </div>
-          </div>
-        </aside>
-
-        <main>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((f) => (
-              <FeatureTile key={f.title} t={f} />
+    <ScaledCanvas>
+      <div className="min-h-screen bg-neutral-50 text-slate-900">
+        <section className="relative isolate w-screen left-1/2 -ml-[50vw]">
+          <div className="relative h-[min(72vh,750px)]">
+            {slides.map((s, i) => (
+              <img
+                key={s.id}
+                src={s.src}
+                alt={s.alt}
+                className={`absolute inset-0 block h-full w-full object-cover transition-opacity duration-700 ${
+                  i === index ? "opacity-100" : "opacity-0"
+                }`}
+              />
             ))}
-          </div>
 
-          <div className="mt-8 flex items-center justify-between gap-4">
-            <Breadcrumb />
-            <div className="hidden text-sm text-slate-500 md:block">
-              แสดง 9 รายการ
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-white/70 px-2 py-1">
+              <div className="flex items-center gap-1.5">
+                {slides.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setIndex(i)}
+                    className={`h-1.5 rounded-full transition-all ${
+                      i === index ? "w-5 bg-emerald-600" : "w-2.5 bg-slate-300"
+                    }`}
+                    aria-label={`สไลด์ที่ ${i + 1}`}
+                  />
+                ))}
+              </div>
             </div>
           </div>
+        </section>
 
-          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3">
-            {products.map((p) => (
-              <ProductCard key={p.id} p={p} />
-            ))}
-          </div>
-        </main>
-      </div>
-
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal>
-          <div
-            className="absolute inset-0 bg-black/30"
-            onClick={() => setSidebarOpen(false)}
-          />
-          <div className="absolute inset-y-0 left-0 w-[88%] max-w-[320px] overflow-y-auto rounded-r-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between px-4 py-3">
-              <SectionTitle>แถบหมวดสินค้า</SectionTitle>
-              <button
-                className="rounded-lg p-2 hover:bg-slate-100"
-                onClick={() => setSidebarOpen(false)}>
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="px-4 pb-6">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-[280px_1fr]">
+          <aside className="hidden md:block">
+            <div className="sticky top-[88px] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                แถบหมวดสินค้า
+              </div>
               <div className="space-y-3">
                 {sidebar.map((sec) => (
                   <SidebarSection
@@ -320,9 +271,64 @@ export default function PakkuCatalogPage() {
                 ))}
               </div>
             </div>
-          </div>
+          </aside>
+
+          <main>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {features.map((f) => (
+                <FeatureTile key={f.title} t={f} />
+              ))}
+            </div>
+
+            <div className="mt-8 flex items-center justify-between gap-4">
+              <Breadcrumb />
+              <div className="hidden text-sm text-slate-500 md:block">
+                แสดง 9 รายการ
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3">
+              {products.map((p) => (
+                <ProductCard key={p.id} p={p} />
+              ))}
+            </div>
+          </main>
         </div>
-      )}
-    </div>
+
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-50 md:hidden"
+            role="dialog"
+            aria-modal>
+            <div
+              className="absolute inset-0 bg-black/30"
+              onClick={() => setSidebarOpen(false)}
+            />
+            <div className="absolute inset-y-0 left-0 w-[88%] max-w-[320px] overflow-y-auto rounded-r-2xl bg-white shadow-xl">
+              <div className="flex items-center justify-between px-4 py-3">
+                <SectionTitle>แถบหมวดสินค้า</SectionTitle>
+                <button
+                  className="rounded-lg p-2 hover:bg-slate-100"
+                  onClick={() => setSidebarOpen(false)}>
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="px-4 pb-6">
+                <div className="space-y-3">
+                  {sidebar.map((sec) => (
+                    <SidebarSection
+                      key={sec.title}
+                      title={sec.title}
+                      icon={sec.icon}
+                      items={sec.items}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </ScaledCanvas>
   );
 }

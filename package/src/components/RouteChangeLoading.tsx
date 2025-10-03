@@ -11,6 +11,8 @@ export default function RouteChangeLoading({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const timer = useRef<number | null>(null);
+  // track previous route so we don't show on initial mount
+  const prevRoute = useRef<string | null>(null);
 
   const ensureOverlay = () => {
     let el = document.getElementById("route-change-overlay");
@@ -44,6 +46,19 @@ export default function RouteChangeLoading({
   };
 
   useEffect(() => {
+    const current = `${pathname ?? ""}?${searchParams?.toString() ?? ""}`;
+
+    // don't show on first render — only when the route actually changes
+    if (prevRoute.current === null) {
+      prevRoute.current = current;
+      return;
+    }
+
+    // if route didn't change (rare), do nothing
+    if (prevRoute.current === current) return;
+
+    prevRoute.current = current;
+
     show();
 
     const startedAt = Date.now();

@@ -476,9 +476,7 @@ export default function OmanAirStyleLayout() {
                     <br />
                     ทุนชำระแล้ว : 30 ล้านบาท (910,000 เหรียญสหรัฐ)
                     <br />
-                    ประธาน : นายศุภพงศ์ อัศวินวิจิตร
-                    <br />
-                    กรรมการผู้จัดการ : นางสาวรัชนีวรรณ ลิ่วเฉลิมวงศ์
+                    กรรมการผู้จัดการ : นายศุภพงศ์ อัศวินวิจิตร
                     <br />
                     สำนักงานขายและบริการทั่วไปของโอมานแอร์ในประเทศไทย
                     (ตัวแทนพิเศษของโอมานแอร์คาร์โก้ในประเทศไทย)
@@ -505,27 +503,51 @@ export default function OmanAirStyleLayout() {
                       isVisible["contact-card"] ? "aos-animate" : ""
                     }`}>
                     <p>
-                      www.omanair.com : Oman Air-Thai
+                      <a
+                        href="https://www.omanair.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 underline">
+                        www.omanair.com
+                      </a>
+                      : Oman Air-Thai
                       <br />
                       สอบถามข้อมูลเพิ่มเติมได้ที่โทร (662) 175-2201-8
                       <br />
                       <br />
-                      <strong>สำนักงาน</strong>
+                      <strong>สำนักงานใหญ่</strong>
                       <br />
-                      9/9 หมู่ 6 ถ.กิ่งแก้ว ต.ราชาเทวา อ.บางพลี
+                      <a
+                        href="https://www.google.com/maps/dir//%E0%B8%96.+%E0%B8%81%E0%B8%B4%E0%B9%88%E0%B8%87%E0%B9%81%E0%B8%81%E0%B9%89%E0%B8%A7+%E0%B8%95%E0%B8%B3%E0%B8%9A%E0%B8%A5%E0%B8%A3%E0%B8%B2%E0%B8%8A%E0%B8%B2%E0%B9%80%E0%B8%97%E0%B8%A7%E0%B8%B0+%E0%B8%AD%E0%B8%B3%E0%B9%80%E0%B8%A0%E0%B8%AD%E0%B8%9A%E0%B8%B2%E0%B8%87%E0%B8%9E%E0%B8%A5%E0%B8%B5+%E0%B8%AA%E0%B8%A1%E0%B8%B8%E0%B8%97%E0%B8%A3%E0%B8%9B%E0%B8%A3%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3+10540/@13.6860287,100.6454261,12z/data=!4m8!4m7!1m0!1m5!1m1!1s0x311d675c1cc48ae9:0x4342525942e8c947!2m2!1d100.7277953!2d13.6859591?entry=ttu&g_ep=EgoyMDI1MDkyNC4wIKXMDSoASAFQAw%3D%3D"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-neutral-900 no-underline"
+                        aria-label="Open head office location in Google Maps">
+                        9/9 หมู่ 6 ถ.กิ่งแก้ว ต.ราชาเทวา อ.บางพลี
+                        <br />
+                        จ.สมุทรปราการ 10540
+                      </a>
                       <br />
-                      จ.สมุทรปราการ 10540
-                      <br />
-                      <br />
-                      <strong>สำนักงานขนส่งสินค้า</strong>
+                      {/* <br /> */}
+                      {/* <strong>สำนักงานขนส่งสินค้า</strong>
                       <br />
                       36/152 RK BIZ Center ถนนด้านหน้าถนน
                       <br />
                       มอเตอร์เวย์-ร่มเกล้าแขวงคลองสาม เขตลาดกระบัง
                       <br />
                       กรุงเทพมหานคร ประเทศไทย
+                      <br /> */}
+                      โทร: +66 2 175 2201
                       <br />
-                      โทร: (662) 171-782
+                      <strong>อีเมล:</strong>{" "}
+                      <a
+                        href="https://mail.google.com/mail/?view=cm&fs=1&to=bkkcargo@omanair.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 underline"
+                        aria-label="Compose email to bkkcargo@omanair.com in Gmail">
+                        bkkcargo@omanair.com
+                      </a>
                     </p>
                   </div>
 

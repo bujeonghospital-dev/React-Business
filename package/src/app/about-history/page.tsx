@@ -274,30 +274,38 @@ function TimelineSection({
         </Reveal>
 
         {/* ========== มือถือ ========== */}
-        <div className="md:hidden relative pl-8">
+        <div className="md:hidden relative pl-12">
+          {/* vertical line */}
           <div
-            className="absolute top-0 bottom-0 w-px bg-green-300"
-            style={{ left: 18 }}
+            className="absolute top-0 bottom-0 w-[3px] bg-slate-200"
+            style={{ left: 28 }}
+            aria-hidden
           />
           <ol className="space-y-6">
             {yearsAsc.flatMap((yr) =>
               (grouped[yr] || []).map((ev, idx) => (
-                <li key={`${yr}-${idx}`} className="relative">
+                <li
+                  key={`${yr}-${idx}`}
+                  className="relative flex items-start pt-2 pb-4">
                   {/* จุด + เส้นเชื่อม */}
-                  <Reveal as="span" y={6} delay={idx * 60} className="block">
+                  <Reveal
+                    as="span"
+                    y={6}
+                    delay={idx * 60}
+                    className="block flex-shrink-0">
                     <span
                       aria-hidden
-                      className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-green-600 ring-4 ring-white shadow"
-                      style={{ left: 18 }}
+                      className="absolute -translate-x-1/2 w-4 h-4 rounded-full bg-red-600 ring-4 ring-white shadow-lg pointer-events-none"
+                      style={{ left: 24, top: 18, zIndex: 40 }}
                     />
                     <span
                       aria-hidden
-                      className="absolute top-1/2 -translate-y-1/2 h-px bg-green-400"
-                      style={{ left: 26, width: 24 }}
+                      className="absolute h-px bg-slate-200 pointer-events-none"
+                      style={{ left: 34, top: 20, width: 28, zIndex: 30 }}
                     />
                   </Reveal>
 
-                  <div className="pl-6">
+                  <div className="ml-8 w-full max-w-[calc(100%-72px)] relative z-10">
                     <Reveal y={14} delay={idx * 60}>
                       <TimelineCard {...ev} align="left" />
                     </Reveal>
@@ -315,7 +323,7 @@ function TimelineSection({
           {/* เส้นกลาง: เอาไว้นอก Reveal เพื่อให้คมชัด/ไม่เบลอ */}
           <div
             aria-hidden
-            className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 h-full w-px bg-red-300 z-0"
+            className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 h-full w-[3px] bg-slate-200 z-0"
           />
 
           {placements.map(
@@ -331,7 +339,7 @@ function TimelineSection({
                   <span
                     aria-hidden
                     className="block -translate-y-1/2 rounded-full bg-red-600 ring-4 ring-white shadow"
-                    style={{ width: 22, height: 22 }}
+                    style={{ width: 24, height: 24 }}
                   />
                 </Reveal>
 
@@ -342,10 +350,10 @@ function TimelineSection({
                     as="div"
                     y={18}
                     delay={pIndex * 70 + i * 70}
-                    className="absolute right-[calc(50%+28px)] w-[44%] z-20"
-                    style={{ top: leftTops[i] }}>
+                    className="absolute right-[calc(50%+28px)] z-20"
+                    style={{ top: leftTops[i], width: "44%", maxWidth: 420 }}>
                     <div className="relative -translate-y-1/2">
-                      <div className="absolute right-[-28px] top-1/2 -translate-y-1/2 w-7 h-px bg-red-400" />
+                      <div className="absolute right-[-28px] top-1/2 -translate-y-1/2 w-8 h-px bg-slate-300" />
                       <TimelineCard {...ev} align="left" />
                     </div>
                   </Reveal>
@@ -358,10 +366,10 @@ function TimelineSection({
                     as="div"
                     y={18}
                     delay={pIndex * 70 + i * 70}
-                    className="absolute left-[calc(50%+28px)] w-[44%] z-20"
-                    style={{ top: rightTops[i] }}>
+                    className="absolute left-[calc(50%+28px)] z-20"
+                    style={{ top: rightTops[i], width: "44%", maxWidth: 420 }}>
                     <div className="relative -translate-y-1/2">
-                      <div className="absolute left-[-28px] top-1/2 -translate-y-1/2 w-7 h-px bg-red-400" />
+                      <div className="absolute left-[-28px] top-1/2 -translate-y-1/2 w-8 h-px bg-slate-300" />
                       <TimelineCard {...ev} align="right" />
                     </div>
                   </Reveal>
@@ -387,9 +395,13 @@ function TimelineCard({
 
   return (
     <article
-      className={`rounded-2xl bg-white border border-neutral-200 p-5 md:p-6 shadow-sm min-h-[120px] ${
+      className={`rounded-2xl bg-white border border-neutral-200 p-4 md:p-6 shadow-sm md:shadow-none min-h-[120px] ${
         align === "left" ? "md:text-right" : ""
-      }`}>
+      } mobile-timeline-card`}
+      style={{
+        // ensure mobile cards stretch and have consistent spacing
+        boxSizing: "border-box",
+      }}>
       <div className="text-[24px] font-semibold tracking-wider custom-red">
         {year}
       </div>

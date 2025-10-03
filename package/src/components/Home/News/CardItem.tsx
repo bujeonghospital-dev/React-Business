@@ -1,7 +1,6 @@
 "use client";
 import React from "react";
 import Image from "next/image";
-import { motion } from "framer-motion";
 
 interface CardItemProps {
   image: string;
@@ -20,64 +19,55 @@ const CardItem: React.FC<CardItemProps> = ({
   hovered,
   direction = "right",
 }) => {
+  const cardClasses = `
+    news-card bg-white rounded-xl p-4 md:p-5 flex flex-col shadow-lg 
+    ${active ? "active" : ""}
+    ${
+      hovered
+        ? "border-2 border-red-300 shadow-red-50"
+        : "border border-gray-200 hover:border-gray-300"
+    }
+  `.trim();
+
   return (
-    <motion.div
-      layout // ให้ reposition ลื่น
-      initial={{ opacity: 0, x: direction === "right" ? 24 : -24, scale: 0.98 }}
-      animate={{ opacity: 1, x: 0, scale: active ? 1.02 : 1 }}
-      transition={{
-        type: "spring",
-        stiffness: 280,
-        damping: 22,
-        mass: 0.8,
-      }}
-      whileHover={{ y: -6, scale: active ? 1.03 : 1.02 }}
-      className={`bg-white rounded-lg p-3 flex flex-col shadow group transition
-        ${
-          active
-            ? "border-4 border-red-500"
-            : hovered
-            ? "border-4 border-red-300"
-            : "border border-gray-200"
-        }`}
+    <div
+      className={cardClasses}
       style={{
-        minHeight: 420,
-        maxWidth: 360,
+        minHeight: "clamp(400px, 45vh, 460px)",
+        maxWidth: 380,
         width: "100%",
-        boxShadow: active
-          ? "0 0 0 3px #e03e3e55"
-          : hovered
-          ? "0 0 0 2px #e03e3e22"
-          : undefined,
       }}>
       {/* Image */}
-      <motion.div
-        className="w-full mb-2 rounded-lg overflow-hidden bg-blue-100"
-        whileHover={{ scale: 1.03 }}
-        transition={{ type: "spring", stiffness: 220, damping: 18 }}>
+      <div
+        className="w-full mb-3 md:mb-4 rounded-xl overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100 relative transition-transform duration-300 hover:scale-[1.02]"
+        style={{ aspectRatio: "4/3" }}>
         <Image
           src={image}
           alt={title}
-          width={400}
-          height={300}
-          className="object-contain w-full h-auto"
+          fill
+          sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 25vw"
+          className="object-cover transition-transform duration-300 hover:scale-105"
         />
-      </motion.div>
+      </div>
 
       {/* Date & Title */}
-      <span className="text-xs text-gray-500 mb-1">{date}</span>
-      <span className="font-bold text-base mb-3 line-clamp-3">{title}</span>
+      <span className="text-xs md:text-sm text-gray-500 mb-2 font-medium">
+        {date}
+      </span>
+      <div className="font-bold text-base leading-snug text-gray-900 group-hover:text-gray-800 mb-4 line-clamp-3">
+        {title}
+      </div>
 
       {/* Arrow Button */}
       <div className="flex-grow" />
-      <motion.button
-        className="self-end mt-2 bg-yellow-400 hover:bg-yellow-500 rounded-full px-3 py-1 text-sm"
-        whileHover={{ x: 4 }}
-        whileTap={{ scale: 0.95 }}
-        transition={{ type: "spring", stiffness: 300, damping: 20 }}>
-        <i className="bi bi-arrow-right text-xl" />
-      </motion.button>
-    </motion.div>
+      <button
+        className="self-end mt-3 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 
+                   rounded-full px-4 py-2 md:px-5 md:py-2.5 text-base font-medium text-gray-800 
+                   shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center
+                   min-w-[44px] min-h-[44px] hover:translate-x-1 active:scale-95">
+        <i className="bi bi-arrow-right text-base" />
+      </button>
+    </div>
   );
 };
 

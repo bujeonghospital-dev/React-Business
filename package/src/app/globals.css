@@ -73,6 +73,7 @@
 html {
   scroll-behavior: smooth;
   overflow-x: hidden;
+  overflow-y: auto;
 }
 
 section {
@@ -129,12 +130,13 @@ body {
 
 /* ---------------------------------------------------------------------------------------------------------------- */
 html,
-body,
-#__next {
-  height: 100%;
-  min-height: 100vh;
+body {
   margin: 0;
   padding: 0;
+  min-height: 100vh;
+}
+#__next {
+  min-height: 100vh;
 }
 .min-vh-100 {
   min-height: 100vh !important;
@@ -155,40 +157,26 @@ body,
   grid-template-rows: auto 1fr auto;
 }
 /* ---------------------------------------------------------------------------------------------------------------- */
-/* ซ่อน Dev Toolbar ของ Next.js */
-#__nextDevOverlay {
-  display: none !important;
-}
+/* ซ่อน Dev Toolbar ของ Next.js เพื่อไม่ให้รบกวนการ screenshot */
+#__nextDevOverlay,
 [data-next-dev-toolbar] {
-  position: fixed !important;
-  bottom: 100px !important; /* ปรับตัวเลขได้ เช่น 80px หรือ 120px */
+  display: none !important;
+  visibility: hidden !important;
 }
 /*  */
 /* ---------------------------------------------------------------------------------------------------------------- */
-/* :root {
-  --brand--100-quarterly-1: #22c55e; 
-  --brand--100-secondary-2: #10b981;
-} */
 /* ===== Header Elevation Tokens (Light/Dark) ===== */
 :root {
-  /* เส้นขอบบาง ๆ เหมือน hairline + เงาเบาๆ */
   --elev-0: 0 0 0 1px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.04);
-
-  /* เงาตอนเริ่มขยับ เห็นความลึกมากขึ้น */
   --elev-1: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 8px 20px -12px rgba(0, 0, 0, 0.18);
-
-  /* เงาตอนสกรอลล์ลงชัดเจนแต่ยังนุ่ม */
   --elev-2: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 18px 48px -22px rgba(0, 0, 0, 0.28);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* ใน dark mode ลดเงาดำ เพิ่ม hairline สว่างเล็กน้อยให้ลอย */
     --elev-0: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 1px 2px rgba(0, 0, 0, 0.2);
-    --elev-1: 0 0 0 1px rgba(255, 255, 255, 0.1),
-      0 12px 28px -18px rgba(0, 0, 0, 0.45);
-    --elev-2: 0 0 0 1px rgba(255, 255, 255, 0.1),
-      0 22px 56px -24px rgba(0, 0, 0, 0.55);
+    --elev-1: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 12px 28px -18px rgba(0, 0, 0, 0.45);
+    --elev-2: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 22px 56px -24px rgba(0, 0, 0, 0.55);
   }
 }
 

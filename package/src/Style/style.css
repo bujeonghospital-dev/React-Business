@@ -55,9 +55,6 @@ a {
 /* ให้ section เป็น context ของ pseudo-element */
 .about-bg-image {
   position: relative;
-  /* ปรับเริ่มต้น (ปรับได้ตามใจ) */
-  --kb-scale-start: 1.06; /* ซูมเข้าก่อนค่อยคลาย */
-  --kb-translate-y: 12px; /* ขยับขึ้นเล็กน้อย */
 }
 
 /* สร้างเลเยอร์พื้นหลังสำหรับเล่นแอนิเมชัน */
@@ -416,7 +413,28 @@ nav > .dropdown > span.btn:active {
 
 :root {
   --bs-danger-rgb: 200, 16, 46;
-} /* ให้ตรง #C8102E */
+  --drawer-w: 330px;
+  --title-accent: #ef4444;
+  --title-size-min: 22px;
+  --title-size-pref: 3.2vw;
+  --title-size-max: 34px;
+  --title-deco-thickness: 8px;
+  --title-deco-offset: 8px;
+  --endeavor-y: -12px;
+  --container-max: 1440px;
+  --gutter: clamp(12px, 2vw, 48px);
+  --fz-base: clamp(14px, 1.2vw, 16px);
+  --space-md: clamp(16px, 1.6vw, 32px);
+  --space-lg: 32px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --kb-scale-start: 1.06;
+  --kb-translate-y: 12px;
+  --header-h: 0px;
+  --brand--100-quarterly-1: #dc2626;
+  --brand--100-secondary-2: #ef4444;
+}
+
 .bg-danger {
   background-color: rgb(var(--bs-danger-rgb)) !important;
 }
@@ -569,10 +587,10 @@ nav > .dropdown > span.btn:active {
 /* -------------------------------------GPT 5---------------------------------------------------- */
 /* ==== Breakpoint Controller: 1600px ==== */
 
-/* ให้เอกสารสูงเต็ม เพื่อ fallback กรณีบางเบราว์เซอร์ */
+/* ให้เอกสารมีความสูงขั้นต่ำเต็มหน้าจอ */
 html,
 body {
-  height: 100%;
+  min-height: 100vh;
 }
 
 /* ==== Drawer overlay ==== */
@@ -739,10 +757,6 @@ body {
   }
 }
 
-:root {
-  --drawer-w: 330px;
-}
-
 .drawer-header {
   width: var(--drawer-w) !important;
 }
@@ -806,15 +820,15 @@ body {
 
 /* พื้นหลังเต็มหน้าสำหรับ Home */
 .home-bg {
-  position: fixed;
-  inset: 0; /* top:0; right:0; bottom:0; left:0 */
-  z-index: -1; /* อยู่หลังทุกอย่าง */
-  pointer-events: none; /* ไม่บังการคลิก */
+  position: absolute;
+  inset: 0;
+  min-height: 100vh;
+  z-index: -1;
+  pointer-events: none;
   background-image: url("/images/Home/New_BG.gif");
   background-size: cover;
   background-position: center;
-  /* ถ้าต้องการเอฟเฟกต์แนบพื้นหลังแบบ dedicated */
-  background-attachment: fixed; /* ถ้า iOS กระตุก ลองลบบรรทัดนี้ */
+  background-attachment: scroll;
 }
 
 /* ใส่ทับสี/ไล่เฉดเหมือนหน้า Dedicated (ไม่ต้องก็ได้) */
@@ -896,15 +910,6 @@ body {
 
 /* ------------------------------------------------------------------------------------------------------------------------------------------ */
 /* --- Section Title (เฉพาะหัวข้อแบบนี้) --- */
-:root {
-  --title-accent: #ef4444; /* สีเส้นใต้ */
-  --title-size-min: 22px; /* มือถือเล็ก */
-  --title-size-pref: 3.2vw; /* ค่ากลางแบบ fluid */
-  --title-size-max: 34px; /* เดสก์ท็อป */
-  --title-deco-thickness: 8px; /* ความหนาเส้นใต้ */
-  --title-deco-offset: 8px; /* ระยะห่างจากตัวหนังสือ */
-}
-
 .tpp-section-title {
   margin: 0 0 2rem 0;
   text-align: center;
@@ -1055,7 +1060,7 @@ body {
 }
 
 /* B) ขีดเส้นใต้กวาดจากซ้าย (accent ใต้หัวข้อ) */
-.fx-underline {
+/* .fx-underline {
   height: 3px;
   background: linear-gradient(
     90deg,
@@ -1073,7 +1078,7 @@ body {
 }
 .fx-underline-in {
   animation: underlineIn 0.5s ease 0.15s both;
-}
+} */
 
 /* C) ฟุ้งเข้ามาอย่างสุภาพ (ใช้กับย่อหน้า/รูป) */
 @keyframes subtleInUp {
@@ -1153,9 +1158,6 @@ body {
   background-repeat: no-repeat;
 }
 
-:root {
-  --endeavor-y: -12px;
-}
 .about-endeavor-bg {
   background-image: url("/images/aboutus/Endeavor_1.png");
   background-size: cover;
@@ -1207,25 +1209,7 @@ body {
 }
 /* --------------------------------------------------------------------------------------------------------------------------- */
 
-/* เพิ่มตัวแปรและคอนเทนเนอร์ที่เป็นกลางสำหรับทุกหน้า */
-:root {
-  /* ขนาด breakpoints */
-  --bp-sm: 600px;
-  --bp-md: 768px;
-  --bp-lg: 1024px;
-  --bp-xl: 1280px;
-
-  /* spacing / typography */
-  --space-sm: 12px;
-  --space-md: 20px;
-  --space-lg: 32px;
-
-  --container-max: 1200px;
-  --gutter: clamp(12px, 2vw, 48px);
-
-  --fs-base: clamp(14px, 1.6vw, 18px);
-  --fs-lg: clamp(18px, 2.4vw, 28px);
-}
+/* Centered responsive container and typography */
 
 /* Centered responsive container */
 .container {
@@ -1481,17 +1465,6 @@ img {
 }
 
 /* === Fluid system (default, responsive) === */
-:root {
-  /* fluid typography & spacing tuned toward 1920 baseline */
-  --container-max: 1440px; /* เปลี่ยนเป็น 1536/1920 ถ้าต้องการเต็มจอ */
-  --gutter: clamp(12px, 2vw, 48px);
-
-  --fz-base: clamp(14px, 1.2vw, 16px);
-  --fz-lg: clamp(18px, 2.2vw, 28px);
-  --space-sm: clamp(8px, 1vw, 16px);
-  --space-md: clamp(16px, 1.6vw, 32px);
-}
-
 /* center container used across layout */
 .container {
   width: min(100%, var(--container-max));
@@ -1788,7 +1761,7 @@ img {
   left: 50%;
   width: 0;
   height: 4px;
-  background: linear-gradient(90deg, #dc2626, #ef4444);
+  /* background: linear-gradient(90deg, #dc2626, #ef4444); */
   transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   transform: translateX(-50%);
 }

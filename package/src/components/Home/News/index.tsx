@@ -194,26 +194,25 @@ const TabPage = () => {
       <div
         className="
             relative flex items-center justify-center min-h-[420px] sm:min-h-[440px] lg:min-h-[460px]
-            overflow-visible px-4 sm:px-8 md:px-12 lg:px-16
+            overflow-visible px-2 sm:px-4 lg:px-16
             [--arrow-shift:0]            
-            sm:[--arrow-shift:320%]     
-            md:[--arrow-shift:280%]
             lg:[--arrow-shift:240%]
           "
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
         onTouchStart={() => setPaused(true)}
         onTouchEnd={() => setPaused(false)}>
-        {/* Left Arrow */}
+        {/* Left Arrow - Desktop Only */}
         <button
           className="
               absolute left-0 top-1/2 -translate-y-1/2
               -translate-x-[var(--arrow-shift)]
               z-20 nav-button
+              hidden lg:flex
               bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700
               text-white
               w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16
-              flex items-center justify-center
+              items-center justify-center
               rounded-full shadow-xl
               border-2 border-white/20
               disabled:opacity-30 disabled:cursor-not-allowed
@@ -274,16 +273,17 @@ const TabPage = () => {
             })}
         </div>
 
-        {/* Right Arrow */}
+        {/* Right Arrow - Desktop Only */}
         <button
           className="
               absolute right-0 top-1/2 -translate-y-1/2
               translate-x-[var(--arrow-shift)]
               z-20 nav-button
+              hidden lg:flex
               bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700
               text-white
               w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16
-              flex items-center justify-center
+              items-center justify-center
               rounded-full shadow-xl
               border-2 border-white/20
               disabled:opacity-30 disabled:cursor-not-allowed

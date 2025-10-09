@@ -131,7 +131,7 @@ export default function Dedicated() {
       <section
         ref={sectionRef}
         data-ded
-        className="relative bg-cover bg-center dark:bg-darkmode overflow-hidden py-10"
+        className="relative bg-cover bg-center dark:bg-darkmode overflow-hidden py-10 "
         style={motionVars}>
         <div className="awe-parallax awe-static" />
         <div className="overlay-color-1" />

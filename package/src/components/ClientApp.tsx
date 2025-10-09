@@ -20,13 +20,13 @@ export default function ClientApp() {
           overflow-x-hidden">
         <Video setIsLoading={setIsLoading} />
 
-        <div className="h-[96px]" aria-hidden />
+        <div className="h-[16px]" aria-hidden />
 
-        <div className="flex flex-col gap-[1in] [&>*]:!my-0">
+        <div className="flex flex-col gap-[16px] [&>*]:!my-0">
           <Aboutus />
           <GoGreenVideo />
         </div>
-        <section className="min-w-0 max-w-[100vw] overflow-x-hidden pb-0">
+        <section className="">
           <Dedicated />
         </section>
         <div className="-mt-8">

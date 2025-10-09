@@ -37,7 +37,8 @@ export default function AboutPhilosophy() {
     },
   ];
 
-  return <ScaledCanvas>(
+  return (
+    <ScaledCanvas>
       <>
         <section className="relative w-full overflow-hidden min-h-[55svh] md:min-h-[60svh] lg:min-h-[70svh]">
           <Image
@@ -66,6 +67,7 @@ export default function AboutPhilosophy() {
             </p>
           </div>
         </section>
+        <br className="flex flex-col gap-[16px]  [&>*]:!my-0"></br>
 
         {/* ส่วนล่าง */}
         <section className="relative isolate w-full overflow-hidden">
@@ -146,5 +148,6 @@ export default function AboutPhilosophy() {
           <QueryPart />
         </Suspense>
       </>
-    )</ScaledCanvas>;
+    </ScaledCanvas>
+  );
 }

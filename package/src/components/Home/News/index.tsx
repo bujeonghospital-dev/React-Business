@@ -166,7 +166,7 @@ const TabPage = () => {
       {/* Tabs */}
       <div className="flex justify-center gap-4 mb-6 mt-2">
         <button
-          className={`px-6 py-2 font-bold text-base tab-button ${
+          className={`px-6 py-2 font-bold text-base tab-button-new ${
             activeTab === "news" ? "active text-red-600" : "text-gray-500"
           }`}
           onClick={() => {
@@ -178,7 +178,7 @@ const TabPage = () => {
           ข่าวสารและกิจกรรม
         </button>
         <button
-          className={`px-6 py-2 font-bold text-base tab-button ${
+          className={`px-6 py-2 font-bold text-base tab-button-new ${
             activeTab === "article" ? "active text-red-600" : "text-gray-500"
           }`}
           onClick={() => {

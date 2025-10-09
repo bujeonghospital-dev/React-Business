@@ -23,7 +23,7 @@ const Footer = () => {
               <br />
               จังหวัดสมุทรปราการ 10540
             </p>
-            <h5 className="text-white fw-bold">ติดตามเรา</h5>
+            <h6 className="text-white fw-bold">ติดตามเรา</h6>
             <div className="d-flex gap-3 ">
               <Link href="#">
                 <Icon icon="ic:baseline-facebook" fontSize={24} color="white" />
@@ -39,7 +39,7 @@ const Footer = () => {
 
           {/* ติดต่อสอบถาม/เวลาทำการ */}
           <div className="col-md-3 col-sm-6">
-            <h5 className="text-white fw-bold">ติดต่อสอบถาม</h5>
+            <h6 className="text-white fw-bold">ติดต่อสอบถาม</h6>
             <p>
               02-175-2201-8
               <br />
@@ -55,7 +55,7 @@ const Footer = () => {
 
           {/* เกี่ยวกับเรา */}
           <div className="col-md-3 col-sm-6">
-            <h5 className="text-white fw-bold">เกี่ยวกับเรา</h5>
+            <h6 className="text-white fw-bold">เกี่ยวกับเรา</h6>
             <ul className="list-unstyled">
               <li>
                 <Link href="#" className="text-white text-decoration-none">
@@ -82,7 +82,7 @@ const Footer = () => {
 
           {/* สินค้าและบริการ */}
           <div className="col-md-3 col-sm-6">
-            <h5 className="text-white fw-bold">สินค้าและบริการ</h5>
+            <h6 className="text-white fw-bold">สินค้าและบริการ</h6>
             <ul className="list-unstyled">
               <li>
                 <Link href="#" className="text-white text-decoration-none">

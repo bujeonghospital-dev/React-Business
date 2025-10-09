@@ -7,7 +7,6 @@ export default function LoadingOverlay() {
   const { loading: isLoading } = useLoading();
   return (
     <ScaledCanvas>
-      (
       <div
         className={`fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 transition-opacity ${
           isLoading
@@ -19,7 +18,6 @@ export default function LoadingOverlay() {
           <span className="text-sm font-medium text-gray-700">Loading…</span>
         </div>
       </div>
-      )
     </ScaledCanvas>
   );
 }

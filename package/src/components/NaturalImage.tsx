@@ -1,7 +1,7 @@
-import ScaledCanvas from "./ScaledCanvas";
-("use client");
-import React from "react";
+"use client";
 
+import ScaledCanvas from "./ScaledCanvas";
+import React from "react";
 import Image from "next/image";
 import clsx from "clsx";
 

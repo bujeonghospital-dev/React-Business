@@ -74,7 +74,8 @@ const MachineryShowcase = () => {
           style={{
             backgroundImage: `radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
                            radial-gradient(circle at 80% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%)`,
-          }}></div>
+          }}
+        ></div>
       </div>
 
       {/* Floating Dots Animation */}
@@ -108,7 +109,8 @@ const MachineryShowcase = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: prefersReducedMotion ? 0 : 0.6 }}
-              className="text-2xl font-extrabold tracking-tight text-neutral-900 sm:text-3xl md:text-4xl inline-block border-b-4 border-red-600 ">
+              className="text-2xl font-extrabold tracking-tight text-neutral-900 sm:text-3xl md:text-4xl inline-block border-b-4 border-red-600 "
+            >
               {"ศักยภาพเครื่องจักรของเรา"}
             </motion.h2>
             <motion.p
@@ -123,7 +125,8 @@ const MachineryShowcase = () => {
                 duration: prefersReducedMotion ? 0 : 0.6,
                 delay: prefersReducedMotion ? 0 : 0.05,
               }}
-              className="mt-2 text-sm leading-relaxed text-neutral-600 sm:text-base">
+              className="mt-2 text-sm leading-relaxed text-neutral-600 sm:text-base"
+            >
               {
                 "ครบทุกกระบวนการ ตั้งแต่ก่อนพิมพ์ พิมพ์ ไปจนถึงหลังพิมพ์เพื่อคุณภาพและความรวดเร็วที่ไว้วางใจ"
               }
@@ -139,7 +142,8 @@ const MachineryShowcase = () => {
                   style={{
                     animationDelay: `${index * 100}ms`,
                     animationFillMode: "both",
-                  }}>
+                  }}
+                >
                   <div className="relative bg-white/80 backdrop-blur-sm px-4 py-3 lg:px-6 lg:py-4 rounded-l-full shadow-md hover:shadow-lg transform hover:-translate-x-2 transition-all duration-300 border-r-4 border-transparent hover:border-red-400">
                     <div className="flex items-center justify-between">
                       <div className="text-[16px] text-gray-700 font-medium group-hover:text-red-600 transition-colors">
@@ -166,21 +170,42 @@ const MachineryShowcase = () => {
                 {/* Main Circle Container */}
                 <div className="relative w-[28.8rem] h-[28.8rem] lg:w-[36rem] lg:h-[36rem]">
                   {/* Main Circular Image */}
-                  <img
+                  <motion.img
                     src="/images/technology/machinery-circle.png"
                     alt="Machinery Showcase"
-                    className="absolute inset-0 w-full h-full object-contain animate-scale-in"
+                    className="absolute inset-0 w-full h-full object-contain"
+                    initial={
+                      prefersReducedMotion
+                        ? { opacity: 1, scale: 1 }
+                        : { opacity: 0, scale: 0.8 }
+                    }
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: prefersReducedMotion ? 0 : 0.8 }}
                   />
 
                   {/* Center Logo */}
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-24 h-24 lg:w-28 lg:h-28 bg-white rounded-2xl shadow-xl flex items-center justify-center transform hover:scale-110 transition-transform duration-300">
+                    <motion.div
+                      className="w-24 h-24 lg:w-28 lg:h-28 bg-white rounded-2xl shadow-xl flex items-center justify-center hover:scale-110 transition-transform duration-300"
+                      initial={
+                        prefersReducedMotion
+                          ? { opacity: 1, scale: 1 }
+                          : { opacity: 0, scale: 0.5 }
+                      }
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      viewport={{ once: true }}
+                      transition={{
+                        duration: prefersReducedMotion ? 0 : 0.5,
+                        delay: prefersReducedMotion ? 0 : 0.3,
+                      }}
+                    >
                       <img
                         className="bg-fallback"
                         src="/images/logo/logo.png"
                         alt=""
                       />
-                    </div>
+                    </motion.div>
                   </div>
                 </div>
               </div>
@@ -195,7 +220,8 @@ const MachineryShowcase = () => {
                   style={{
                     animationDelay: `${index * 100}ms`,
                     animationFillMode: "both",
-                  }}>
+                  }}
+                >
                   <div className="relative bg-white/80 backdrop-blur-sm px-4 py-3 lg:px-6 lg:py-4 rounded-r-full shadow-md hover:shadow-lg transform hover:translate-x-2 transition-all duration-300 border-l-4 border-transparent hover:border-red-400">
                     <div className="flex items-center justify-between">
                       <div className="w-2 h-2 bg-gray-300 rounded-full group-hover:bg-red-400 transition-colors"></div>

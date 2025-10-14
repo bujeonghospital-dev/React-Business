@@ -79,6 +79,7 @@ export default function RouteChangeLoading({
         timer.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, searchParams?.toString(), minDuration]);
 
   return null;

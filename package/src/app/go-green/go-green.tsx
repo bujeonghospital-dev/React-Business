@@ -1,6 +1,7 @@
+"use client";
+
 import ScaledCanvas from "../../components/ScaledCanvas";
 // src/components/GoGreenSection.tsx
-("use client");
 import Image from "next/image";
 import React from "react";
 import { motion, useReducedMotion, Variants } from "framer-motion";

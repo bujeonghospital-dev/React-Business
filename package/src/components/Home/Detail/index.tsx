@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef } from "react";
 import ScaledCanvas from "../../ScaledCanvas";
+// @ts-ignore
 import "animate.css";
 
 // ====== Data ======
@@ -86,19 +87,35 @@ export default function Dedicated() {
       return;
     }
 
+    // ตรวจสอบว่าเป็นมือถือหรือไม่
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           const el = entry.target as HTMLElement;
           const classes = normalizeAni(el.dataset.ani || "");
+          const hasPlayed = el.dataset.aniPlayed === "true";
+
           if (entry.isIntersecting) {
+            // ถ้าเป็นมือถือและเล่นไปแล้ว ไม่เล่นอีก
+            if (isMobile && hasPlayed) return;
+
             el.classList.remove(...classes);
             void el.offsetWidth; // restart
             el.classList.add(...classes);
             el.classList.remove("opacity-0");
+
+            // ทำเครื่องหมายว่าเล่นแล้ว (สำหรับมือถือ)
+            if (isMobile) {
+              el.dataset.aniPlayed = "true";
+            }
           } else {
-            el.classList.remove(...classes);
-            el.classList.add("opacity-0");
+            // ถ้าเป็นเดสก์ท็อป ให้ซ่อนเมื่อออกจาก viewport
+            if (!isMobile) {
+              el.classList.remove(...classes);
+              el.classList.add("opacity-0");
+            }
           }
         });
       },
@@ -132,7 +149,8 @@ export default function Dedicated() {
         ref={sectionRef}
         data-ded
         className="relative bg-cover bg-center dark:bg-darkmode overflow-hidden py-10 "
-        style={motionVars}>
+        style={motionVars}
+      >
         <div className="awe-parallax awe-static" />
         <div className="overlay-color-1" />
 
@@ -150,7 +168,8 @@ export default function Dedicated() {
               grid justify-center
               gap-2 md:gap-3
               grid-cols-[repeat(auto-fit,minmax(320px,320px))]
-            ">
+            "
+          >
             {cards.map((item, i) => (
               <div
                 key={i}
@@ -161,7 +180,8 @@ export default function Dedicated() {
                   transition-transform duration-500 ease-[cubic-bezier(.22,.61,.36,1)]
                 "
                 data-ani="fadeInUp slow"
-                style={{ animationDelay: `${baseDelay + i * step}ms` }}>
+                style={{ animationDelay: `${baseDelay + i * step}ms` }}
+              >
                 {/* animated background as CSS background (fills container reliably) */}
                 {item.animatedImg && (
                   <div
@@ -203,7 +223,8 @@ export default function Dedicated() {
                     0px 0px 12px #fff,
                     0px 4px 16px rgba(0,0,0,0.8)
                   `,
-                  }}>
+                  }}
+                >
                   {item.title}
                 </p>
 

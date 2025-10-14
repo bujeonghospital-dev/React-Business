@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import { useEffect, useRef } from "react";
-// ถ้าอยากใช้ animate.css ร่วมด้วยก็ import ได้: import "animate.css";
+// @ts-ignore
 import "animate.css";
 
 const Aboutus = () => {
@@ -38,7 +38,7 @@ const Aboutus = () => {
           out.push(`animate__${t}`);
           usesAnimate = true;
         } else {
-          out.push(t); // ปล่อยอื่น ๆ ตามเดิม
+          out.push(t);
         }
       });
 
@@ -63,21 +63,37 @@ const Aboutus = () => {
       return;
     }
 
+    // ตรวจสอบว่าเป็นมือถือหรือไม่
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           const el = entry.target as HTMLElement;
           const classes = normalizeAni(el.dataset.ani || "");
+          const hasPlayed = el.dataset.aniPlayed === "true";
+
           if (entry.isIntersecting) {
+            // ถ้าเป็นมือถือและเล่นไปแล้ว ไม่เล่นอีก
+            if (isMobile && hasPlayed) return;
+
             // รีสตาร์ทแอนิเมชันให้ชัวร์
             el.classList.remove(...classes);
             // force reflow (บางเบราว์เซอร์จำเป็นเพื่อเล่นใหม่)
             void el.offsetWidth;
             el.classList.add(...classes);
             el.classList.remove("opacity-0");
+
+            // ทำเครื่องหมายว่าเล่นแล้ว (สำหรับมือถือ)
+            if (isMobile) {
+              el.dataset.aniPlayed = "true";
+            }
           } else {
-            el.classList.remove(...classes);
-            el.classList.add("opacity-0");
+            // ถ้าเป็นเดสก์ท็อป ให้ซ่อนเมื่อออกจาก viewport
+            if (!isMobile) {
+              el.classList.remove(...classes);
+              el.classList.add("opacity-0");
+            }
           }
         });
       },
@@ -92,7 +108,8 @@ const Aboutus = () => {
     <section
       ref={sectionRef}
       data-ani="fx-kenburns-in fx-kenburns-drift"
-      className="about-bg-image relative bg-cover bg-center md:overflow-hidden dark:bg-neutral-900">
+      className="about-bg-image relative bg-cover bg-center md:overflow-hidden dark:bg-neutral-900"
+    >
       <div className="absolute inset-0 md:hidden pointer-events-none bg-gradient-to-r from-white/70 to-white/0 dark:from-black/50 dark:to-transparent" />
 
       <div className="relative mx-auto w-full max-w-screen-xl px-4 sm:px-6 lg:px-8">
@@ -102,7 +119,8 @@ const Aboutus = () => {
               {/* หัวข้อ: คลิปรีวีล + เส้นใต้กวาด */}
               <strong
                 className="block text-[clamp(1.4375rem,4.6vw,2.0625rem)] font-bold leading-tight custom-Charcoal-gray dark:text-neutral-50 [text-wrap:balance] opacity-0"
-                data-ani="fadeInUp faster delay-200ms">
+                data-ani="fadeInUp faster delay-200ms"
+              >
                 <span>เกี่ยวกับ</span>&nbsp; ไทยบรรจุภัณฑ์และการพิมพ์
               </strong>
               <span
@@ -114,7 +132,8 @@ const Aboutus = () => {
               <p
                 className="mt-4 text-[clamp(1.1375rem,3.8vw,1.1875rem)] leading-7 break-words custom-Ash-gray dark:text-neutral-300 opacity-0"
                 data-ani="fx-subtle-in-up"
-                style={{ animationDelay: "120ms" }}>
+                style={{ animationDelay: "120ms" }}
+              >
                 <b className="text-red-700">
                   TPP หรือ บริษัท ไทยบรรจุภัณฑ์และการพิมพ์ จำกัด (มหาชน)
                 </b>
@@ -133,7 +152,8 @@ const Aboutus = () => {
                 href="/about-history"
                 className="mt-4 inline-flex items-center gap-2 text-primary font-semibold hover:underline text-[clamp(1.1375rem,3.8vw,1.1875rem)] opacity-0"
                 data-ani="fx-link-in-right"
-                style={{ animationDelay: "220ms" }}>
+                style={{ animationDelay: "220ms" }}
+              >
                 อ่านต่อ{" "}
                 <Icon icon="tabler:chevron-right" width={20} height={20} />
               </Link>

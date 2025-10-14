@@ -1,6 +1,7 @@
 "use client";
 import ScaledCanvas from "./ScaledCanvas";
 import React, { useEffect, useRef } from "react";
+// @ts-ignore
 import "animate.css";
 
 const data = [
@@ -80,19 +81,35 @@ export default function InvestorRelations() {
       return;
     }
 
+    // ตรวจสอบว่าเป็นมือถือหรือไม่
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           const el = entry.target as HTMLElement;
           const classes = normalizeAni(el.dataset.ani || "");
+          const hasPlayed = el.dataset.aniPlayed === "true";
+
           if (entry.isIntersecting) {
+            // ถ้าเป็นมือถือและเล่นไปแล้ว ไม่เล่นอีก
+            if (isMobile && hasPlayed) return;
+
             el.classList.remove(...classes);
             void el.offsetWidth; // restart
             el.classList.add(...classes);
             el.classList.remove("opacity-0");
+
+            // ทำเครื่องหมายว่าเล่นแล้ว (สำหรับมือถือ)
+            if (isMobile) {
+              el.dataset.aniPlayed = "true";
+            }
           } else {
-            el.classList.remove(...classes);
-            el.classList.add("opacity-0");
+            // ถ้าเป็นเดสก์ท็อป ให้ซ่อนเมื่อออกจาก viewport
+            if (!isMobile) {
+              el.classList.remove(...classes);
+              el.classList.add("opacity-0");
+            }
           }
         });
       },
@@ -126,7 +143,8 @@ export default function InvestorRelations() {
         ref={sectionRef}
         data-iri
         className="relative z-10 isolate bg-cover bg-center dark:bg-darkmode overflow-hidden py-10"
-        style={motionVars}>
+        style={motionVars}
+      >
         <div className="mx-auto w-full max-w-[1400px] px-4">
           <h2 className="tpp-section-title opacity-0" data-ani="fadeInUp slow">
             นักลงทุนสัมพันธ์
@@ -140,7 +158,8 @@ export default function InvestorRelations() {
                 key={i}
                 className="group relative w-[320px] h-[420px] shadow-lg rounded-[16px] overflow-hidden cursor-pointer will-change-[transform,opacity] opacity-0 transition-transform duration-500"
                 data-ani="fadeInUp slow"
-                style={{ animationDelay: `${baseDelay + i * step}ms` }}>
+                style={{ animationDelay: `${baseDelay + i * step}ms` }}
+              >
                 {item.animatedImg && (
                   <div
                     className="absolute inset-0 bg-center bg-cover z-0"
@@ -174,7 +193,8 @@ export default function InvestorRelations() {
                     0px 0px 12px #fff,
                     0px 4px 16px rgba(0,0,0,0.8)
                   `,
-                  }}>
+                  }}
+                >
                   {item.title}
                 </p>
 
@@ -187,7 +207,8 @@ export default function InvestorRelations() {
             <button
               className="ir-btn ir-btn-glow opacity-0"
               data-ani="fadeInUp slow"
-              style={{ animationDelay: "240ms" }}>
+              style={{ animationDelay: "240ms" }}
+            >
               ดูทั้งหมด
             </button>
           </div>

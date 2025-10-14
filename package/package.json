@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@googlemaps/js-api-loader": "^2.0.1",
     "@headlessui/react": "^2.2.0",
     "@iconify/icons-ion": "^1.2.10",
     "@iconify/react": "^5.0.1",

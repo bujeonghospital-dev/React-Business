@@ -299,21 +299,30 @@ const ContactInquiryPage = () => {
             {/* Google Map */}
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
               <div className="aspect-video relative">
-                <iframe
-                  src={`https://www.google.com/maps/embed/v1/place?key=${
-                    process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
-                    "YOUR_API_KEY"
-                  }&q=${currentLocation.coordinates.lat},${
-                    currentLocation.coordinates.lng
-                  }&zoom=15`}
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  className="absolute inset-0"
-                />
+                {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY &&
+                process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY !==
+                  "YOUR_API_KEY" ? (
+                  <iframe
+                    src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${currentLocation.coordinates.lat},${currentLocation.coordinates.lng}&zoom=15`}
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    className="absolute inset-0"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-gray-100 flex flex-col items-center justify-center p-8">
+                    <MapPin className="w-16 h-16 text-gray-400 mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                      แผนที่ยังไม่พร้อมใช้งาน
+                    </h3>
+                    <p className="text-gray-500 text-center">
+                      กรุณาใช้ปุ่มด้านล่างเพื่อดูตำแหน่งใน Google Maps
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="p-4 bg-gradient-to-r from-red-600 to-red-700">
                 <a

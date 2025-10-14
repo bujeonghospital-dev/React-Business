@@ -90,7 +90,7 @@ const products = Array.from({ length: 9 }).map((_, i) => ({
   sku: `FIC${800000 + i}`,
   name: `ชามกระดาษ 8oz ลายบลู #${i + 1}`,
   priceText: `ราคาเริ่ม ${540 + i * 10} บาท/แพ็ค`,
-  img: "https://images.unsplash.com/photo-1556909114-96b7c8c01728?q=80&w=800&auto=format&fit=crop",
+  img: "/images/pakku-packaging/dev_291.png",
 }));
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -115,7 +115,8 @@ function SidebarSection({
     <div className="border-b border-slate-200 pb-3">
       <button
         className="w-full flex items-center justify-between py-3"
-        onClick={() => setOpen((v) => !v)}>
+        onClick={() => setOpen((v) => !v)}
+      >
         <SectionTitle>
           <span className="inline-flex items-center gap-2">
             {icon}
@@ -134,7 +135,8 @@ function SidebarSection({
             <li key={idx}>
               <a
                 href="#"
-                className="group flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-slate-50">
+                className="group flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-slate-50"
+              >
                 <span className="mt-1 inline-block h-1.5 w-1.5 rounded-full bg-slate-400 group-hover:bg-emerald-500" />
                 <span className="group-hover:text-emerald-600">{it}</span>
               </a>
@@ -150,7 +152,8 @@ function FeatureTile({ t }: { t: (typeof features)[number] }) {
   return (
     <a
       href="#"
-      className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
+      className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+    >
       <div className="aspect-[4/3] w-full overflow-hidden">
         <img
           src={t.img}
@@ -172,7 +175,8 @@ function ProductCard({ p }: { p: (typeof products)[number] }) {
   return (
     <a
       href="#"
-      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
+      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+    >
       <div className="aspect-square w-full overflow-hidden bg-white">
         <img
           src={p.img}
@@ -195,7 +199,8 @@ function Breadcrumb() {
   return (
     <nav
       className="flex items-center gap-2 text-sm text-slate-500"
-      aria-label="breadcrumb">
+      aria-label="breadcrumb"
+    >
       <a className="hover:text-emerald-700" href="#">
         หน้าแรก
       </a>
@@ -299,7 +304,8 @@ export default function PakkuCatalogPage() {
           <div
             className="fixed inset-0 z-50 md:hidden"
             role="dialog"
-            aria-modal>
+            aria-modal
+          >
             <div
               className="absolute inset-0 bg-black/30"
               onClick={() => setSidebarOpen(false)}
@@ -309,7 +315,8 @@ export default function PakkuCatalogPage() {
                 <SectionTitle>แถบหมวดสินค้า</SectionTitle>
                 <button
                   className="rounded-lg p-2 hover:bg-slate-100"
-                  onClick={() => setSidebarOpen(false)}>
+                  onClick={() => setSidebarOpen(false)}
+                >
                   <X className="h-5 w-5" />
                 </button>
               </div>

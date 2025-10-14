@@ -9,6 +9,7 @@ import { usePathname } from "next/navigation";
 export default function NewsEventsPage() {
   const pathname = usePathname();
   const isArticlesPage = pathname === "/articles";
+
   // ข้อมูลข่าวสาร (ตัวอย่าง)
   const newsItems = [
     {

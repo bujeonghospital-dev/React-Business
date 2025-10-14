@@ -1,7 +1,6 @@
 "use client";
 import ScaledCanvas from "./ScaledCanvas";
 import React, { useEffect, useRef } from "react";
-// @ts-ignore
 import "animate.css";
 
 const data = [

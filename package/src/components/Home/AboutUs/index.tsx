@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import { useEffect, useRef } from "react";
-// @ts-ignore
 import "animate.css";
 
 const Aboutus = () => {

@@ -13,8 +13,7 @@ import ClientApp from "@/components/ClientApp";
 import "../Style/style.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
-import "../app/globals.css";
-import "bootstrap-icons/font/bootstrap-icons.css";
+import "./globals.css";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
@@ -25,7 +24,11 @@ export const metadata: Metadata = {
 };
 
 export default function Home() {
-  return (<ScaledCanvas><ClientApp /></ScaledCanvas>);
+  return (
+    <ScaledCanvas>
+      <ClientApp />
+    </ScaledCanvas>
+  );
 }
 
 // *ALL

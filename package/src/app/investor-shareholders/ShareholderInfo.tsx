@@ -465,8 +465,11 @@ export default function ShareholderInfo() {
               {/* Company Logo */}
               <div className="w-24 h-24 sm:w-32 sm:h-32 relative bg-red-700 rounded-full flex items-center justify-center shadow-xl">
                 <div className="text-white text-center">
-                  <div className="text-xl sm:text-2xl font-bold">TPP</div>
-                  <div className="text-[10px] sm:text-xs">PACK</div>
+                  <img
+                    src="/images/logo/logo.png"
+                    alt="Company Logo"
+                    className="w-full h-full object-cover "
+                  />
                 </div>
               </div>
 

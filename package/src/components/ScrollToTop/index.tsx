@@ -1,9 +1,11 @@
 "use client";
 import ScaledCanvas from "../ScaledCanvas";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export default function ScrollToTop() {
   const [isVisible, setIsVisible] = useState(false);
+  const pathname = usePathname();
 
   const scrollToTop = () => {
     window.scrollTo({
@@ -24,6 +26,10 @@ export default function ScrollToTop() {
     };
   }, []);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, [pathname]);
+
   return (
     <ScaledCanvas>
       <div className="fixed bottom-8 right-8 z-50">
@@ -31,7 +37,8 @@ export default function ScrollToTop() {
           <button
             onClick={scrollToTop}
             aria-label="scroll to top"
-            className="back-to-top flex h-10 w-10 cursor-pointer items-center justify-center rounded-md bg-[#102C46] text-white shadow-md transition duration-300 ease-in-out hover:bg-dark">
+            className="back-to-top flex h-10 w-10 cursor-pointer items-center justify-center rounded-md bg-[#102C46] text-white shadow-md transition duration-300 ease-in-out hover:bg-dark"
+          >
             <span className="mt-[6px] h-3 w-3 rotate-45 border-l border-t border-white" />
           </button>
         )}

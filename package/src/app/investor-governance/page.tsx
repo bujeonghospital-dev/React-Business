@@ -110,22 +110,29 @@ export default function InvestorFinancialsPage() {
                 {/* Placeholder for logos - waiting for user to add images */}
                 <div className="text-center animate-scale-in delay-300 hover:scale-110 transition-transform duration-300">
                   <div className="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center mb-2 hover:bg-gray-300 transition-colors">
-                    <span className="text-gray-500 text-sm">CAC Logo</span>
+                    {/* <span className="text-gray-500 text-sm">CAC Logo</span> */}
+                    <img src="/images/governance/dev_192.png" alt="CAC Logo" />
                   </div>
                 </div>
                 <div className="text-center animate-scale-in delay-400 hover:scale-110 transition-transform duration-300">
                   <div className="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center mb-2 hover:bg-gray-300 transition-colors">
-                    <span className="text-gray-500 text-sm">SET Logo</span>
+                    {/* <span className="text-gray-500 text-sm">SET Logo</span> */}
+                    <img src="/images/governance/dev_192.png" alt="SET Logo" />
                   </div>
                 </div>
                 <div className="text-center animate-scale-in delay-500 hover:scale-110 transition-transform duration-300">
                   <div className="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center mb-2 hover:bg-gray-300 transition-colors">
-                    <span className="text-gray-500 text-sm">ISO Logo</span>
+                    {/* <span className="text-gray-500 text-sm">ISO Logo</span> */}
+                    <img src="/images/governance/dev_192.png" alt="ISO Logo" />
                   </div>
                 </div>
                 <div className="text-center animate-scale-in delay-600 hover:scale-110 transition-transform duration-300">
                   <div className="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center mb-2 hover:bg-gray-300 transition-colors">
-                    <span className="text-gray-500 text-sm">Award Logo</span>
+                    {/* <span className="text-gray-500 text-sm">Award Logo</span> */}
+                    <img
+                      src="/images/governance/dev_192.png"
+                      alt="Award Logo"
+                    />
                   </div>
                 </div>
               </div>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Container from "@/components/Container";
 import Image from "next/image";
+import GoogleMapComponent from "@/components/GoogleMap";
 
 // Animation variants
 const fadeInUp = {
@@ -299,20 +300,11 @@ const ContactInquiryPage = () => {
             {/* Google Map */}
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
               <div className="aspect-video relative">
-                <iframe
-                  src={`https://www.google.com/maps/embed/v1/place?key=${
-                    process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
-                    "YOUR_API_KEY"
-                  }&q=${currentLocation.coordinates.lat},${
-                    currentLocation.coordinates.lng
-                  }&zoom=15`}
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  className="absolute inset-0"
+                <GoogleMapComponent
+                  center={currentLocation.coordinates}
+                  zoom={15}
+                  markerPosition={currentLocation.coordinates}
+                  markerTitle={currentLocation.title}
                 />
               </div>
               <div className="p-4 bg-gradient-to-r from-red-600 to-red-700">

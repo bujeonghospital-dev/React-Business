@@ -157,7 +157,7 @@ const ContactInquiryPage = () => {
       <div className="relative h-[400px] bg-gradient-to-br from-red-900 via-red-800 to-red-700 overflow-hidden">
         <div className="absolute inset-0 bg-black/30" />
         <Image
-          src="/images/Home/banner-home.jpg"
+          src="/images/team/TPP_HOME.png"
           alt="Contact Us"
           fill
           className="object-cover mix-blend-overlay"

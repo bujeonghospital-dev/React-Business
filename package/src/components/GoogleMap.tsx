@@ -32,7 +32,9 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
     // ตรวจสอบว่ามี API Key หรือไม่
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
-      console.error("Google Maps API Key is not configured");
+      console.warn(
+        "Google Maps API Key is not configured - using fallback iframe"
+      );
       return;
     }
 
@@ -42,23 +44,50 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
     );
 
     if (existingScript) {
-      setScriptLoaded(true);
+      // รอให้ Web Components พร้อม
+      if (typeof customElements !== "undefined") {
+        customElements
+          .whenDefined("gmp-map")
+          .then(() => {
+            setScriptLoaded(true);
+          })
+          .catch(() => {
+            setScriptLoaded(true);
+          });
+      } else {
+        setScriptLoaded(true);
+      }
       return;
     }
 
-    // โหลด Google Maps script
+    // โหลด Google Maps script แบบ async
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=console.debug&libraries=maps,marker&v=beta`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async&libraries=maps,marker&v=beta`;
     script.async = true;
     script.defer = true;
 
     script.onload = () => {
-      setScriptLoaded(true);
-      console.log("Google Maps script loaded successfully");
+      // รอให้ Web Components ลงทะเบียนเสร็จ
+      if (typeof customElements !== "undefined") {
+        customElements
+          .whenDefined("gmp-map")
+          .then(() => {
+            setScriptLoaded(true);
+          })
+          .catch(() => {
+            setScriptLoaded(true);
+          });
+      } else {
+        setScriptLoaded(true);
+      }
     };
 
     script.onerror = () => {
-      console.error("Failed to load Google Maps script");
+      console.error(
+        "Failed to load Google Maps script - using fallback iframe"
+      );
+      // ใช้ iframe fallback
+      setScriptLoaded(false);
     };
 
     document.head.appendChild(script);
@@ -71,29 +100,43 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
   useEffect(() => {
     if (!isClient || !scriptLoaded || !mapContainerRef.current) return;
 
-    // สร้าง map elements
-    const mapElement = document.createElement("gmp-map");
-    mapElement.setAttribute("center", `${center.lat},${center.lng}`);
-    mapElement.setAttribute("zoom", zoom.toString());
-    mapElement.setAttribute("map-id", mapId);
-    mapElement.style.width = "100%";
-    mapElement.style.height = "100%";
-    mapElement.style.display = "block";
+    try {
+      // ตรวจสอบว่า gmp-map element พร้อมใช้งานหรือไม่
+      if (
+        typeof customElements === "undefined" ||
+        !customElements.get("gmp-map")
+      ) {
+        console.warn("Google Maps Web Components not ready");
+        return;
+      }
 
-    // สร้าง marker
-    const markerElement = document.createElement("gmp-advanced-marker");
-    markerElement.setAttribute(
-      "position",
-      `${markerPosition.lat},${markerPosition.lng}`
-    );
-    markerElement.setAttribute("title", markerTitle);
+      // สร้าง map elements
+      const mapElement = document.createElement("gmp-map");
+      mapElement.setAttribute("center", `${center.lat},${center.lng}`);
+      mapElement.setAttribute("zoom", zoom.toString());
+      mapElement.setAttribute("map-id", mapId);
+      mapElement.style.width = "100%";
+      mapElement.style.height = "100%";
+      mapElement.style.display = "block";
 
-    // เพิ่ม marker เข้า map
-    mapElement.appendChild(markerElement);
+      // สร้าง marker
+      const markerElement = document.createElement("gmp-advanced-marker");
+      markerElement.setAttribute(
+        "position",
+        `${markerPosition.lat},${markerPosition.lng}`
+      );
+      markerElement.setAttribute("title", markerTitle);
 
-    // Clear existing content and add map
-    mapContainerRef.current.innerHTML = "";
-    mapContainerRef.current.appendChild(mapElement);
+      // เพิ่ม marker เข้า map
+      mapElement.appendChild(markerElement);
+
+      // Clear existing content and add map
+      mapContainerRef.current.innerHTML = "";
+      mapContainerRef.current.appendChild(mapElement);
+    } catch (error) {
+      console.error("Error creating Google Maps Web Components:", error);
+      // Fallback จะถูกแสดงอัตโนมัติถ้า scriptLoaded = false
+    }
   }, [
     isClient,
     scriptLoaded,

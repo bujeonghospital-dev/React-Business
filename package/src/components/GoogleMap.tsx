@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 interface GoogleMapComponentProps {
   center: { lat: number; lng: number };
@@ -18,18 +18,31 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
   mapId = "DEMO_MAP_ID",
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const scriptLoadedRef = useRef(false);
+  const [isClient, setIsClient] = useState(false);
+  const [scriptLoaded, setScriptLoaded] = useState(false);
+
+  // ตรวจสอบว่าอยู่ใน client-side หรือไม่
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
-    // ตรวจสอบว่า script ถูกโหลดแล้วหรือยัง
-    if (scriptLoadedRef.current) {
-      return;
-    }
+    if (!isClient) return;
 
     // ตรวจสอบว่ามี API Key หรือไม่
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
       console.error("Google Maps API Key is not configured");
+      return;
+    }
+
+    // ตรวจสอบว่า script ถูกโหลดแล้วหรือยัง
+    const existingScript = document.querySelector(
+      `script[src*="maps.googleapis.com"]`
+    );
+
+    if (existingScript) {
+      setScriptLoaded(true);
       return;
     }
 
@@ -40,7 +53,7 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
     script.defer = true;
 
     script.onload = () => {
-      scriptLoadedRef.current = true;
+      setScriptLoaded(true);
       console.log("Google Maps script loaded successfully");
     };
 
@@ -48,39 +61,73 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({
       console.error("Failed to load Google Maps script");
     };
 
-    // เพิ่ม script เข้า head ถ้ายังไม่มี
-    if (!document.querySelector(`script[src*="maps.googleapis.com"]`)) {
-      document.head.appendChild(script);
-    } else {
-      scriptLoadedRef.current = true;
-    }
+    document.head.appendChild(script);
 
     return () => {
-      // ไม่ต้อง cleanup script เพราะจะใช้ร่วมกันทั้ง app
+      // Cleanup not needed as script is shared across the app
     };
-  }, []);
+  }, [isClient]);
 
-  return (
-    <div
-      ref={mapContainerRef}
-      className="w-full h-full"
-      dangerouslySetInnerHTML={{
-        __html: `
-          <gmp-map 
-            center="${center.lat},${center.lng}" 
-            zoom="${zoom}" 
-            map-id="${mapId}"
-            style="width: 100%; height: 100%; display: block;"
-          >
-            <gmp-advanced-marker 
-              position="${markerPosition.lat},${markerPosition.lng}" 
-              title="${markerTitle}"
-            ></gmp-advanced-marker>
-          </gmp-map>
-        `,
-      }}
-    />
-  );
+  useEffect(() => {
+    if (!isClient || !scriptLoaded || !mapContainerRef.current) return;
+
+    // สร้าง map elements
+    const mapElement = document.createElement("gmp-map");
+    mapElement.setAttribute("center", `${center.lat},${center.lng}`);
+    mapElement.setAttribute("zoom", zoom.toString());
+    mapElement.setAttribute("map-id", mapId);
+    mapElement.style.width = "100%";
+    mapElement.style.height = "100%";
+    mapElement.style.display = "block";
+
+    // สร้าง marker
+    const markerElement = document.createElement("gmp-advanced-marker");
+    markerElement.setAttribute(
+      "position",
+      `${markerPosition.lat},${markerPosition.lng}`
+    );
+    markerElement.setAttribute("title", markerTitle);
+
+    // เพิ่ม marker เข้า map
+    mapElement.appendChild(markerElement);
+
+    // Clear existing content and add map
+    mapContainerRef.current.innerHTML = "";
+    mapContainerRef.current.appendChild(mapElement);
+  }, [
+    isClient,
+    scriptLoaded,
+    center,
+    zoom,
+    markerPosition,
+    markerTitle,
+    mapId,
+  ]);
+
+  // แสดง fallback iframe สำหรับ SSR หรือเมื่อยังโหลด script ไม่เสร็จ
+  if (!isClient || !scriptLoaded) {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    return (
+      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+        {apiKey ? (
+          <iframe
+            src={`https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${center.lat},${center.lng}&zoom=${zoom}`}
+            width="100%"
+            height="100%"
+            style={{ border: 0 }}
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            title={markerTitle}
+          />
+        ) : (
+          <div className="text-gray-500">Loading map...</div>
+        )}
+      </div>
+    );
+  }
+
+  return <div ref={mapContainerRef} className="w-full h-full" />;
 };
 
 export default GoogleMapComponent;

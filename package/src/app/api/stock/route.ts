@@ -14,50 +14,100 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get("symbol");
 
-    // Fetch data from SET API
-    const response = await fetch(
-      "https://marketplace.set.or.th/api/public/realtime-data/stock",
+    // SET API configuration
+    const API_KEY =
+      process.env.SET_API_KEY || "461b3d65-d964-4d93-97a0-79b670d3867f";
+    const API_URL =
+      process.env.SET_API_URL ||
+      "https://marketplace.set.or.th/api/public/realtime-data/stock";
+
+    console.log("🔄 Attempting to fetch SET API...");
+
+    // Try different authentication methods
+    const authMethods: Array<{
+      name: string;
+      headers: Record<string, string>;
+    }> = [
+      // Method 1: Bearer token
       {
+        name: "Bearer Token",
         headers: {
           Accept: "application/json",
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          Authorization: `Bearer ${API_KEY}`,
         },
-        next: { revalidate: 300 }, // Cache for 5 minutes
-      }
-    );
+      },
+      // Method 2: x-api-key
+      {
+        name: "X-API-Key",
+        headers: {
+          Accept: "application/json",
+          "x-api-key": API_KEY,
+        },
+      },
+      // Method 3: Both
+      {
+        name: "Both Headers",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${API_KEY}`,
+          "x-api-key": API_KEY,
+        },
+      },
+    ];
 
-    if (!response.ok) {
-      throw new Error(`SET API returned ${response.status}`);
+    let lastError = null;
+
+    // Try each authentication method
+    for (const method of authMethods) {
+      try {
+        console.log(`   Trying ${method.name}...`);
+        const response = await fetch(API_URL, {
+          headers: method.headers,
+          next: { revalidate: 300 },
+        });
+
+        if (response.ok) {
+          console.log(`✅ Success with ${method.name}`);
+          const data = await response.json();
+
+          // If specific symbol requested, filter the data
+          if (symbol && data.data && Array.isArray(data.data)) {
+            const stockData = data.data.find(
+              (stock: any) =>
+                stock.symbol.toUpperCase() === symbol.toUpperCase()
+            );
+
+            if (stockData) {
+              return NextResponse.json({ data: [stockData] });
+            } else {
+              return NextResponse.json(
+                { error: `Stock symbol ${symbol} not found` },
+                { status: 404 }
+              );
+            }
+          }
+
+          // Return all data if no symbol specified
+          return NextResponse.json(data);
+        }
+
+        lastError = `${response.status} ${response.statusText}`;
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : "Unknown error";
+      }
     }
 
-    const data = await response.json();
-
-    // If specific symbol requested, filter the data
-    if (symbol && data.data && Array.isArray(data.data)) {
-      const stockData = data.data.find(
-        (stock: any) => stock.symbol.toUpperCase() === symbol.toUpperCase()
-      );
-
-      if (stockData) {
-        return NextResponse.json({ data: [stockData] });
-      } else {
-        return NextResponse.json(
-          { error: `Stock symbol ${symbol} not found` },
-          { status: 404 }
-        );
-      }
-    }
-
-    // Return all data if no symbol specified
-    return NextResponse.json(data);
+    // All methods failed
+    console.error("❌ All authentication methods failed:", lastError);
+    throw new Error(`SET API authentication failed: ${lastError}`);
   } catch (error) {
-    console.error("Stock API Error:", error);
+    console.error("❌ Stock API Error:", error);
 
     return NextResponse.json(
       {
         error: "Failed to fetch stock data",
         message: error instanceof Error ? error.message : "Unknown error",
+        fallback: "Using mock data on client side",
       },
       { status: 500 }
     );

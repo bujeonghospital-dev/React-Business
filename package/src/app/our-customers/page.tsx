@@ -624,7 +624,7 @@ const OurCustomers: React.FC = () => {
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">
       {/* Hero Section */}
-      <section className="relative pt-24 pb-8 bg-gradient-to-b from-gray-50 to-white">
+      <section className="relative pt-24 pb-2 bg-gradient-to-b from-gray-50 to-white">
         <div className="container mx-auto px-4">
           <div className="text-center animate-fade-in">
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 relative inline-block title-underline">
@@ -636,7 +636,7 @@ const OurCustomers: React.FC = () => {
             </p>
 
             {/* Stats */}
-            <div className="flex flex-wrap justify-center gap-6 md:gap-12 mt-6 mb-8">
+            {/* <div className="flex flex-wrap justify-center gap-6 md:gap-12 mt-6 mb-8">
               <div className="bg-white rounded-2xl shadow-lg p-6 min-w-[180px] transform hover:scale-105 transition-transform duration-300">
                 <div className="flex items-center justify-center mb-4">
                   <Users className="w-8 h-8 text-blue-600" />
@@ -666,7 +666,7 @@ const OurCustomers: React.FC = () => {
                 </div>
                 <div className="text-gray-600 mt-2">ความพึงพอใจ</div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </section>
@@ -680,7 +680,8 @@ const OurCustomers: React.FC = () => {
 
           <div
             id="logo-grid"
-            className="observe-animation bg-white rounded-3xl border border-gray-200 shadow-xl p-4 md:p-6">
+            className="observe-animation bg-white rounded-3xl border border-gray-200 shadow-xl p-4 md:p-6"
+          >
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
               {customerLogos.map((logo, index) => (
                 <LogoCard
@@ -800,7 +801,8 @@ const LogoCard: React.FC<LogoCardProps> = ({
         animationDelay: `${(index % 6) * 0.1}s`,
       }}
       onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}>
+      onMouseLeave={() => setIsHovered(false)}
+    >
       {/* Hover Gradient Effect */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 

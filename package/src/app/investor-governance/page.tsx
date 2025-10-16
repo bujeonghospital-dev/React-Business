@@ -56,8 +56,10 @@ export default function InvestorFinancialsPage() {
 
   return (
     <div className="min-h-screen bg-white mt-5">
-      {/* Hero Section */}
-      <section className="relative h-[400px] bg-gradient-to-r from-blue-50 to-blue-100 overflow-hidden">
+      <section
+        className="relative h-[400px] bg-gradient-to-r from-blue-50 to-blue-100 overflow-hidden"
+        style={{ backgroundImage: "url(/images/New/dev_1905.png)" }}
+      >
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center z-10 px-4 animate-fade-in-up">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4 animate-slide-down">
@@ -75,9 +77,9 @@ export default function InvestorFinancialsPage() {
           </div>
         </div>
         {/* Animated Background Elements */}
-        <div className="absolute inset-0 bg-black opacity-5"></div>
-        <div className="absolute top-10 left-10 w-32 h-32 bg-blue-200 rounded-full opacity-20 animate-float"></div>
-        <div className="absolute bottom-10 right-10 w-40 h-40 bg-green-200 rounded-full opacity-20 animate-float-delayed"></div>
+        {/* <div className="absolute inset-0 bg-black opacity-5"></div> */}
+        {/* <div className="absolute top-10 left-10 w-32 h-32 bg-blue-200 rounded-full opacity-20 animate-float"></div>
+        <div className="absolute bottom-10 right-10 w-40 h-40 bg-green-200 rounded-full opacity-20 animate-float-delayed"></div> */}
       </section>
 
       <Container>
@@ -104,28 +106,33 @@ export default function InvestorFinancialsPage() {
               </p>
             </div>
 
-            {/* Certifications/Logos Section - Placeholder for logos */}
             <div className="bg-white p-8 rounded-lg shadow-md mb-12 animate-fade-in-up delay-200">
               <div className="flex flex-wrap items-center justify-center gap-8">
-                {/* Placeholder for logos - waiting for user to add images */}
                 <div className="text-center animate-scale-in delay-300 hover:scale-110 transition-transform duration-300">
                   <div className="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center mb-2 hover:bg-gray-300 transition-colors">
-                    <span className="text-gray-500 text-sm">CAC Logo</span>
+                    {/* <span className="text-gray-500 text-sm">CAC Logo</span> */}
+                    <img src="/images/governance/dev_192.png" alt="CAC Logo" />
                   </div>
                 </div>
                 <div className="text-center animate-scale-in delay-400 hover:scale-110 transition-transform duration-300">
                   <div className="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center mb-2 hover:bg-gray-300 transition-colors">
-                    <span className="text-gray-500 text-sm">SET Logo</span>
+                    {/* <span className="text-gray-500 text-sm">SET Logo</span> */}
+                    <img src="/images/governance/dev_192.png" alt="SET Logo" />
                   </div>
                 </div>
                 <div className="text-center animate-scale-in delay-500 hover:scale-110 transition-transform duration-300">
                   <div className="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center mb-2 hover:bg-gray-300 transition-colors">
-                    <span className="text-gray-500 text-sm">ISO Logo</span>
+                    {/* <span className="text-gray-500 text-sm">ISO Logo</span> */}
+                    <img src="/images/governance/dev_192.png" alt="ISO Logo" />
                   </div>
                 </div>
                 <div className="text-center animate-scale-in delay-600 hover:scale-110 transition-transform duration-300">
                   <div className="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center mb-2 hover:bg-gray-300 transition-colors">
-                    <span className="text-gray-500 text-sm">Award Logo</span>
+                    {/* <span className="text-gray-500 text-sm">Award Logo</span> */}
+                    <img
+                      src="/images/governance/dev_192.png"
+                      alt="Award Logo"
+                    />
                   </div>
                 </div>
               </div>

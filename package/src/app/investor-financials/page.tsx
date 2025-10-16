@@ -834,7 +834,7 @@ export default function InvestorFinancials() {
 
   return (
     <div className="min-h-screen bg-gray-50 mt-5">
-      {/* Hero Section - Placeholder for image */}
+      {/* Web Section - Placeholder for image */}
       <div className="relative h-80 bg-gradient-to-r from-teal-500 via-teal-600 to-teal-700 flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-black bg-opacity-30" />
 
@@ -843,9 +843,14 @@ export default function InvestorFinancials() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1)_0%,transparent_50%)]" />
         </div>
 
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div
+          style={{
+            backgroundImage: "url(/images/financials/dev_1905_320.png)",
+          }}
+          className="absolute inset-0 flex items-center justify-center"
+        >
           <div
-            className={`text-center text-white z-10 max-w-4xl px-4 transform transition-all duration-1000 ${
+            className={`text-center text-blackbg-opacity-70 z-10 max-w-4xl px-4 transform transition-all duration-1000 ${
               isHeroVisible
                 ? "opacity-100 translate-y-0"
                 : "opacity-0 translate-y-8"

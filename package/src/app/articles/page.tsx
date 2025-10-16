@@ -85,16 +85,16 @@ export default function NewsEventsPage() {
       >
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url(/images/news-banner.jpg)" }}
+          style={{ backgroundImage: "url(/images/New/dev_1905.png)" }}
         >
-          <div className="absolute inset-0 bg-black bg-opacity-30"></div>
+          {/* <div className="absolute inset-0 bg-black bg-opacity-30"></div> */}
         </div>
         <div className="relative z-10 flex items-center justify-end h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
-            className="text-right text-white"
+            className="text-right text-blackbg-opacity-70 p-4 rounded-md max-w-md"
           >
             <h1 className="text-4xl md:text-5xl font-bold mb-2">
               {isArticlesPage ? "บทความ" : "ข่าวประชาสัมพันธ์"}

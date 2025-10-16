@@ -1,7 +1,75 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Download } from "lucide-react";
+import { Download, TrendingUp, TrendingDown } from "lucide-react";
+
+// Types for SET API data
+interface StockData {
+  symbol: string;
+  last: number;
+  change: number;
+  percentChange: number;
+  high: number;
+  low: number;
+  volume: number;
+  value: number;
+  prior: number;
+  marketStatus: string;
+}
+
+interface ApiResponse {
+  data?: StockData[];
+  error?: string;
+}
+
+// Add styles for animations
+if (typeof window !== "undefined") {
+  const style = document.createElement("style");
+  style.textContent = `
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @keyframes slideInLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    
+    .animate-pulse-slow {
+      animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 // Intersection Observer Hook for scroll animations
 const useScrollAnimation = (threshold = 0.1) => {
@@ -27,6 +95,168 @@ const useScrollAnimation = (threshold = 0.1) => {
   }, [threshold]);
 
   return { ref, isVisible };
+};
+
+// Stock Market Widget Component
+const StockMarketWidget: React.FC<{ symbol?: string }> = ({
+  symbol = "TVO",
+}) => {
+  const [stockData, setStockData] = useState<StockData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { ref, isVisible } = useScrollAnimation();
+
+  useEffect(() => {
+    const fetchStockData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(
+          "https://marketplace.set.or.th/api/public/realtime-data/stock",
+          {
+            headers: {
+              Accept: "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.status}`);
+        }
+
+        const data: ApiResponse = await response.json();
+
+        // Find the specific stock symbol
+        if (data.data && Array.isArray(data.data)) {
+          const stock = data.data.find(
+            (s) => s.symbol.toUpperCase() === symbol.toUpperCase()
+          );
+          if (stock) {
+            setStockData(stock);
+          } else {
+            setError(`ไม่พบข้อมูลหุ้น ${symbol}`);
+          }
+        }
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการดึงข้อมูล"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStockData();
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchStockData, 300000);
+    return () => clearInterval(interval);
+  }, [symbol]);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6 animate-pulse">
+        <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+        <div className="h-12 bg-gray-200 rounded w-1/2 mb-2"></div>
+        <div className="h-6 bg-gray-200 rounded w-1/4"></div>
+      </div>
+    );
+  }
+
+  if (error || !stockData) {
+    return (
+      <div
+        ref={ref}
+        className={`bg-white rounded-lg shadow-md p-6 border-l-4 border-yellow-500 transition-all duration-700 ${
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <div className="text-yellow-500 text-2xl">⚠️</div>
+          <div>
+            <h3 className="font-semibold text-gray-800">ข้อมูลหุ้น {symbol}</h3>
+            <p className="text-sm text-gray-600">
+              {error || "กำลังโหลดข้อมูล..."}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const isPositive = stockData.change >= 0;
+
+  return (
+    <div
+      ref={ref}
+      className={`bg-gradient-to-br from-white to-gray-50 rounded-lg shadow-lg p-6 border-l-4 transform transition-all duration-700 hover:shadow-xl hover:-translate-y-1 ${
+        isPositive ? "border-green-500" : "border-red-500"
+      } ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+    >
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h3 className="text-2xl font-bold text-gray-800 mb-1">
+            {stockData.symbol}
+          </h3>
+          <p className="text-sm text-gray-500">
+            {stockData.marketStatus === "OPEN"
+              ? "🟢 เปิดซื้อขาย"
+              : "🔴 ปิดตลาด"}
+          </p>
+        </div>
+        <div className="text-right">
+          <div className="text-3xl font-bold text-gray-800">
+            {stockData.last.toFixed(2)}
+          </div>
+          <div
+            className={`flex items-center justify-end gap-1 text-lg font-semibold ${
+              isPositive ? "text-green-600" : "text-red-600"
+            }`}
+          >
+            {isPositive ? (
+              <TrendingUp className="w-5 h-5" />
+            ) : (
+              <TrendingDown className="w-5 h-5" />
+            )}
+            {isPositive ? "+" : ""}
+            {stockData.change.toFixed(2)} ({isPositive ? "+" : ""}
+            {stockData.percentChange.toFixed(2)}%)
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-gray-200">
+        <div>
+          <p className="text-xs text-gray-500 mb-1">สูงสุด</p>
+          <p className="text-lg font-semibold text-gray-800">
+            {stockData.high.toFixed(2)}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500 mb-1">ต่ำสุด</p>
+          <p className="text-lg font-semibold text-gray-800">
+            {stockData.low.toFixed(2)}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500 mb-1">ปริมาณ (หุ้น)</p>
+          <p className="text-lg font-semibold text-gray-800">
+            {(stockData.volume / 1000000).toFixed(2)}M
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500 mb-1">มูลค่า (บาท)</p>
+          <p className="text-lg font-semibold text-gray-800">
+            {(stockData.value / 1000000).toFixed(2)}M
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <p className="text-xs text-gray-400">
+          ราคาปิดก่อนหน้า: {stockData.prior.toFixed(2)} บาท
+        </p>
+      </div>
+    </div>
+  );
 };
 
 // Chart Component with editable data
@@ -380,6 +610,156 @@ const FinancialTable: React.FC = () => {
   );
 };
 
+// Market Overview Component - Top stocks from SET
+const MarketOverview: React.FC = () => {
+  const [marketData, setMarketData] = useState<StockData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { ref, isVisible } = useScrollAnimation();
+
+  useEffect(() => {
+    const fetchMarketData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(
+          "https://marketplace.set.or.th/api/public/realtime-data/stock",
+          {
+            headers: {
+              Accept: "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.status}`);
+        }
+
+        const data: ApiResponse = await response.json();
+
+        if (data.data && Array.isArray(data.data)) {
+          // Get top 10 stocks by value
+          const topStocks = data.data
+            .filter((stock) => stock.value > 0)
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 10);
+          setMarketData(topStocks);
+        }
+      } catch (err) {
+        console.error("Market data fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMarketData();
+    const interval = setInterval(fetchMarketData, 300000); // Refresh every 5 min
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6 animate-pulse">
+        <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+        <div className="space-y-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-16 bg-gray-200 rounded"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={ref}
+      className={`bg-white rounded-lg shadow-md p-6 transform transition-all duration-700 hover:shadow-xl ${
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+      }`}
+    >
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-2xl font-bold text-gray-800">
+          หุ้นมูลค่าซื้อขายสูงสุด
+        </h3>
+        <span className="text-sm text-gray-500">อัพเดตทุก 5 นาที</span>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b-2 border-teal-600">
+              <th className="text-left py-3 px-2 text-sm font-semibold text-gray-700">
+                สัญลักษณ์
+              </th>
+              <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700">
+                ราคา
+              </th>
+              <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700">
+                เปลี่ยนแปลง
+              </th>
+              <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700">
+                %
+              </th>
+              <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700">
+                มูลค่า (ล้าน)
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {marketData.map((stock, idx) => {
+              const isPositive = stock.change >= 0;
+              return (
+                <tr
+                  key={stock.symbol}
+                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200"
+                  style={{
+                    animation: isVisible
+                      ? `slideInLeft 0.5s ease-out ${idx * 0.05}s forwards`
+                      : "none",
+                    opacity: isVisible ? 1 : 0,
+                  }}
+                >
+                  <td className="py-3 px-2">
+                    <span className="font-semibold text-gray-800">
+                      {stock.symbol}
+                    </span>
+                  </td>
+                  <td className="text-right py-3 px-2 font-medium">
+                    {stock.last.toFixed(2)}
+                  </td>
+                  <td
+                    className={`text-right py-3 px-2 font-semibold ${
+                      isPositive ? "text-green-600" : "text-red-600"
+                    }`}
+                  >
+                    {isPositive ? "+" : ""}
+                    {stock.change.toFixed(2)}
+                  </td>
+                  <td
+                    className={`text-right py-3 px-2 font-semibold ${
+                      isPositive ? "text-green-600" : "text-red-600"
+                    }`}
+                  >
+                    {isPositive ? "+" : ""}
+                    {stock.percentChange.toFixed(2)}%
+                  </td>
+                  <td className="text-right py-3 px-2 text-gray-700">
+                    {(stock.value / 1000000).toFixed(2)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <p className="text-xs text-gray-400 text-center">
+          ข้อมูลจาก SET Market Data API • สำหรับการอ้างอิงเท่านั้น
+        </p>
+      </div>
+    </div>
+  );
+};
+
 // Download Section Component
 interface DownloadItem {
   title: string;
@@ -446,6 +826,7 @@ const DownloadSection: React.FC<{ title: string; items: DownloadItem[] }> = ({
 // Main Page Component
 export default function InvestorFinancials() {
   const [isHeroVisible, setIsHeroVisible] = useState(false);
+  const [stockSymbol, setStockSymbol] = useState("TVO");
 
   useEffect(() => {
     setIsHeroVisible(true);
@@ -506,6 +887,31 @@ export default function InvestorFinancials() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-12 space-y-12">
+        {/* Real-time Stock Data Section */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <h2 className="text-3xl font-bold text-gray-800">
+              ราคาหุ้นแบบเรียลไทม์
+            </h2>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">สัญลักษณ์หุ้น:</label>
+              <input
+                type="text"
+                value={stockSymbol}
+                onChange={(e) => setStockSymbol(e.target.value.toUpperCase())}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm font-semibold uppercase"
+                placeholder="TVO"
+                maxLength={10}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <StockMarketWidget symbol={stockSymbol} />
+            <MarketOverview />
+          </div>
+        </div>
+
         {/* Charts Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <EditableChart

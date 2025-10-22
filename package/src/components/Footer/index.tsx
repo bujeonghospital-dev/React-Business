@@ -132,7 +132,7 @@ const Footer = () => {
           <ul className="list-inline mb-0">
             <li className="list-inline-item">
               <Link
-                href="#"
+                href="/PDPA"
                 className="text-secondary text-decoration-underline"
               >
                 ข้อกำหนดและเงื่อนไข
@@ -141,8 +141,9 @@ const Footer = () => {
             <li className="list-inline-item">|</li>
             <li className="list-inline-item">
               <Link
-                href="investor-governance#"
+                href="/downloads/pdpa/3-นโยบายคุ้มครองข้อมูลส่วนบุคคล-ของบริษัท-ไทยบรรจุภัณฑ์และการพิมพ์-จำกัด-มหาชน.pdf"
                 className="text-secondary text-decoration-underline"
+                target="_blank"
               >
                 การคุ้มครองข้อมูลส่วนบุคคล
               </Link>
@@ -150,10 +151,21 @@ const Footer = () => {
             <li className="list-inline-item">|</li>
             <li className="list-inline-item">
               <Link
-                href="investor-governance#"
+                href="/downloads/pdpa/2-นโยบายคุกกี้-Cookies-Policy-ของ-บริษัท-ไทยบรรจุภัณฑ์และการพิมพ์-จำกัด-มหาชน.pdf"
                 className="text-secondary text-decoration-underline"
+                target="_blank"
               >
                 นโยบายการใช้คุกกี้
+              </Link>
+            </li>
+            <li className="list-inline-item">|</li>
+            <li className="list-inline-item">
+              <Link
+                href="/downloads/pdpa/คำประกาศ-เกี่ยวกับความเป็นส่วนตัวในการใช้กล้องวงจรปิด-CCTV-Rev.01.pdf"
+                className="text-secondary text-decoration-underline"
+                target="_blank"
+              >
+                นโยบายกล้องวงจรปิด CCTV
               </Link>
             </li>
           </ul>

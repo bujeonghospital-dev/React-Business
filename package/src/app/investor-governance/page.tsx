@@ -42,44 +42,15 @@ export default function InvestorFinancialsPage() {
   const downloadSections = [
     {
       title: "คู่มือและจรรยาบรรณที่เกี่ยวข้องกับการกำกับกิจการ",
-      items: [
-        { name: "เอกสาร 1", url: "#" },
-        { name: "เอกสาร 2", url: "#" },
-        { name: "เอกสาร 3", url: "#" },
-      ],
+      items: ["เอกสาร 1", "เอกสาร 2", "เอกสาร 3"],
     },
     {
       title: "นโยบายต่างๆ ที่เกี่ยวข้องกับการกำกับดูแลกิจกรรม",
-      items: [
-        { name: "นโยบาย 1", url: "#" },
-        { name: "นโยบาย 2", url: "#" },
-        { name: "นโยบาย 3", url: "#" },
-      ],
+      items: ["นโยบาย 1", "นโยบาย 2", "นโยบาย 3"],
     },
     {
-      title: "กฎหมายคุ้มครองข้อมูลส่วนบุคคล",
-      items: [
-        {
-          name: "นโยบายคุกกี้ (Cookies Policy)",
-          url: "/downloads/pdpa/2-นโยบายคุกกี้-Cookies-Policy-ของ-บริษัท-ไทยบรรจุภัณฑ์และการพิมพ์-จำกัด-มหาชน.pdf",
-        },
-        {
-          name: "นโยบายคุ้มครองข้อมูลส่วนบุคคล ของบริษัท ไทยบรรจุภัณฑ์และการพิมพ์ จำกัด (มหาชน)",
-          url: "/downloads/pdpa/3-นโยบายคุ้มครองข้อมูลส่วนบุคคล-ของบริษัท-ไทยบรรจุภัณฑ์และการพิมพ์-จำกัด-มหาชน.pdf",
-        },
-        {
-          name: "ประกาศความเป็นส่วนตัว (Privacy Notice) ของลูกค้า",
-          url: "/downloads/pdpa/4-ประกาศความเป็นส่วนตัว-Privacy-Notice-ของลูกค้า.pdf",
-        },
-        {
-          name: "ประกาศความเป็นส่วนตัว (Privacy Notice) สำหรับผู้สมัครงาน",
-          url: "/downloads/pdpa/5-ประกาศความเป็นส่วนตัว-Privacy-Notice-สำหรับผู้สมัคร.pdf",
-        },
-        {
-          name: "คำประกาศเกี่ยวกับความเป็นส่วนตัวในการใช้กล้องวงจรปิด (CCTV)",
-          url: "/downloads/pdpa/คำประกาศ-เกี่ยวกับความเป็นส่วนตัวในการใช้กล้องวงจรปิด-CCTV-Rev.01.pdf",
-        },
-      ],
+      title: "อื่นๆ",
+      items: ["เอกสารอื่นๆ 1", "เอกสารอื่นๆ 2"],
     },
   ];
 
@@ -252,9 +223,7 @@ export default function InvestorFinancialsPage() {
                             style={{ animationDelay: `${itemIndex * 50}ms` }}
                           >
                             <a
-                              href={item.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                              href="#"
                               className="flex items-center text-blue-600 hover:text-blue-800 hover:underline hover:translate-x-2 transition-transform duration-200"
                             >
                               <svg
@@ -270,7 +239,7 @@ export default function InvestorFinancialsPage() {
                                   d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                                 />
                               </svg>
-                              {item.name}
+                              {item}
                             </a>
                           </li>
                         ))}

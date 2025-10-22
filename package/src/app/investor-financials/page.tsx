@@ -99,7 +99,7 @@ const useScrollAnimation = (threshold = 0.1) => {
 
 // Stock Market Widget Component
 const StockMarketWidget: React.FC<{ symbol?: string }> = ({
-  symbol = "TVO",
+  symbol = "TPP",
 }) => {
   const [stockData, setStockData] = useState<StockData | null>(null);
   const [loading, setLoading] = useState(true);

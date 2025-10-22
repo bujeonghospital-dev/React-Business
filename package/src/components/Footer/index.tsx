@@ -141,7 +141,7 @@ const Footer = () => {
             <li className="list-inline-item">|</li>
             <li className="list-inline-item">
               <Link
-                href="#"
+                href="investor-governance#"
                 className="text-secondary text-decoration-underline"
               >
                 การคุ้มครองข้อมูลส่วนบุคคล
@@ -150,7 +150,7 @@ const Footer = () => {
             <li className="list-inline-item">|</li>
             <li className="list-inline-item">
               <Link
-                href="#"
+                href="investor-governance#"
                 className="text-secondary text-decoration-underline"
               >
                 นโยบายการใช้คุกกี้

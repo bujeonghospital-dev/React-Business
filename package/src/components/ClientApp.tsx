@@ -17,7 +17,8 @@ export default function ClientApp() {
         className="
           relative isolate
           min-w-0 max-w-[100vw]
-          overflow-x-hidden">
+          overflow-x-hidden"
+      >
         <Video setIsLoading={setIsLoading} />
 
         <div className="h-[16px]" aria-hidden />

@@ -58,12 +58,28 @@ const sidebar = [
     title: "แบ่งตามประเภท",
     icon: <Boxes className="h-4 w-4" />,
     items: [
-      "แก้วกระดาษ",
-      "ถ้วยร้อน/เย็น",
-      "ช้อนส้อมไม้",
-      "กล่องพัสดุ",
-      "กล่องหูหิ้ว",
-      "สินค้าแคมเปญ",
+      // ถาดและกล่องอาหาร
+      "FOOD TRAY",
+      "SNACK BOX",
+      "CUP NOODLES",
+
+      // กล่องเบเกอรี่และเค้ก
+      "BAKERY BOX",
+      "กล่องเค้กสามเหลี่ยม",
+      "กล่องเค้กลิ้นชัก",
+      "กล่องเค้กหูหิ้ว",
+
+      // อุปกรณ์เสริมสำหรับเครื่องดื่ม
+      "CUP SLEEVE",
+      "ถาดใส่แก้วกาแฟ",
+
+      // กระดาษและวัสดุบรรจุภัณฑ์
+      "กระดาษลูกฟูก E-B",
+      "กระดาษเอนกประสงค์",
+      "ซองเครป",
+
+      // กล่องเอนกประสงค์
+      "กล่องเอนกประสงค์",
     ],
   },
 ];
@@ -152,7 +168,7 @@ const products = [
     name: `กล่องเค้กสามเหลี่ยม`,
     Detail: `ขนาด 9x13.8x9 cm`,
     priceText: `ราคาเริ่ม 120 บาท/แพ็ค`,
-    img: "/images/pakku-packaging/9.png",
+    img: "/images/pakku-packaging/8.png",
   },
   {
     id: "8",
@@ -231,10 +247,14 @@ function SidebarSection({
   title,
   icon,
   items,
+  selectedCategory,
+  onSelectCategory,
 }: {
   title: string;
   icon?: React.ReactNode;
   items: string[];
+  selectedCategory: string | null;
+  onSelectCategory: (category: string | null) => void;
 }) {
   const [open, setOpen] = useState(true);
   return (
@@ -259,13 +279,31 @@ function SidebarSection({
         <ul className="mt-1 space-y-2 text-[15px] leading-6 text-slate-700">
           {items.map((it, idx) => (
             <li key={idx}>
-              <a
-                href="#"
-                className="group flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-slate-50"
+              <button
+                onClick={() =>
+                  onSelectCategory(selectedCategory === it ? null : it)
+                }
+                className={`group flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-slate-50 w-full text-left transition-colors ${
+                  selectedCategory === it ? "bg-emerald-50" : ""
+                }`}
               >
-                <span className="mt-1 inline-block h-1.5 w-1.5 rounded-full bg-slate-400 group-hover:bg-emerald-500" />
-                <span className="group-hover:text-emerald-600">{it}</span>
-              </a>
+                <span
+                  className={`mt-1 inline-block h-1.5 w-1.5 rounded-full transition-colors ${
+                    selectedCategory === it
+                      ? "bg-emerald-500"
+                      : "bg-slate-400 group-hover:bg-emerald-500"
+                  }`}
+                />
+                <span
+                  className={`transition-colors ${
+                    selectedCategory === it
+                      ? "text-emerald-600 font-medium"
+                      : "group-hover:text-emerald-600"
+                  }`}
+                >
+                  {it}
+                </span>
+              </button>
             </li>
           ))}
         </ul>
@@ -323,21 +361,23 @@ function ProductCard({ p }: { p: (typeof products)[number] }) {
   );
 }
 
-function Breadcrumb() {
+function Breadcrumb({ selectedCategory }: { selectedCategory: string | null }) {
   return (
     <nav
       className="flex items-center gap-2 text-sm text-slate-500"
       aria-label="breadcrumb"
     >
       <a className="hover:text-emerald-700" href="#">
-        หน้าแรก
+        หน้าแรก (
       </a>
       <span className="text-slate-400">/</span>
       <a className="hover:text-emerald-700" href="#">
         สินค้าทั่วไป
       </a>
       <span className="text-slate-400">/</span>
-      <span className="text-slate-700">สินค้าใหม่</span>
+      <span className="text-slate-700 font-medium">
+        {selectedCategory || "ทั้งหมด"}
+      </span>
     </nav>
   );
 }
@@ -345,6 +385,7 @@ function Breadcrumb() {
 export default function PakkuCatalogPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [index, setIndex] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   useEffect(() => {
     const id = setInterval(
@@ -353,6 +394,12 @@ export default function PakkuCatalogPage() {
     );
     return () => clearInterval(id);
   }, []);
+
+  // กรองสินค้าตามหมวดหมู่ที่เลือก
+  const filteredProducts = useMemo(() => {
+    if (!selectedCategory) return products;
+    return products.filter((p) => p.sku === selectedCategory);
+  }, [selectedCategory]);
 
   return (
     <ScaledCanvas>
@@ -390,8 +437,18 @@ export default function PakkuCatalogPage() {
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-[280px_1fr]">
           <aside className="hidden md:block">
             <div className="sticky top-[88px] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                แถบหมวดสินค้า
+              <div className="mb-3 flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  แถบหมวดสินค้า
+                </div>
+                {selectedCategory && (
+                  <button
+                    onClick={() => setSelectedCategory(null)}
+                    className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                  >
+                    ล้างตัวกรอง
+                  </button>
+                )}
               </div>
               <div className="space-y-3">
                 {sidebar.map((sec) => (
@@ -400,6 +457,8 @@ export default function PakkuCatalogPage() {
                     title={sec.title}
                     icon={sec.icon}
                     items={sec.items}
+                    selectedCategory={selectedCategory}
+                    onSelectCategory={setSelectedCategory}
                   />
                 ))}
               </div>
@@ -414,16 +473,47 @@ export default function PakkuCatalogPage() {
             </div>
 
             <div className="mt-8 flex items-center justify-between gap-4">
-              <Breadcrumb />
+              <Breadcrumb selectedCategory={selectedCategory} />
               <div className="hidden text-sm text-slate-500 md:block">
-                แสดง {products.length} รายการ
+                แสดง {filteredProducts.length} รายการ
+                {selectedCategory && (
+                  <span className="ml-2 text-emerald-600">
+                    (กรองโดย: {selectedCategory})
+                  </span>
+                )}
               </div>
             </div>
 
+            {selectedCategory && (
+              <div className="mt-4 flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-slate-600">กรองตาม:</span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-sm text-emerald-700">
+                  {selectedCategory}
+                  <button
+                    onClick={() => setSelectedCategory(null)}
+                    className="hover:bg-emerald-200 rounded-full p-0.5"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              </div>
+            )}
+
             <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3">
-              {products.map((p) => (
-                <ProductCard key={p.id} p={p} />
-              ))}
+              {filteredProducts.length > 0 ? (
+                filteredProducts.map((p) => <ProductCard key={p.id} p={p} />)
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <Package className="h-16 w-16 text-slate-300 mx-auto mb-4" />
+                  <p className="text-slate-500">ไม่พบสินค้าในหมวดหมู่นี้</p>
+                  <button
+                    onClick={() => setSelectedCategory(null)}
+                    className="mt-4 text-emerald-600 hover:text-emerald-700 font-medium"
+                  >
+                    แสดงสินค้าทั้งหมด
+                  </button>
+                </div>
+              )}
             </div>
           </main>
         </div>
@@ -448,6 +538,16 @@ export default function PakkuCatalogPage() {
                   <X className="h-5 w-5" />
                 </button>
               </div>
+              {selectedCategory && (
+                <div className="px-4 pb-2">
+                  <button
+                    onClick={() => setSelectedCategory(null)}
+                    className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                  >
+                    ล้างตัวกรอง
+                  </button>
+                </div>
+              )}
               <div className="px-4 pb-6">
                 <div className="space-y-3">
                   {sidebar.map((sec) => (
@@ -456,6 +556,11 @@ export default function PakkuCatalogPage() {
                       title={sec.title}
                       icon={sec.icon}
                       items={sec.items}
+                      selectedCategory={selectedCategory}
+                      onSelectCategory={(category) => {
+                        setSelectedCategory(category);
+                        setSidebarOpen(false);
+                      }}
                     />
                   ))}
                 </div>

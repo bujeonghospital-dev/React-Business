@@ -188,18 +188,21 @@ const AwardsPage = () => {
           isVisible.header
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-10"
-        }`}>
+        }`}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1
             className={`text-4xl font-bold text-gray-900 mb-6 transition-all duration-1000 delay-200 ${
               isVisible.header ? "opacity-100 scale-100" : "opacity-0 scale-95"
-            }`}>
+            }`}
+          >
             รางวัลและความภาคภูมิใจ
           </h1>
           <p
             className={`text-lg text-gray-700 max-w-4xl mx-auto leading-relaxed transition-all duration-1000 delay-400 ${
               isVisible.header ? "opacity-100" : "opacity-0"
-            }`}>
+            }`}
+          >
             TPP
             มุ่งมั่นพัฒนาและรักษามาตรฐานด้านคุณภาพของบรรจุภัณฑ์อย่างต่อเนื่อง
             จนได้รับการยอมรับและความไว้วางใจจากลูกค้าในทุกกลุ่มอุตสาหกรรม
@@ -216,23 +219,26 @@ const AwardsPage = () => {
           refs.current.gallery = el;
         }}
         id="gallery"
-        className="py-16 bg-white">
+        className="py-16 bg-white"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Main Trophy Display with Floating Animation */}
           <div
             className={`flex justify-center mb-12 ${
               isVisible.gallery ? "opacity-100" : "opacity-0"
-            }`}></div>
+            }`}
+          ></div>
 
           {/* Certificates Image Display */}
           <div
-            className={`relative w-full h-64 sm:h-72 md:h-80 lg:h-96 xl:h-[28rem] pt-4 sm:pt-6 overflow-hidden rounded-xl shadow-2xl transition-all duration-1000 ${
+            className={`relative w-full h-64 sm:h-72 md:h-80 lg:h-96 xl:h-[30rem] pt-4 sm:pt-6 overflow-hidden rounded-xl shadow-2xl transition-all duration-1000 ${
               isVisible.gallery ? "opacity-100 scale-100" : "opacity-0 scale-95"
-            }`}>
+            }`}
+          >
             <img
               src="images/certifications/awards-collage.png"
               alt="ใบรับรองและรางวัลต่างๆ ของบริษัท TPP"
-              className="w-full h-full object-contain hover:scale-105 transition-transform duration-700"
+              className="w-full h-full object-contain hover:scale-90 transition-transform duration-700"
             />
           </div>
         </div>
@@ -240,7 +246,8 @@ const AwardsPage = () => {
       <p
         className={`text-center text-gray-600 mb-12 max-w-3xl mx-auto transition-all duration-1000 delay-200 ${
           isVisible.gallery ? "opacity-100" : "opacity-0"
-        }`}>
+        }`}
+      >
         รางวัลและการรับรองมาตรฐานต่างๆ ที่ TPP ได้รับจากหน่วยงานชั้นนำ
         ทั้งในประเทศและระดับสากล ยืนยันถึงคุณภาพและมาตรฐานการดำเนินงานของเรา
       </p>

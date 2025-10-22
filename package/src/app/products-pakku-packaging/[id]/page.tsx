@@ -19,26 +19,25 @@ const productsData = [
     id: "1",
     sku: "FIC800000",
     name: "ถาดใส่อาหาร Size L 650 ml #1",
-    description: "ชามกระดาษคุณภาพสูง",
+    description: "ถาดกระดาษคุณภาพสูง ขนาด 9.5x19x4 cm",
     shortDesc: "อีนเตอร์ดิอลสำสุด",
     price: "540",
-    image: "/images/pakku-packaging/item_detail/dev_592.png",
-    category: "บรรจุภัณฑ์กระดาษ",
+    image: "/images/pakku-packaging/item_detail/1.1.png",
+    category: "FOOD TRAY",
     rating: 4.8,
     reviews: 324,
     stock: 150,
-    fullDescription:
-      "ชามกระดาษ 8oz ลายบลู ผลิตจากวัสดุคุณภาพสูงที่มีความแข็งแรงและสามารถเก็บรักษาได้นาน พิมพ์สีสันสวยงาม เหมาะสำหรับใช้บรรจุอาหารต่างๆ ปลอดภัยต่อสุขภาพ ทนความร้อนได้ดี",
+    fullDescription: "ถาดใส่อาหารเย็น–ร้อน แข็งแรง เหมาะกับเดลิเวอร",
     specifications: {
       ขนาด: "8 oz (237 ml)",
-      วัสดุ: "กระดาษเคลือบ PE Food Grade",
+      วัสดุ: "กระดาษคราฟท์ฟู้ดเกรด เคลือบกันซึม รองรับอุณหภูมิร้อน–เย็น",
       ความหนา: "12 pt",
       สี: "ฟ้าพิมพ์ลายสวยงาม",
       พิมพ์: "ดิจิตอลพิมพ์ 4 สี",
       ปริมาณ: "1000 ชิ้นต่อกล่อง",
     },
     images: [
-      "/images/pakku-packaging/item_detail/dev_592.png",
+      "/images/pakku-packaging/item_detail/1.1.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
     ],
@@ -46,27 +45,26 @@ const productsData = [
   {
     id: "2",
     sku: "FIC800001",
-    name: "ชามกระดาษ 8oz ลายบลู #2",
-    description: "ชามกระดาษคุณภาพสูง",
+    name: "ถาดใส่อาหาร Size S 180 ml #2",
+    description: "ถาดกระดาษคุณภาพสูง ขนาด 11x11x4 cm",
     shortDesc: "อีนเตอร์ดิอลสำสุด",
     price: "550",
-    image: "/images/pakku-packaging/item_detail/dev_592.png",
-    category: "บรรจุภัณฑ์กระดาษ",
+    image: "/images/pakku-packaging/item_detail/2.2.png",
+    category: "FOOD TRAY",
     rating: 4.9,
     reviews: 512,
     stock: 200,
-    fullDescription:
-      "ชามกระดาษ 8oz ลายบลู รุ่นพิเศษ ออกแบบมาเพื่อให้สวยงามและใช้งานได้ดี เหมาะสำหรับร้านอาหาร คาเฟ่ หรือใช้ในงานเลี้ยงต่างๆ",
+    fullDescription: "ถาดใส่อาหารเย็น–ร้อน แข็งแรง เหมาะกับเดลิเวอรี่",
     specifications: {
       ขนาด: "8 oz (237 ml)",
-      วัสดุ: "กระดาษเคลือบ PE Food Grade",
+      วัสดุ: "กระดาษคราฟท์ฟู้ดเกรด เคลือบกันซึม รองรับอุณหภูมิร้อน–เย็น",
       ความหนา: "14 pt",
       สี: "ฟ้าเข้มพิมพ์ลายพิเศษ",
       พิมพ์: "ออฟเซ็ทพิมพ์ 4 สี",
       ปริมาณ: "1000 ชิ้นต่อกล่อง",
     },
     images: [
-      "/images/pakku-packaging/item_detail/dev_592.png",
+      "/images/pakku-packaging/item_detail/2.2.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
     ],
@@ -74,12 +72,12 @@ const productsData = [
   {
     id: "3",
     sku: "FIC800002",
-    name: "ชามกระดาษ 8oz ลายบลู #3",
-    description: "ชามกระดาษคุณภาพสูง",
+    name: "SNACK BOX Size M #3",
+    description: "กล่องกระดาษคุณภาพสูง ขนาด 13x13x6 cm",
     shortDesc: "อีนเตอร์ดิอลสำสุด",
     price: "560",
-    image: "/images/pakku-packaging/item_detail/dev_592.png",
-    category: "บรรจุภัณฑ์กระดาษเล็ก",
+    image: "/images/pakku-packaging/item_detail/3.3.png",
+    category: "SNACK BOX",
     rating: 4.7,
     reviews: 287,
     stock: 300,
@@ -94,7 +92,7 @@ const productsData = [
       ปริมาณ: "2000 ชิ้นต่อกล่อง",
     },
     images: [
-      "/images/pakku-packaging/item_detail/dev_592.png",
+      "/images/pakku-packaging/item_detail/3.3.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
     ],
@@ -102,12 +100,12 @@ const productsData = [
   {
     id: "4",
     sku: "FIC800003",
-    name: "ชามกระดาษ 8oz ลายบลู #4",
-    description: "ชามกระดาษคุณภาพสูง",
+    name: "BAKERY BOX Size S #4",
+    description: "ชามกระดาษคุณภาพสูง ขนาด 14x18x4 cm",
     shortDesc: "อีนเตอร์ดิอลสำสุด",
     price: "570",
-    image: "/images/pakku-packaging/item_detail/dev_592.png",
-    category: "บรรจุภัณฑ์กระดาษ",
+    image: "/images/pakku-packaging/item_detail/13.13.png",
+    category: "BAKERY BOX",
     rating: 4.6,
     reviews: 198,
     stock: 120,
@@ -122,7 +120,7 @@ const productsData = [
       ปริมาณ: "1000 ชิ้นต่อกล่อง",
     },
     images: [
-      "/images/pakku-packaging/item_detail/dev_592.png",
+      "/images/pakku-packaging/item_detail/13.13.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
     ],
@@ -130,12 +128,12 @@ const productsData = [
   {
     id: "5",
     sku: "FIC800004",
-    name: "ชามกระดาษ 8oz ลายบลู #5",
+    name: "สายคาดแก้ว Size L 16-12 oz #5",
     description: "ชามกระดาษคุณภาพสูง",
     shortDesc: "อีนเตอร์ดิอลสำสุด",
     price: "580",
-    image: "/images/pakku-packaging/item_detail/dev_592.png",
-    category: "บรรจุภัณฑ์กระดาษ",
+    image: "/images/pakku-packaging/item_detail/14.14.png",
+    category: "CUP SLEEVE",
     rating: 4.8,
     reviews: 445,
     stock: 180,
@@ -150,7 +148,7 @@ const productsData = [
       ปริมาณ: "1000 ชิ้นต่อกล่อง",
     },
     images: [
-      "/images/pakku-packaging/item_detail/dev_592.png",
+      "/images/pakku-packaging/item_detail/14.14.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
     ],
@@ -158,12 +156,12 @@ const productsData = [
   {
     id: "6",
     sku: "FIC800005",
-    name: "ชามกระดาษ 8oz ลายบลู #6",
-    description: "ชามกระดาษคุณภาพสูง",
+    name: "ถ้วยอาหาร  #6",
+    description: "ชามกระดาษคุณภาพสูง ขนาด 9x10.5x3 cm",
     shortDesc: "อีนเตอร์ดิอลสำสุด",
     price: "590",
-    image: "/images/pakku-packaging/item_detail/dev_592.png",
-    category: "บรรจุภัณฑ์กระดาษ",
+    image: "/images/pakku-packaging/item_detail/12.12.png",
+    category: "CUP NOODLES",
     rating: 4.9,
     reviews: 623,
     stock: 250,
@@ -178,7 +176,7 @@ const productsData = [
       ปริมาณ: "1000 ชิ้นต่อกล่อง",
     },
     images: [
-      "/images/pakku-packaging/item_detail/dev_592.png",
+      "/images/pakku-packaging/item_detail/12.12.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
     ],
@@ -186,11 +184,11 @@ const productsData = [
   {
     id: "7",
     sku: "FIC800006",
-    name: "ชามกระดาษ 8oz ลายบลู #7",
-    description: "ชามกระดาษคุณภาพสูง",
-    shortDesc: "อีนเตอร์ดิอลสำสุด",
+    name: "กล่องเค้กสามเหลี่ยม #7",
+    description: "ชามกระดาษคุณภาพสูง ขนาด 9x13.8x9 cm",
+    shortDesc: "กล่องเค้กสามเหลี่ยม",
     price: "600",
-    image: "/images/pakku-packaging/item_detail/dev_592.png",
+    image: "/images/pakku-packaging/item_detail/8.8.png",
     category: "บรรจุภัณฑ์กระดาษ",
     rating: 4.7,
     reviews: 356,
@@ -206,7 +204,7 @@ const productsData = [
       ปริมาณ: "1500 ชิ้นต่อกล่อง",
     },
     images: [
-      "/images/pakku-packaging/item_detail/dev_592.png",
+      "/images/pakku-packaging/item_detail/8.8.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
     ],
@@ -214,11 +212,11 @@ const productsData = [
   {
     id: "8",
     sku: "FIC800007",
-    name: "ชามกระดาษ 8oz ลายบลู #8",
-    description: "ชามกระดาษคุณภาพสูง",
-    shortDesc: "อีนเตอร์ดิอลสำสุด",
+    name: "กล่องเค้กลิ้นชัก #8",
+    description: "ชามกระดาษคุณภาพสูง ขนาด 8.7x17x6 cm",
+    shortDesc: "กล่องเค้กลิ้นชัก",
     price: "610",
-    image: "/images/pakku-packaging/item_detail/dev_592.png",
+    image: "/images/pakku-packaging/item_detail/5.5.png",
     category: "บรรจุภัณฑ์กระดาษ",
     rating: 4.8,
     reviews: 478,
@@ -234,7 +232,7 @@ const productsData = [
       ปริมาณ: "1000 ชิ้นต่อกล่อง",
     },
     images: [
-      "/images/pakku-packaging/item_detail/dev_592.png",
+      "/images/pakku-packaging/item_detail/5.5.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
     ],
@@ -242,11 +240,11 @@ const productsData = [
   {
     id: "9",
     sku: "FIC800008",
-    name: "ชามกระดาษ 8oz ลายบลู #9",
-    description: "ชามกระดาษคุณภาพสูง",
-    shortDesc: "อีนเตอร์ดิอลสำสุด",
+    name: "กระดาษลูกฟูก E-B #9",
+    description: "ชามกระดาษคุณภาพสูง ขนาด 38x40 cm",
+    shortDesc: "กระดาษลูกฟูก E-B",
     price: "620",
-    image: "/images/pakku-packaging/item_detail/dev_592.png",
+    image: "/images/pakku-packaging/item_detail/10.10.png",
     category: "บรรจุภัณฑ์กระดาษ",
     rating: 4.9,
     reviews: 589,
@@ -262,7 +260,175 @@ const productsData = [
       ปริมาณ: "1000 ชิ้นต่อกล่อง",
     },
     images: [
+      "/images/pakku-packaging/item_detail/10.10.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
+      "/images/pakku-packaging/item_detail/dev_592.png",
+    ],
+  },
+  {
+    id: "10",
+    sku: "FIC800008",
+    name: "กล่องเอนกประสงค์ #10",
+    description: "ชามกระดาษคุณภาพสูง ขนาด 10x7.2x6.5 cm",
+    shortDesc: "กล่องเอนกประสงค์",
+    price: "620",
+    image: "/images/pakku-packaging/item_detail/6.6.png",
+    category: "บรรจุภัณฑ์กระดาษ",
+    rating: 4.9,
+    reviews: 589,
+    stock: 220,
+    fullDescription:
+      "ชามกระดาษ 8oz ลายบลู รุ่นท็อปเซลเลอร์ ใช้วัสดุคุณภาพสูง ออกแบบสวยงาม ใช้งานได้ยาวนาน",
+    specifications: {
+      ขนาด: "8 oz (237 ml)",
+      วัสดุ: "กระดาษเคลือบ PE Food Grade",
+      ความหนา: "14 pt",
+      สี: "ฟ้าไล่โทน",
+      พิมพ์: "UV Offset Printing",
+      ปริมาณ: "1000 ชิ้นต่อกล่อง",
+    },
+    images: [
+      "/images/pakku-packaging/item_detail/6.6.png",
+      "/images/pakku-packaging/item_detail/dev_592.png",
+      "/images/pakku-packaging/item_detail/dev_592.png",
+    ],
+  },
+  {
+    id: "11",
+    sku: "FIC800008",
+    name: "กระดาษเอนกประสงค์ #11",
+    description: "ชามกระดาษคุณภาพสูง ขนาด 40x45 cm",
+    shortDesc: "กล่องเอนกประสงค์",
+    price: "620",
+    image: "/images/pakku-packaging/item_detail/10.10.png",
+    category: "บรรจุภัณฑ์กระดาษ",
+    rating: 4.9,
+    reviews: 589,
+    stock: 220,
+    fullDescription:
+      "ชามกระดาษ 8oz ลายบลู รุ่นท็อปเซลเลอร์ ใช้วัสดุคุณภาพสูง ออกแบบสวยงาม ใช้งานได้ยาวนาน",
+    specifications: {
+      ขนาด: "8 oz (237 ml)",
+      วัสดุ: "กระดาษเคลือบ PE Food Grade",
+      ความหนา: "14 pt",
+      สี: "ฟ้าไล่โทน",
+      พิมพ์: "UV Offset Printing",
+      ปริมาณ: "1000 ชิ้นต่อกล่อง",
+    },
+    images: [
+      "/images/pakku-packaging/item_detail/10.10.png",
+      "/images/pakku-packaging/item_detail/dev_592.png",
+      "/images/pakku-packaging/item_detail/dev_592.png",
+    ],
+  },
+  {
+    id: "12",
+    sku: "FIC800008",
+    name: "ซองเครป #12",
+    description: "ชามกระดาษคุณภาพสูง ขนาด 14.5x20 cm",
+    shortDesc: "กล่องเอนกประสงค์",
+    price: "620",
+    image: "/images/pakku-packaging/item_detail/7.7.png",
+    category: "บรรจุภัณฑ์กระดาษ",
+    rating: 4.9,
+    reviews: 589,
+    stock: 220,
+    fullDescription:
+      "ชามกระดาษ 8oz ลายบลู รุ่นท็อปเซลเลอร์ ใช้วัสดุคุณภาพสูง ออกแบบสวยงาม ใช้งานได้ยาวนาน",
+    specifications: {
+      ขนาด: "8 oz (237 ml)",
+      วัสดุ: "กระดาษเคลือบ PE Food Grade",
+      ความหนา: "14 pt",
+      สี: "ฟ้าไล่โทน",
+      พิมพ์: "UV Offset Printing",
+      ปริมาณ: "1000 ชิ้นต่อกล่อง",
+    },
+    images: [
+      "/images/pakku-packaging/item_detail/7.7.png",
+      "/images/pakku-packaging/item_detail/dev_592.png",
+      "/images/pakku-packaging/item_detail/dev_592.png",
+    ],
+  },
+  {
+    id: "13",
+    sku: "FIC800008",
+    name: "กล่องเค้กหูหิ้ว #13",
+    description: "ชามกระดาษคุณภาพสูง ขนาด 9.5x14.2x14 cm",
+    shortDesc: "กล่องเค้กหูหิ้ว",
+    price: "620",
+    image: "/images/pakku-packaging/item_detail/4.4.png",
+    category: "บรรจุภัณฑ์กระดาษ",
+    rating: 4.9,
+    reviews: 589,
+    stock: 220,
+    fullDescription:
+      "ชามกระดาษ 8oz ลายบลู รุ่นท็อปเซลเลอร์ ใช้วัสดุคุณภาพสูง ออกแบบสวยงาม ใช้งานได้ยาวนาน",
+    specifications: {
+      ขนาด: "8 oz (237 ml)",
+      วัสดุ: "กระดาษเคลือบ PE Food Grade",
+      ความหนา: "14 pt",
+      สี: "ฟ้าไล่โทน",
+      พิมพ์: "UV Offset Printing",
+      ปริมาณ: "1000 ชิ้นต่อกล่อง",
+    },
+    images: [
+      "/images/pakku-packaging/item_detail/4.4.png",
+      "/images/pakku-packaging/item_detail/dev_592.png",
+      "/images/pakku-packaging/item_detail/dev_592.png",
+    ],
+  },
+  {
+    id: "14",
+    sku: "FIC800008",
+    name: "ถาดใส่แก้วกาแฟ #14",
+    description: "ชามกระดาษคุณภาพสูง ขนาด 9.3x19.5x3.2 cm",
+    shortDesc: "ถาดใส่แก้วกาแฟ",
+    price: "620",
+    image: "/images/pakku-packaging/item_detail/11.11.png",
+    category: "บรรจุภัณฑ์กระดาษ",
+    rating: 4.9,
+    reviews: 589,
+    stock: 220,
+    fullDescription:
+      "ชามกระดาษ 8oz ลายบลู รุ่นท็อปเซลเลอร์ ใช้วัสดุคุณภาพสูง ออกแบบสวยงาม ใช้งานได้ยาวนาน",
+    specifications: {
+      ขนาด: "8 oz (237 ml)",
+      วัสดุ: "กระดาษเคลือบ PE Food Grade",
+      ความหนา: "14 pt",
+      สี: "ฟ้าไล่โทน",
+      พิมพ์: "UV Offset Printing",
+      ปริมาณ: "1000 ชิ้นต่อกล่อง",
+    },
+    images: [
+      "/images/pakku-packaging/item_detail/11.11.png",
+      "/images/pakku-packaging/item_detail/dev_592.png",
+      "/images/pakku-packaging/item_detail/dev_592.png",
+    ],
+  },
+  {
+    id: "15",
+    sku: "FIC800008",
+    name: "รุ่น BUTTERFLY #15",
+    description: "ชามกระดาษคุณภาพสูง ขนาด 9.3x13.8x9 cm",
+    shortDesc: "กล่องเค้กสามเหลี่ยม",
+    price: "620",
+    image: "/images/pakku-packaging/item_detail/9.9.png",
+    category: "บรรจุภัณฑ์กระดาษ",
+    rating: 4.9,
+    reviews: 589,
+    stock: 220,
+    fullDescription:
+      "ชามกระดาษ 8oz ลายบลู รุ่นท็อปเซลเลอร์ ใช้วัสดุคุณภาพสูง ออกแบบสวยงาม ใช้งานได้ยาวนาน",
+    specifications: {
+      ขนาด: "8 oz (237 ml)",
+      วัสดุ: "กระดาษเคลือบ PE Food Grade",
+      ความหนา: "14 pt",
+      สี: "ฟ้าไล่โทน",
+      พิมพ์: "UV Offset Printing",
+      ปริมาณ: "1000 ชิ้นต่อกล่อง",
+    },
+    images: [
+      "/images/pakku-packaging/item_detail/9.9.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
     ],
@@ -275,6 +441,15 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [liked, setLiked] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [showZoom, setShowZoom] = useState(false);
+  const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setZoomPosition({ x, y });
+  };
 
   // หาสินค้าจาก ID
   const product = productsData.find((p) => p.id === params.id);
@@ -338,12 +513,26 @@ export default function ProductDetailPage() {
           <div className="grid gap-12 md:grid-cols-2">
             {/* Product Images */}
             <div className="space-y-4">
-              <div className="flex h-96 items-center justify-center overflow-hidden rounded-2xl bg-white p-8 shadow-lg">
+              <div
+                className="relative flex h-96 items-center justify-center overflow-hidden rounded-2xl bg-white p-8 shadow-lg cursor-crosshair"
+                onMouseEnter={() => setShowZoom(true)}
+                onMouseLeave={() => setShowZoom(false)}
+                onMouseMove={handleMouseMove}
+              >
                 <img
                   src={product.images[selectedImageIndex]}
                   alt={product.name}
-                  className="h-full w-full object-contain"
+                  className="h-full w-full object-contain transition-transform duration-200"
+                  style={{
+                    transform: showZoom ? "scale(1.5)" : "scale(1)",
+                    transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                  }}
                 />
+                {showZoom && (
+                  <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-3 py-1 rounded-full">
+                    🔍 กำลังซูม
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-3 gap-4">
                 {product.images.map((img, idx) => (

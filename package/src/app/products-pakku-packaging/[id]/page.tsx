@@ -244,7 +244,7 @@ const productsData = [
     description: "ชามกระดาษคุณภาพสูง ขนาด 38x40 cm",
     shortDesc: "กระดาษลูกฟูก E-B",
     price: "620",
-    image: "/images/pakku-packaging/item_detail/10.10.png",
+    image: "/images/pakku-packaging/item_detail/15.15.png",
     category: "บรรจุภัณฑ์กระดาษ",
     rating: 4.9,
     reviews: 589,
@@ -260,7 +260,7 @@ const productsData = [
       ปริมาณ: "1000 ชิ้นต่อกล่อง",
     },
     images: [
-      "/images/pakku-packaging/item_detail/10.10.png",
+      "/images/pakku-packaging/item_detail/15.15.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
       "/images/pakku-packaging/item_detail/dev_592.png",
     ],
@@ -491,10 +491,10 @@ export default function ProductDetailPage() {
         {/* Header */}
         <header className="sticky top-0 z-50 bg-white shadow-md">
           <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-center">
               <Link
                 href="/products-pakku-packaging"
-                className="flex items-center gap-2 text-slate-700 transition-colors hover:text-emerald-600"
+                className="absolute left-4 flex items-center gap-2 text-slate-700 transition-colors hover:text-emerald-600"
               >
                 <ArrowLeft size={24} />
                 <span className="font-semibold">กลับ</span>
@@ -502,9 +502,6 @@ export default function ProductDetailPage() {
               <h1 className="text-xl font-bold text-slate-800">
                 รายละเอียดสินค้า
               </h1>
-              <button className="flex items-center gap-2 rounded-lg bg-emerald-600 px-6 py-2 text-white transition-colors hover:bg-emerald-700">
-                <ShoppingCart size={20} />
-              </button>
             </div>
           </div>
         </header>
@@ -640,32 +637,6 @@ export default function ProductDetailPage() {
 
               {/* Quantity & Actions */}
               <div className="space-y-4 border-t border-slate-200 pt-4">
-                <div className="flex items-center gap-4">
-                  <span className="font-semibold text-slate-700">จำนวน:</span>
-                  <div className="flex items-center overflow-hidden rounded-lg border border-slate-300">
-                    <button
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="p-2 hover:bg-slate-100"
-                    >
-                      <Minus size={20} />
-                    </button>
-                    <input
-                      type="number"
-                      value={quantity}
-                      onChange={(e) =>
-                        setQuantity(Math.max(1, parseInt(e.target.value) || 1))
-                      }
-                      className="w-16 border-l border-r border-slate-300 py-2 text-center"
-                    />
-                    <button
-                      onClick={() => setQuantity(quantity + 1)}
-                      className="p-2 hover:bg-slate-100"
-                    >
-                      <Plus size={20} />
-                    </button>
-                  </div>
-                </div>
-
                 <div className="flex gap-3">
                   <button
                     onClick={handleAddToCart}
@@ -673,16 +644,6 @@ export default function ProductDetailPage() {
                   >
                     <ShoppingCart size={24} />
                     เพิ่มลงตะกร้า
-                  </button>
-                  <button
-                    onClick={() => setLiked(!liked)}
-                    className={`rounded-lg border-2 px-6 py-4 font-semibold transition-colors ${
-                      liked
-                        ? "border-emerald-600 bg-emerald-50 text-emerald-600"
-                        : "border-slate-300 text-slate-700 hover:border-emerald-600"
-                    }`}
-                  >
-                    <Heart size={24} fill={liked ? "currentColor" : "none"} />
                   </button>
                 </div>
 

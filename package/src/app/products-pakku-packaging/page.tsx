@@ -30,13 +30,8 @@ const slides = [
   },
   {
     id: 3,
-    src: "/images/pakku-packaging/banner/pakku_banner_3.png",
-    alt: "Banner – Pakku Packaging 3",
-  },
-  {
-    id: 4,
     src: "/images/pakku-packaging/banner/pakku_banner_4.png",
-    alt: "Banner – Pakku Packaging 4",
+    alt: "Banner – Pakku Packaging 3",
   },
 ];
 
@@ -189,7 +184,7 @@ const products = [
     name: `กระดาษลูกฟูก E-B`,
     Detail: `ขนาด 38x40 cm`,
     priceText: `ราคาเริ่ม 200 บาท/แพ็ค`,
-    img: "/images/pakku-packaging/10.png",
+    img: "/images/pakku-packaging/15.png",
   },
   {
     id: "10",

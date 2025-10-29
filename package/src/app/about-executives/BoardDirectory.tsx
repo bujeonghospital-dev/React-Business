@@ -8,7 +8,7 @@ import { useMemo, useState, useEffect } from "react";
 const Video_TITLE = "คณะกรรมการ / ผู้บริหาร";
 const Video_DESC =
   "คณะกรรมการและผู้บริหาร กำหนดวิสัยทัศน์และกลยุทธ์เชิงธุรกิจ เพื่อเสริมสร้างความแข็งแกร่งและความยั่งยืนขององค์กร";
-const Video_BG_URL = "/images/joinus/bg-board-1.png";
+const Video_BG_URL = "/images/Directors/bg-board-1.png";
 
 // หมวดในแถบแท็บ
 const TABS = [
@@ -501,7 +501,7 @@ function Video({ mounted }: { mounted: boolean }) {
         <div
           className="absolute inset-0 opacity-10"
           style={{
-            backgroundImage: `linear-gradient(90deg,rgba(237, 66, 9, 0.69) 0%, rgba(184, 28, 46, 0.61) 50%, rgba(227, 20, 20, 0.64) 100%);`,
+            backgroundImage: `linear-gradient(90deg,rgba(237, 66, 9, 0.69) 0%, rgba(184, 28, 46, 0.61) 50%, rgba(227, 20, 20, 0) 75%)`,
             animation: mounted ? "pulse 4s ease-in-out infinite" : "none",
           }}
         />

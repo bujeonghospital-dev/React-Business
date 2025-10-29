@@ -463,7 +463,7 @@ export default function ShareholderInfo() {
           <div className="bg-white rounded-2xl border-2 border-red-300 p-6 sm:p-8 shadow-lg">
             <div className="flex flex-col items-center justify-center space-y-6">
               {/* Company Logo */}
-              <div className="w-24 h-24 sm:w-32 sm:h-32 relative bg-red-700 rounded-full flex items-center justify-center shadow-xl">
+              <div className="w-24 h-24 sm:w-32 sm:h-32 relative flex items-center justify-center shadow-xl">
                 <div className="text-white text-center">
                   <img
                     src="/images/logo/logo.png"
@@ -675,7 +675,7 @@ function HeroSection({ mounted }: { mounted: boolean }) {
   return (
     <section className="relative w-full overflow-hidden py-5">
       <div className="relative w-full py-5">
-        <div className="relative h-[40vh] sm:h-[50vh] lg:h-[60vh] xl:h-[640px]">
+        <div className="relative w-full overflow-hidden h-[55svh]">
           <div className="absolute inset-0">
             <Image
               src={Video_BG_URL}

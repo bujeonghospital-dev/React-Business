@@ -123,7 +123,7 @@ export default function AboutPhilosophy() {
           <div className="absolute inset-0 -z-10 bg-white/75 md:bg-white/40 lg:bg-transparent" />
 
           <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-10 xl:px-14 py-10 sm:py-14">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 text-green-900">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 ">
               {/* พันธกิจ (8 กล่อง) */}
               <div className="space-y-6 md:col-span-2">
                 <h3 className="my-heading sm:text-xl mb-1 text-black fx-clip-reveal">
@@ -142,11 +142,16 @@ export default function AboutPhilosophy() {
                       style={{ animationDelay: `${80 + i * 60}ms` }}
                     >
                       <p className="leading-relaxed break-words">
-                        <span className="mr-2 font-semibold text-red-600">
+                        <span className="mr-2 font-semibold text-red-800">
                           {i + 1}.
                         </span>
-                        <span className="text-red-600">{text.textS}</span>&nbsp;
-                        <span className="text-black">{text.textE}</span>
+                        <span className="text-[18px] text-red-800">
+                          {text.textS}
+                        </span>
+                        &nbsp;
+                        <span className="text-[18px] text-black">
+                          {text.textE}
+                        </span>
                       </p>
                     </div>
                   ))}
@@ -171,13 +176,13 @@ export default function AboutPhilosophy() {
                       style={{ animationDelay: `${80 + i * 80}ms` }}
                     >
                       <div
-                        className="font-bold fx-link-in-right text-red-600"
+                        className="font-bold fx-link-in-right text-red-800 text-[18px]"
                         style={{ animationDelay: `${160 + i * 80}ms` }}
                       >
                         {val.k}
                       </div>
                       <p
-                        className="mt-1 leading-relaxed break-words fx-subtle-in-up"
+                        className="mt-1 leading-relaxed break-words fx-subtle-in-up text-[18px]"
                         style={{ animationDelay: `${220 + i * 80}ms` }}
                       >
                         {val.v}

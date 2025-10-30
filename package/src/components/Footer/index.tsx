@@ -32,7 +32,10 @@ const Footer = () => {
                 <Icon icon="simple-icons:line" fontSize={24} color="white" />
               </Link>
               <Link href="#">
-                <Icon icon="mdi:youtube" fontSize={24} color="white" />
+                <Icon icon="simple-icons:tiktok" fontSize={24} color="white" />
+              </Link>
+              <Link href="#">
+                <Icon icon="simple-icons:shopee" fontSize={24} color="white" />
               </Link>
             </div>
           </div>

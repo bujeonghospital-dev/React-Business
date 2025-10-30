@@ -344,6 +344,7 @@ export default function Page() {
           .tab-button {
             position: relative;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 18px;
           }
 
           .tab-button:hover {
@@ -379,7 +380,7 @@ export default function Page() {
               }}
             >
               <div className="inline-flex min-w-full sm:min-w-0 items-center gap-1 sm:gap-2 whitespace-nowrap py-2">
-                <div className="inline-flex rounded-xl bg-red-50 p-1 ring-1 ring-red-200 w-full max-w-full overflow-x-auto">
+                <div className="inline-flex rounded-xl bg-red-50 p-1 ring-1 ring-red-200 w-full max-w-full overflow-x-auto ">
                   {TABS.map((t, index) => {
                     const isActive = t.id === active;
                     return (
@@ -389,7 +390,7 @@ export default function Page() {
                         onClick={() => handleTabChange(t.id)}
                         aria-current={isActive ? "page" : undefined}
                         className={[
-                          "tab-button px-3 py-2 text-sm rounded-lg transition flex-1 sm:flex-none",
+                          "tab-button px-3 py-2 text-sm rounded-lg transition flex-1 sm:flex-none ",
                           isActive
                             ? "active bg-white text-red-700 shadow-sm ring-1 ring-red-300"
                             : "text-gray-600 hover:text-red-700 hover:bg-white/50",
@@ -458,11 +459,11 @@ export default function Page() {
                   <div className="member-info bg-gray-100/90 px-2 sm:px-3 py-2 text-center relative overflow-hidden">
                     {/* Shimmer effect on hover */}
                     <div className="absolute inset-0 opacity-0 group-hover:opacity-100 animate-shimmer" />
-                    <p className="text-[12px] sm:text-sm font-medium leading-5 text-gray-900 relative z-10 transition-transform duration-300 group-hover:scale-105">
+                    <p className="text-[18px] font-medium leading-5 text-gray-900 relative z-10 transition-transform duration-300 group-hover:scale-105 ">
                       {m.name}
                     </p>
                     {m.role && (
-                      <p className="mt-0.5 text-[10px] sm:text-xs text-gray-600 relative z-10 transition-all duration-300 group-hover:text-red-700">
+                      <p className="mt-0.5 text-[16px]  text-gray-600 relative z-10 transition-all duration-300 group-hover:text-red-700">
                         {m.role}
                       </p>
                     )}

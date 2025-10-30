@@ -457,10 +457,10 @@ export default function OmanAirStyleLayout() {
                 isVisible["company-card"] ? "aos-animate" : ""
               }`}
             >
-              <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 mb-2">
+              <div className="text-[32px] font-extrabold text-neutral-900 mb-2">
                 บริษัทในเครือ
-              </h3>
-              <div className="text-sm sm:text-base leading-relaxed text-neutral-700">
+              </div>
+              <div className="text-[18px] leading-relaxed text-neutral-700">
                 <p>
                   บริษัท ทีพีพี อินเตอร์เนชั่นแนล จำกัด
                   <br />
@@ -485,16 +485,16 @@ export default function OmanAirStyleLayout() {
                 isVisible["contact-card"] ? "aos-animate" : ""
               }`}
             >
-              <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 mb-3">
+              <div className="text-[32px] font-extrabold text-neutral-900 mb-3">
                 กรุณาเยี่ยมชมเราได้ที่
-              </h3>
+              </div>
               <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
                 <div
                   data-aos="fade-right"
                   data-aos-delay="300"
-                  className={`text-sm sm:text-base leading-relaxed text-neutral-700 ${
+                  className={` leading-relaxed text-neutral-700 ${
                     isVisible["contact-card"] ? "aos-animate" : ""
-                  }`}
+                  } text-[18px]`}
                 >
                   <p>
                     <a

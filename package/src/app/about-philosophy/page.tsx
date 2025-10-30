@@ -86,7 +86,7 @@ export default function AboutPhilosophy() {
             className="absolute inset-0 -z-10 object-cover object-center"
             priority
           />
-          <div className="relative md:absolute md:right-6 lg:right-12 md:top-1/3 md:-translate-y-1/2 md:-translate-x-1/2 mx-auto md:mx-0 md:ml-0 max-w-screen-md md:max-w-md lg:max-w-lg px-4 sm:px-6 md:pr-4 lg:pr-8 py-10 text-center md:text-right ">
+          <div className="relative md:absolute md:right-6 lg:right-12 md:top-1/3 md:-translate-y-1/6 md:-translate-x-1/2 mx-auto md:mx-0 md:ml-0 max-w-screen-md md:max-w-md lg:max-w-lg px-4 sm:px-6 md:pr-4 lg:pr-8 py-10 text-center md:text-right ">
             <div className="my-heading text-2xl md:text-4xl lg:text-5xl mb-3 text-start text-red-800 fx-clip-reveal">
               วิสัยทัศน์
               <span
@@ -96,7 +96,7 @@ export default function AboutPhilosophy() {
             </div>
 
             <p
-              className="mx-auto text-base sm:text-lg leading-relaxed break-words shadow-white-end custom-Charcoal-gray fx-subtle-in-up text-start"
+              className="mx-auto text-base sm:text-lg leading-relaxed break-words  custom-Charcoal-gray fx-subtle-in-up text-start"
               style={{ animationDelay: "120ms" }}
             >
               เป็นผู้นำด้านธุรกิจการพิมพ์และบรรจุภัณฑ์กระดาษ

@@ -1536,6 +1536,16 @@ const DownloadSection: React.FC<{ title: string; items: DownloadItem[] }> = ({
 }) => {
   const { ref, isVisible } = useScrollAnimation();
 
+  const handleDownload = (filename: string, itemTitle: string) => {
+    // Create download link for files in public/downloads/financials/
+    const link = document.createElement("a");
+    link.href = `/downloads/financials/${filename}`;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div
       ref={ref}
@@ -1576,7 +1586,10 @@ const DownloadSection: React.FC<{ title: string; items: DownloadItem[] }> = ({
                 </p>
               </div>
             </div>
-            <button className="px-4 py-2 bg-teal-600 text-white text-sm rounded hover:bg-teal-700 transition-all duration-300 flex items-center gap-2 hover:scale-105 active:scale-95 shadow-md hover:shadow-lg">
+            <button
+              onClick={() => handleDownload(item.filename, item.title)}
+              className="px-4 py-2 bg-teal-600 text-white text-sm rounded hover:bg-teal-700 transition-all duration-300 flex items-center gap-2 hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
+            >
               <Download className="w-4 h-4 transition-transform duration-300 group-hover:animate-bounce" />
               ดาวน์โหลด
             </button>
@@ -1724,12 +1737,16 @@ export default function InvestorFinancials() {
             title="งบการเงิน"
             items={[
               {
-                title: "งบการเงิน ไตรมาสที่ 2/2568 (สอบทานแล้ว)",
-                filename: "financial-q2-2568.pdf",
+                title:
+                  "สรุปผลการดำเนินงานของ บจ. ไตรมาสที่ 1 (F45) (สอบทานแล้ว)",
+                filename:
+                  "สรุปผลการดำเนินงานของ บจ. ไตรมาสที่ 1 (F45) (สอบทานแล้ว).pdf",
               },
               {
-                title: "งบการเงิน ไตรมาสที่ 1/2568 (สอบทานแล้ว)",
-                filename: "financial-q1-2568.pdf",
+                title:
+                  "สรุปผลการดำเนินงานของ บจ. ไตรมาสที่ 2 (F45) (สอบทานแล้ว)",
+                filename:
+                  "สรุปผลการดำเนินงานของ บจ. ไตรมาสที่ 2 (F45) (สอบทานแล้ว).pdf",
               },
             ]}
           />
@@ -1739,13 +1756,15 @@ export default function InvestorFinancials() {
             items={[
               {
                 title:
-                  "คำอธิบายและวิเคราะห์ของฝ่ายจัดการ ไตรมาสที่ 2 สิ้นสุดวันที่ 30 มิ.ย. 2568",
-                filename: "mda-q2-2568.pdf",
+                  "คำอธิบายและวิเคราะห์ของฝ่ายจัดการ ไตรมาสที่ 1 สิ้นสุดวันที่ 31 มี.ค. 2568",
+                filename:
+                  "คำอธิบายและวิเคราะห์ของฝ่ายจัดการ ไตรมาสที่ 1 สิ้นสุดวันที่ 31 มี.ค. 2568.pdf",
               },
               {
                 title:
-                  "คำอธิบายและวิเคราะห์ของฝ่ายจัดการ ไตรมาสที่ 1 สิ้นสุดวันที่ 31 มี.ค. 2568",
-                filename: "mda-q1-2568.pdf",
+                  "คำอธิบายและวิเคราะห์ของฝ่ายจัดการ ไตรมาสที่ 2 สิ้นสุดวันที่ 30 มิ.ย. 2568",
+                filename:
+                  "คำอธิบายและวิเคราะห์ของฝ่ายจัดการ ไตรมาสที่ 2 สิ้นสุดวันที่ 30 มิ.ย. 2568.pdf",
               },
             ]}
           />

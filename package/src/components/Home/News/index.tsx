@@ -40,30 +40,6 @@ const TabPage = () => {
         "ประชุมคณะกรรมการบริหาร – รวมพลังขับเคลื่อนองค์กรสู่ความสำเร็จ เสริมสร้างวิสัยทัศน์ร่วม และกำหนดทิศทางการเติบโตอย่างยั่งยืน",
       image: "/images/New/Board_of_Directors_Meeting.png",
     },
-    {
-      date: "03 เมษายน 2568",
-      title:
-        "xxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxx",
-      image: "/images/New/Dev_Size.png",
-    },
-    {
-      date: "03 เมษายน 2568",
-      title:
-        "xxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxx",
-      image: "/images/New/Dev_Size.png",
-    },
-    {
-      date: "03 เมษายน 2568",
-      title:
-        "xxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxx",
-      image: "/images/New/Dev_Size.png",
-    },
-    {
-      date: "03 เมษายน 2568",
-      title:
-        "xxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxx",
-      image: "/images/New/Dev_Size.png",
-    },
   ];
 
   const articleData = [
@@ -347,7 +323,7 @@ const TabPage = () => {
 
       {/* CTA */}
       <div className="flex justify-center mt-6">
-        <Link href="/tpp-news">
+        <Link href={activeTab === "news" ? "/news-events" : "/articles"}>
           <button className="ir-btn ir-btn-glow">ดูทั้งหมด</button>
         </Link>
       </div>

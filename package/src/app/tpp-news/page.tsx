@@ -327,40 +327,6 @@ export default function TPPNewsPage() {
           {/* Sidebar - Right 1 column */}
           <div className="lg:col-span-1">
             <div className="sticky top-6">
-              {/* Popular News */}
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-6">
-                  <h2 className="font-bold text-xl">ข่าวยอดนิยม</h2>
-                </div>
-                <div>
-                  {sidebarNews.map((news, index) => (
-                    <article
-                      key={news.id}
-                      className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer"
-                    >
-                      <div className="p-6">
-                        <div className="relative h-32 mb-4 rounded-lg overflow-hidden">
-                          <Image
-                            src={news.image}
-                            alt={news.title}
-                            fill
-                            className="object-cover"
-                            unoptimized
-                          />
-                        </div>
-                        <span className="inline-block text-xs bg-red-600 text-white px-3 py-1 rounded-full mb-3">
-                          {news.category}
-                        </span>
-                        <h3 className="font-bold text-sm mb-2 hover:text-red-600 transition-colors line-clamp-2">
-                          {news.title}
-                        </h3>
-                        <p className="text-xs text-gray-500">{news.date}</p>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </div>
-
               {/* Quick Links */}
               <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
                 <h3 className="font-bold text-lg mb-4 text-gray-800">

@@ -346,6 +346,11 @@ function ProductCard({ p }: { p: (typeof products)[number] }) {
           src={p.img}
           alt={p.name}
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          style={{
+            borderStyle: "solid",
+            borderWidth: "1px",
+            borderColor: "#e2e8f0",
+          }}
         />
       </div>
       <div className="p-4">

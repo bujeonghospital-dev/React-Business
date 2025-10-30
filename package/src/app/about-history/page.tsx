@@ -409,7 +409,7 @@ function TimelineCard({
         boxSizing: "border-box",
       }}
     >
-      <div className="text-[24px] font-semibold tracking-wider custom-red">
+      <div className="text-[18px] font-semibold tracking-wider custom-red">
         {year}
       </div>
       {title && (
@@ -417,15 +417,13 @@ function TimelineCard({
       )}
 
       {lines.length > 1 ? (
-        // ถ้ามีหลายรายการ ให้ขึ้นบรรทัดใหม่แต่ยังคงเครื่องหมาย "-"
-        <div className="mt-2 text-sm md:text-base leading-7 text-neutral-700">
+        <div className="mt-2 text-[18px] leading-7 text-neutral-700">
           {lines.map((t, i) => (
             <div key={i}>- {t}</div>
           ))}
         </div>
       ) : (
-        // ถ้าไม่มี "-" ให้แสดงเป็นย่อหน้าเดิม
-        <p className="mt-2 text-sm md:text-base leading-7 text-neutral-700">
+        <p className="mt-2 text-[18px] leading-7 text-neutral-700">
           {description}
         </p>
       )}

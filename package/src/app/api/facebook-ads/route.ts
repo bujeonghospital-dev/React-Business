@@ -66,14 +66,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           error: "ยังไม่พร้อมใช้งาน Facebook Ads API",
-          message: "ขาด credentials ดังนี้:",
+          message: "ขาด Environment Variables ดังนี้:",
           missing: missingCredentials,
           instructions: {
-            "1. สร้าง Facebook App":
-              "ไปที่ https://developers.facebook.com/apps/",
-            "2. ขอ Access Token": "ใช้ Access Token Tool",
-            "3. หา Ad Account ID": "ดูใน Business Manager",
-            "4. เพิ่มใน .env.local": "ดูคู่มือใน FACEBOOK_ADS_SETUP.md",
+            "🔧 สำหรับ Local Development": {
+              "1. สร้างไฟล์ .env.local": "ในโฟลเดอร์ package/",
+              "2. เพิ่ม credentials": "ดูตัวอย่างใน .env.local.example",
+              "3. Restart dev server": "npm run dev",
+            },
+            "☁️ สำหรับ Vercel (Production)": {
+              "1. ไปที่":
+                "https://vercel.com/your-project/settings/environment-variables",
+              "2. เพิ่มตัวแปรเหล่านี้": missingCredentials.join(", "),
+              "3. Redeploy": "การ deploy ครั้งถัดไปจะใช้ตัวแปรใหม่",
+            },
+            "📚 วิธีขอ Credentials": {
+              "Facebook App": "https://developers.facebook.com/apps/",
+              "Access Token":
+                "https://developers.facebook.com/tools/accesstoken/",
+              "Ad Account ID":
+                "https://business.facebook.com/settings/ad-accounts",
+              คู่มือ: "ดูที่ FACEBOOK_ADS_SETUP.md",
+            },
           },
           currentCredentials: {
             hasAppId: !!credentials.appId,
@@ -81,6 +95,9 @@ export async function GET(request: NextRequest) {
             hasAccessToken: !!credentials.accessToken,
             hasAdAccountId: !!credentials.adAccountId,
           },
+          environment: process.env.VERCEL
+            ? "Vercel Production"
+            : "Local Development",
         },
         { status: 503 }
       );

@@ -3,6 +3,7 @@
 export interface GoogleAdsCampaign {
   id: string;
   name: string;
+  status?: string; // ENABLED, PAUSED, REMOVED
   clicks: number;
   impressions: number;
   averageCpc: number; // in THB

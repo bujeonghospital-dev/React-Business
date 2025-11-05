@@ -8,8 +8,17 @@ export async function GET(request: NextRequest) {
     if (!accessToken) {
       return NextResponse.json(
         {
-          error:
-            "ไม่พบ Access Token กรุณาตั้งค่า FACEBOOK_ACCESS_TOKEN ใน .env.local",
+          success: false,
+          error: "ไม่พบ Facebook Access Token",
+          message:
+            process.env.NODE_ENV === "production"
+              ? "กรุณาตั้งค่า FACEBOOK_ACCESS_TOKEN ใน Environment Variables ของ hosting platform (เช่น Vercel, Netlify)"
+              : "กรุณาตั้งค่า FACEBOOK_ACCESS_TOKEN ใน .env.local",
+          hint:
+            process.env.NODE_ENV === "production"
+              ? "สำหรับ Vercel: Project Settings → Environment Variables"
+              : "สร้างไฟล์ .env.local ในโฟลเดอร์ package/ และเพิ่ม FACEBOOK_ACCESS_TOKEN=your_token",
+          docs: "ดูเอกสารเพิ่มเติมที่ VERCEL_ENV_SETUP.md และ FACEBOOK_ADS_SETUP.md",
         },
         { status: 500 }
       );
@@ -18,8 +27,13 @@ export async function GET(request: NextRequest) {
     if (!adAccountId) {
       return NextResponse.json(
         {
-          error:
-            "ไม่พบ Ad Account ID กรุณาตั้งค่า FACEBOOK_AD_ACCOUNT_ID ใน .env.local",
+          success: false,
+          error: "ไม่พบ Facebook Ad Account ID",
+          message:
+            process.env.NODE_ENV === "production"
+              ? "กรุณาตั้งค่า FACEBOOK_AD_ACCOUNT_ID ใน Environment Variables ของ hosting platform"
+              : "กรุณาตั้งค่า FACEBOOK_AD_ACCOUNT_ID ใน .env.local",
+          hint: "Ad Account ID รูปแบบ: act_1234567890",
         },
         { status: 500 }
       );

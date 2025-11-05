@@ -46,8 +46,10 @@ import { GoogleAdsApiResponse, GoogleAdsCampaign } from "@/types/google-ads";
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const startDate = searchParams.get("startDate") || "2025-01-01";
-    const endDate = searchParams.get("endDate") || "2025-04-04";
+    // Default เป็นวันนี้
+    const today = new Date().toISOString().split("T")[0];
+    const startDate = searchParams.get("startDate") || today;
+    const endDate = searchParams.get("endDate") || today;
 
     // ตรวจสอบว่ามี credentials อะไรบ้าง
     const credentials = {
@@ -116,12 +118,120 @@ export async function GET(request: NextRequest) {
         refresh_token: credentials.refreshToken!,
       });
 
+      console.log("🔍 Checking if account is a Manager Account...");
+
+      // ตรวจสอบว่าเป็น Manager Account หรือไม่
+      let isManagerAccount = false;
+      let clientAccounts: any[] = [];
+
+      try {
+        const accountInfo = await customer.query(`
+          SELECT
+            customer.id,
+            customer.manager,
+            customer.descriptive_name
+          FROM customer
+          LIMIT 1
+        `);
+
+        if (accountInfo.length > 0 && accountInfo[0]?.customer?.manager) {
+          isManagerAccount = true;
+          console.log(
+            "⚠️  This is a Manager Account (MCC). Fetching client accounts..."
+          );
+
+          // ดึงรายการ Client Accounts ภายใต้ Manager (แบบง่าย)
+          try {
+            const clientAccountsData = await customer.query(`
+              SELECT
+                customer_client.id,
+                customer_client.descriptive_name,
+                customer_client.manager,
+                customer_client.status
+              FROM customer_client
+              WHERE customer_client.status = 'ENABLED'
+            `);
+
+            clientAccounts = clientAccountsData
+              .filter((row: any) => !row.customer_client.manager)
+              .map((row: any) => ({
+                id: row.customer_client.id.toString(),
+                name: row.customer_client.descriptive_name,
+                isManager: row.customer_client.manager,
+                status: row.customer_client.status,
+              }));
+
+            console.log(`📋 Found ${clientAccounts.length} client accounts`);
+          } catch (queryError: any) {
+            console.log(
+              "⚠️  Could not fetch client accounts:",
+              queryError.message
+            );
+
+            // ถ้า query ไม่ได้ ให้แสดงคำแนะนำ
+            clientAccounts = [
+              {
+                id: "ไม่สามารถ query ได้",
+                name: "กรุณาดู Client Account ID จาก Google Ads Dashboard",
+                instructions:
+                  "ไปที่ ads.google.com → Account selector → เลือก Client Account → ดู Customer ID มุมขวาบน",
+              },
+            ];
+          }
+        }
+      } catch (checkError: any) {
+        console.log("ℹ️  Unable to check account type, proceeding...");
+      }
+
+      // ถ้าเป็น Manager Account แสดงรายการ Client Accounts
+      if (isManagerAccount) {
+        return NextResponse.json(
+          {
+            error: "Manager Account ไม่สามารถ query metrics โดยตรง",
+            message:
+              "Manager Account (MCC) ไม่สามารถ query campaigns/metrics ได้โดยตรง",
+            solution: "กรุณาใช้ Client Account ID แทน",
+            currentCustomerId: credentials.customerId,
+            currentAccountType: "Manager Account (MCC)",
+            clientAccounts: clientAccounts,
+            howToFindClientAccountId: {
+              method1: "ผ่าน Google Ads Dashboard",
+              steps: [
+                "1. ไปที่ https://ads.google.com/",
+                "2. คลิก Account selector (มุมบนซ้าย)",
+                "3. จะเห็นรายการบัญชีทั้งหมด (Manager และ Client Accounts)",
+                "4. คลิกเข้าไปใน Client Account ที่ต้องการ",
+                "5. ดู Customer ID มุมขวาบน (เช่น 123-456-7890)",
+                "6. เอาตัวเลขมาใส่ใน .env.local (เช่น 1234567890)",
+              ],
+              method2: "หรือสร้าง Client Account ใหม่",
+              createSteps: [
+                "1. ไปที่ https://ads.google.com/",
+                "2. คลิก Tools & Settings → Setup → Create new account",
+                "3. สร้าง Client Account ใหม่",
+                "4. ใช้ Customer ID ของบัญชีใหม่",
+              ],
+            },
+            instructions: {
+              step1: "หา Client Account ID จากวิธีข้างบน",
+              step2: "อัพเดท GOOGLE_ADS_CUSTOMER_ID ใน .env.local",
+              step3: "Restart server และลองอีกครั้ง",
+              example:
+                'GOOGLE_ADS_CUSTOMER_ID=1234567890 (ใช้เฉพาะตัวเลข ไม่ต้องมี "-")',
+            },
+            note: "ถ้าไม่มี Client Account ใต้ Manager นี้ อาจต้องสร้างบัญชีใหม่หรือขอสิทธิ์เข้าถึง Client Account จากเจ้าของบัญชี",
+          },
+          { status: 400 }
+        );
+      }
+
       console.log("🔍 Querying campaigns from Google Ads API...");
 
       const campaignsData = await customer.query(`
         SELECT
           campaign.id,
           campaign.name,
+          campaign.status,
           metrics.clicks,
           metrics.impressions,
           metrics.average_cpc,
@@ -130,7 +240,6 @@ export async function GET(request: NextRequest) {
           metrics.conversions
         FROM campaign
         WHERE segments.date BETWEEN '${startDate}' AND '${endDate}'
-        AND campaign.status = 'ENABLED'
       `);
 
       console.log(`✅ Retrieved ${campaignsData.length} campaigns`);
@@ -139,6 +248,7 @@ export async function GET(request: NextRequest) {
       const campaigns: GoogleAdsCampaign[] = campaignsData.map((row: any) => ({
         id: row.campaign.id.toString(),
         name: row.campaign.name,
+        status: row.campaign.status,
         clicks: row.metrics.clicks || 0,
         impressions: row.metrics.impressions || 0,
         averageCpc: (row.metrics.average_cpc || 0) / 1000000, // Convert micros to THB
@@ -146,6 +256,11 @@ export async function GET(request: NextRequest) {
         ctr: (row.metrics.ctr || 0) * 100, // Convert to percentage
         conversions: row.metrics.conversions || 0,
       }));
+
+      console.log("📊 Campaign Details:");
+      campaigns.forEach((c) => {
+        console.log(`  - ${c.name}: ${c.clicks} clicks (Status: ${c.status})`);
+      });
 
       // คำนวณ summary
       const summary = {
@@ -191,6 +306,13 @@ export async function GET(request: NextRequest) {
       } else if (errorDetails.includes("CUSTOMER_NOT_FOUND")) {
         errorMessage = "ไม่พบ Customer ID";
         errorDetails = `Customer ID ${credentials.customerId} ไม่ถูกต้อง กรุณาตรวจสอบที่ Google Ads Dashboard`;
+      } else if (
+        errorDetails.includes("manager account") ||
+        errorDetails.includes("Metrics cannot be requested")
+      ) {
+        errorMessage = "ใช้ Manager Account (MCC) ไม่ได้";
+        errorDetails =
+          "กรุณาใช้ Client Account ID แทน ลองเรียก API อีกครั้งเพื่อดูรายการ Client Accounts";
       }
 
       return NextResponse.json(

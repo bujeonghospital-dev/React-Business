@@ -7,23 +7,25 @@
 ### ขั้นตอนการตั้งค่า:
 
 1. **เข้าสู่ Vercel Dashboard**
+
    ```
    https://vercel.com/your-username/your-project-name
    ```
 
 2. **ไปที่ Settings → Environment Variables**
+
    ```
    https://vercel.com/your-username/your-project-name/settings/environment-variables
    ```
 
 3. **เพิ่มตัวแปรเหล่านี้:**
 
-   | Variable Name | Value | Environment |
-   |--------------|-------|-------------|
-   | `FACEBOOK_APP_ID` | `your-app-id` | Production, Preview, Development |
-   | `FACEBOOK_APP_SECRET` | `your-app-secret` | Production, Preview, Development |
-   | `FACEBOOK_ACCESS_TOKEN` | `your-access-token` | Production, Preview, Development |
-   | `FACEBOOK_AD_ACCOUNT_ID` | `act_1234567890` | Production, Preview, Development |
+   | Variable Name            | Value               | Environment                      |
+   | ------------------------ | ------------------- | -------------------------------- |
+   | `FACEBOOK_APP_ID`        | `your-app-id`       | Production, Preview, Development |
+   | `FACEBOOK_APP_SECRET`    | `your-app-secret`   | Production, Preview, Development |
+   | `FACEBOOK_ACCESS_TOKEN`  | `your-access-token` | Production, Preview, Development |
+   | `FACEBOOK_AD_ACCOUNT_ID` | `act_1234567890`    | Production, Preview, Development |
 
 4. **Redeploy Project**
    - ไปที่ Deployments
@@ -57,6 +59,7 @@ curl -X GET "https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_e
 ```
 
 แทนที่:
+
 - `{APP_ID}` = Facebook App ID ของคุณ
 - `{APP_SECRET}` = Facebook App Secret ของคุณ
 - `{SHORT_LIVED_TOKEN}` = Token ที่คัดลอกมา
@@ -107,6 +110,7 @@ curl -X GET "https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_e
 ### การต่ออายุ Token อัตโนมัติ
 
 สำหรับ Production ควรใช้:
+
 1. **System User Token** (ไม่หมดอายุ)
 2. หรือสร้างระบบ **Token Refresh** อัตโนมัติ
 
@@ -140,10 +144,12 @@ https://your-project.vercel.app/api/facebook-ads
 ```
 
 ถ้าตั้งค่าถูกต้อง จะเห็น:
+
 - ✅ ข้อมูล campaigns จาก Facebook Ads
 - ✅ Status 200 OK
 
 ถ้าตั้งค่าไม่ถูกต้อง จะเห็น:
+
 - ❌ Error message พร้อมวิธีแก้ไข
 - ❌ Status 503 Service Unavailable
 
@@ -176,16 +182,19 @@ https://your-project.vercel.app/api/facebook-ads
 ## 💡 Tips
 
 1. **ใช้ System User Token สำหรับ Production**
+
    - ไม่หมดอายุ
    - ปลอดภัยกว่า User Access Token
    - จัดการได้ใน Business Manager
 
 2. **แยก Environment ตาม Use Case**
+
    - **Development**: ใช้ Test Ad Account
    - **Preview**: ใช้ Staging Ad Account
    - **Production**: ใช้ Real Ad Account
 
 3. **Monitor Token Status**
+
    - ตรวจสอบอายุของ Token เป็นประจำ
    - ตั้งค่า Alert เมื่อ Token ใกล้หมดอายุ
 

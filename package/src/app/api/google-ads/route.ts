@@ -263,7 +263,62 @@ export async function GET(request: NextRequest) {
         }`
       );
 
-      // แปลงข้อมูลเป็นรูปแบบที่ต้องการ
+      // ถ้าต้องการข้อมูลรายวัน
+      if (daily) {
+        console.log("📊 Processing daily data...");
+
+        // จัดกลุ่มข้อมูลตามวันที่
+        const dailyDataMap = new Map<
+          string,
+          { clicks: number; impressions: number }
+        >();
+
+        campaignsData.forEach((row: any) => {
+          const date = row.segments?.date || "";
+          if (!date) return;
+
+          const clicks = row.metrics?.clicks || 0;
+          const impressions = row.metrics?.impressions || 0;
+
+          const existing = dailyDataMap.get(date) || {
+            clicks: 0,
+            impressions: 0,
+          };
+          dailyDataMap.set(date, {
+            clicks: existing.clicks + clicks,
+            impressions: existing.impressions + impressions,
+          });
+        });
+
+        // แปลงเป็น array และเรียงตามวันที่
+        const dailyData = Array.from(dailyDataMap.entries())
+          .map(([date, metrics]) => ({
+            date,
+            clicks: metrics.clicks,
+            impressions: metrics.impressions,
+          }))
+          .sort(
+            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+          );
+
+        console.log(`✅ Daily breakdown: ${dailyData.length} days`);
+        dailyData.forEach((d) => {
+          console.log(
+            `  ${d.date}: ${d.clicks} clicks, ${d.impressions} impressions`
+          );
+        });
+
+        return NextResponse.json({
+          success: true,
+          dailyData: dailyData,
+          dateRange: {
+            startDate,
+            endDate,
+          },
+        });
+      }
+
+      // แปลงข้อมูลเป็นรูปแบบที่ต้องการ (สำหรับ non-daily)
       const campaigns: GoogleAdsCampaign[] = campaignsData.map((row: any) => ({
         id: row.campaign.id.toString(),
         name: row.campaign.name,

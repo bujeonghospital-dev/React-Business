@@ -201,14 +201,10 @@ const CustomerContactDashboard = () => {
         params.append("queue_extension", queueExtension);
       }
 
-      console.log("🔍 Fetching queue status with params:", params.toString());
-
       const response = await fetch(
         `/api/yalecom/queue-status?${params.toString()}`
       );
       const result = await response.json();
-
-      console.log("📡 API Response:", result);
 
       if (!result.success) {
         console.error("❌ API Error:", result.error);
@@ -216,8 +212,6 @@ const CustomerContactDashboard = () => {
       }
 
       const data: YalecomQueueStatus = result.data;
-      console.log("✅ Queue Data:", data);
-      console.log("👥 Agents:", data.agents);
 
       setQueueData(data);
 
@@ -225,12 +219,6 @@ const CustomerContactDashboard = () => {
       const agentContactsData: ContactRecord[] = data.agents.map((agent) => {
         let status: ContactRecord["status"] = "waiting";
         let customerPhone = "-"; // เบอร์ลูกค้าที่ติดต่อ
-
-        console.log(`👤 Processing Agent: ${agent.agent_name}`, {
-          queue_status: agent.agent_queue_status,
-          outbound_number: agent.agent_outbound_callee_number,
-          caller_number: agent.agent_queue_caller_number,
-        });
 
         // กำหนดสถานะตามการใช้งานจริงของ Agent
         // ตรวจสอบสถานะจาก agent_queue_status ก่อน
@@ -246,22 +234,18 @@ const CustomerContactDashboard = () => {
             agent.agent_outbound_callee_number ||
             agent.agent_queue_caller_number ||
             "-";
-          console.log(`  ✅ Status: SALE ติดต่อ (${customerPhone})`);
         } else if (agent.agent_queue_caller_number) {
           // Agent รับสายเข้าแต่ยังไม่ได้คุย
           status = "received";
           customerPhone = agent.agent_queue_caller_number;
-          console.log(`  📲 Status: รับสาย (${customerPhone})`);
         } else if (agent.agent_queue_status === "Waiting") {
           // Agent ว่าง รอรับสาย
           status = "waiting";
           customerPhone = "-";
-          console.log(`  ⏳ Status: รอสาย`);
         } else if (agent.agent_queue_status === "Offline") {
           // Agent ออฟไลน์
           status = "waiting";
           customerPhone = "-";
-          console.log(`  💤 Status: Offline (รอสาย)`);
         }
 
         return {
@@ -277,7 +261,6 @@ const CustomerContactDashboard = () => {
         };
       });
 
-      console.log("📊 Final Agent Contacts:", agentContactsData);
       setAgentContacts(agentContactsData);
       return data;
     } catch (error) {
@@ -387,13 +370,6 @@ const CustomerContactDashboard = () => {
       console.error("Error deleting contact:", error);
     }
   };
-
-  // Debug: Log all contacts before rendering
-  console.log("🎨 Rendering Dashboard with contacts:", {
-    allContacts: allContacts.length,
-    agentContacts: agentContacts.length,
-    filteredContacts: filteredContacts.length,
-  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">

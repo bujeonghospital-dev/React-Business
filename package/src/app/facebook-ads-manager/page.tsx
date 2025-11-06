@@ -278,6 +278,77 @@ export default function FacebookAdsManagerPage() {
         }
       });
 
+      // ดึงข้อมูล Google Sheets รายวัน
+      try {
+        const sheetsTimeRange = JSON.stringify({ since, until });
+        const sheetsUrl = `/api/google-sheets-data?time_range=${encodeURIComponent(
+          sheetsTimeRange
+        )}&daily=true`;
+
+        const sheetsResponse = await fetch(sheetsUrl);
+        const sheetsResult = await sheetsResponse.json();
+
+        if (
+          sheetsResponse.ok &&
+          sheetsResult.success &&
+          sheetsResult.dailyData
+        ) {
+          // รวมข้อมูล Google Sheets เข้ากับข้อมูลที่มีอยู่
+          sheetsResult.dailyData.forEach((sheetDay: any) => {
+            if (dataByDate.has(sheetDay.date)) {
+              dataByDate.get(sheetDay.date)!.googleSheets = sheetDay.count || 0;
+            } else {
+              // ถ้ายังไม่มีวันนี้ในข้อมูล ให้เพิ่มเข้าไป
+              dataByDate.set(sheetDay.date, {
+                date: sheetDay.date,
+                spend: 0,
+                clicks: 0,
+                impressions: 0,
+                messagingFirstReply: 0,
+                messagingConnection: 0,
+                googleSheets: sheetDay.count || 0,
+                googleAds: 0,
+              });
+            }
+          });
+        }
+      } catch (sheetsErr) {
+        console.error("Error fetching Google Sheets daily data:", sheetsErr);
+        // ไม่ throw error เพราะเราต้องการให้แสดงข้อมูล FB Ads ต่อไป
+      }
+
+      // ดึงข้อมูล Google Ads รายวัน
+      try {
+        const adsUrl = `/api/google-ads?startDate=${since}&endDate=${until}&daily=true`;
+
+        const adsResponse = await fetch(adsUrl);
+        const adsResult = await adsResponse.json();
+
+        if (adsResponse.ok && !adsResult.error && adsResult.dailyData) {
+          // รวมข้อมูล Google Ads เข้ากับข้อมูลที่มีอยู่
+          adsResult.dailyData.forEach((adsDay: any) => {
+            if (dataByDate.has(adsDay.date)) {
+              dataByDate.get(adsDay.date)!.googleAds = adsDay.clicks || 0;
+            } else {
+              // ถ้ายังไม่มีวันนี้ในข้อมูล ให้เพิ่มเข้าไป
+              dataByDate.set(adsDay.date, {
+                date: adsDay.date,
+                spend: 0,
+                clicks: 0,
+                impressions: 0,
+                messagingFirstReply: 0,
+                messagingConnection: 0,
+                googleSheets: 0,
+                googleAds: adsDay.clicks || 0,
+              });
+            }
+          });
+        }
+      } catch (adsErr) {
+        console.error("Error fetching Google Ads daily data:", adsErr);
+        // ไม่ throw error เพราะเราต้องการให้แสดงข้อมูล FB Ads ต่อไป
+      }
+
       // แปลงเป็น array และเรียงตามวันที่
       const dailyArray = Array.from(dataByDate.values()).sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()

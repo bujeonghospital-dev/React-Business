@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
     const today = new Date().toISOString().split("T")[0];
     const startDate = searchParams.get("startDate") || today;
     const endDate = searchParams.get("endDate") || today;
+    const daily = searchParams.get("daily") === "true"; // ถ้า daily=true จะให้ข้อมูลแยกรายวัน
 
     // ตรวจสอบว่ามี credentials อะไรบ้าง
     const credentials = {
@@ -227,7 +228,19 @@ export async function GET(request: NextRequest) {
 
       console.log("🔍 Querying campaigns from Google Ads API...");
 
-      const campaignsData = await customer.query(`
+      // ถ้าต้องการข้อมูลรายวัน ให้ใช้ segments.date
+      const query = daily
+        ? `
+        SELECT
+          segments.date,
+          metrics.clicks,
+          metrics.impressions,
+          metrics.average_cpc,
+          metrics.cost_micros
+        FROM campaign
+        WHERE segments.date BETWEEN '${startDate}' AND '${endDate}'
+      `
+        : `
         SELECT
           campaign.id,
           campaign.name,
@@ -240,9 +253,15 @@ export async function GET(request: NextRequest) {
           metrics.conversions
         FROM campaign
         WHERE segments.date BETWEEN '${startDate}' AND '${endDate}'
-      `);
+      `;
 
-      console.log(`✅ Retrieved ${campaignsData.length} campaigns`);
+      const campaignsData = await customer.query(query);
+
+      console.log(
+        `✅ Retrieved ${campaignsData.length} ${
+          daily ? "daily records" : "campaigns"
+        }`
+      );
 
       // แปลงข้อมูลเป็นรูปแบบที่ต้องการ
       const campaigns: GoogleAdsCampaign[] = campaignsData.map((row: any) => ({

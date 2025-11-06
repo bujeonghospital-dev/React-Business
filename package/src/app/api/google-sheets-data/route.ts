@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const datePreset = searchParams.get("date_preset") || "today";
     const timeRange = searchParams.get("time_range");
+    const daily = searchParams.get("daily") === "true"; // ถ้า daily=true จะให้ข้อมูลแยกรายวัน
 
     // ตรวจสอบว่ามี environment variables ครบหรือไม่
     if (
@@ -279,6 +280,79 @@ export async function GET(request: NextRequest) {
 
     console.log(`=== FINAL COUNT ===`);
     console.log(`Valid rows with data in "ได้ชื่อได้เบอร์" column: ${count}`);
+
+    // ถ้าต้องการข้อมูลรายวัน
+    if (daily && dateColIndex >= 0) {
+      console.log(`=== GROUPING BY DATE ===`);
+
+      // จัดกลุ่มข้อมูลตามวันที่
+      const dailyDataMap = new Map<string, number>();
+
+      validRows.forEach((row: any[]) => {
+        const dateValue = row[dateColIndex];
+        if (!dateValue) return;
+
+        // แปลงวันที่เป็นรูปแบบ YYYY-MM-DD
+        let dateStr = "";
+        const rawDateStr = dateValue.toString().trim();
+
+        // รูปแบบ ISO (YYYY-MM-DD)
+        if (/^\d{4}-\d{1,2}-\d{1,2}/.test(rawDateStr)) {
+          dateStr = rawDateStr.split(" ")[0]; // เอาแค่ส่วนวันที่
+        }
+        // รูปแบบ DD/MM/YYYY
+        else if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(rawDateStr)) {
+          const parts = rawDateStr.split(" ")[0].split("/");
+          const day = parts[0].padStart(2, "0");
+          const month = parts[1].padStart(2, "0");
+          const year = parts[2];
+          dateStr = `${year}-${month}-${day}`;
+        }
+        // รูปแบบ DD-MM-YYYY
+        else if (/^\d{1,2}-\d{1,2}-\d{4}/.test(rawDateStr)) {
+          const parts = rawDateStr.split(" ")[0].split("-");
+          const day = parts[0].padStart(2, "0");
+          const month = parts[1].padStart(2, "0");
+          const year = parts[2];
+          dateStr = `${year}-${month}-${day}`;
+        }
+        // รูปแบบ YYYY/MM/DD
+        else if (/^\d{4}\/\d{1,2}\/\d{1,2}/.test(rawDateStr)) {
+          const parts = rawDateStr.split(" ")[0].split("/");
+          const year = parts[0];
+          const month = parts[1].padStart(2, "0");
+          const day = parts[2].padStart(2, "0");
+          dateStr = `${year}-${month}-${day}`;
+        }
+
+        if (dateStr) {
+          const currentCount = dailyDataMap.get(dateStr) || 0;
+          dailyDataMap.set(dateStr, currentCount + 1);
+        }
+      });
+
+      // แปลงเป็น array และเรียงตามวันที่
+      const dailyData = Array.from(dailyDataMap.entries())
+        .map(([date, count]) => ({ date, count }))
+        .sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+
+      console.log(`✅ Daily breakdown: ${dailyData.length} days`);
+      dailyData.forEach((d) => {
+        console.log(`  ${d.date}: ${d.count} records`);
+      });
+
+      return NextResponse.json({
+        success: true,
+        dailyData: dailyData,
+        total: count,
+        dateRange: {
+          start: startDate?.toISOString().split("T")[0],
+          end: endDate?.toISOString().split("T")[0],
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,

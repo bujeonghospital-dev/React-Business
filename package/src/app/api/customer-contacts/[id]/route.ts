@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { supabase } from "@/utils/supabase/client";
 
 // Types
 interface ContactRecord {
@@ -13,31 +14,21 @@ interface ContactRecord {
   createdAt: string;
 }
 
-// In-memory storage (ต้องเหมือนกับ route.ts หลัก)
-const contacts: ContactRecord[] = [
-  {
-    id: "1",
-    name: "คุณสมชาย ใจดี",
-    company: "บริษัท ABC จำกัด",
-    phone: "089-xxx-xxxx",
-    email: "somchai@abc.com",
-    status: "outgoing",
-    lastContact: new Date().toISOString(),
-    notes: "สอบถามเกี่ยวกับราคาสินค้า",
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-];
-
-// GET - Retrieve single contact by ID
+// GET - Retrieve single contact by ID from Supabase
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const contact = contacts.find((c) => c.id === id);
 
-    if (!contact) {
+    const { data, error } = await supabase
+      .from("customer_contacts")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error || !data) {
       return NextResponse.json(
         {
           success: false,
@@ -47,12 +38,25 @@ export async function GET(
       );
     }
 
+    // Transform data
+    const transformedData = {
+      id: data.id,
+      name: data.name,
+      company: data.company,
+      phone: data.phone,
+      email: data.email || "",
+      status: data.status,
+      lastContact: data.last_contact,
+      notes: data.notes || "",
+      createdAt: data.created_at,
+    };
+
     return NextResponse.json({
       success: true,
-      data: contact,
+      data: transformedData,
     });
-  } catch (error) {
-    console.error("Error fetching contact:", error);
+  } catch (error: any) {
+    console.error("❌ Server Error:", error);
     return NextResponse.json(
       {
         success: false,
@@ -63,7 +67,7 @@ export async function GET(
   }
 }
 
-// PUT - Update contact by ID
+// PUT - Update contact by ID in Supabase
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -72,62 +76,78 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    const contactIndex = contacts.findIndex((c) => c.id === id);
-
-    if (contactIndex === -1) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Contact not found",
-        },
-        { status: 404 }
-      );
-    }
-
     // Validate required fields
-    if (!body.name || !body.phone || !body.email) {
+    if (!body.name || !body.phone) {
       return NextResponse.json(
         {
           success: false,
-          error: "Missing required fields: name, phone, email",
+          error: "Missing required fields: name, phone",
         },
         { status: 400 }
       );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(body.email)) {
+    // Validate email format if provided
+    if (body.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(body.email)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Invalid email format",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Update in Supabase
+    const { data, error } = await supabase
+      .from("customer_contacts")
+      .update({
+        name: body.name,
+        company: body.company || "",
+        phone: body.phone,
+        email: body.email || null,
+        status: body.status,
+        notes: body.notes || null,
+        last_contact: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error("❌ Supabase Update Error:", error);
       return NextResponse.json(
         {
           success: false,
-          error: "Invalid email format",
+          error: error?.message || "Contact not found",
         },
-        { status: 400 }
+        { status: error?.code === "PGRST116" ? 404 : 500 }
       );
     }
 
-    // Update contact
-    const updatedContact: ContactRecord = {
-      ...contacts[contactIndex],
-      name: body.name,
-      company: body.company || "",
-      phone: body.phone,
-      email: body.email,
-      status: body.status || contacts[contactIndex].status,
-      lastContact: new Date().toISOString(),
-      notes: body.notes || "",
+    // Transform response
+    const transformedData = {
+      id: data.id,
+      name: data.name,
+      company: data.company,
+      phone: data.phone,
+      email: data.email || "",
+      status: data.status,
+      lastContact: data.last_contact,
+      notes: data.notes || "",
+      createdAt: data.created_at,
     };
-
-    contacts[contactIndex] = updatedContact;
 
     return NextResponse.json({
       success: true,
-      data: updatedContact,
+      data: transformedData,
       message: "Contact updated successfully",
     });
-  } catch (error) {
-    console.error("Error updating contact:", error);
+  } catch (error: any) {
+    console.error("❌ Server Error:", error);
     return NextResponse.json(
       {
         success: false,
@@ -138,16 +158,22 @@ export async function PUT(
   }
 }
 
-// DELETE - Delete contact by ID
+// DELETE - Delete contact by ID from Supabase
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const contactIndex = contacts.findIndex((c) => c.id === id);
 
-    if (contactIndex === -1) {
+    const { data, error } = await supabase
+      .from("customer_contacts")
+      .delete()
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error || !data) {
       return NextResponse.json(
         {
           success: false,
@@ -157,16 +183,26 @@ export async function DELETE(
       );
     }
 
-    // Remove contact
-    const deletedContact = contacts.splice(contactIndex, 1)[0];
+    // Transform response
+    const transformedData = {
+      id: data.id,
+      name: data.name,
+      company: data.company,
+      phone: data.phone,
+      email: data.email || "",
+      status: data.status,
+      lastContact: data.last_contact,
+      notes: data.notes || "",
+      createdAt: data.created_at,
+    };
 
     return NextResponse.json({
       success: true,
-      data: deletedContact,
+      data: transformedData,
       message: "Contact deleted successfully",
     });
-  } catch (error) {
-    console.error("Error deleting contact:", error);
+  } catch (error: any) {
+    console.error("❌ Server Error:", error);
     return NextResponse.json(
       {
         success: false,

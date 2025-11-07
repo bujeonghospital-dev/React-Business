@@ -1,0 +1,251 @@
+======================================================================
+Quick Test Commands - Yalecom Webhook
+======================================================================
+
+ใช้คำสั่งเหล่านี้เพื่อทดสอบ webhook อย่างรวดเร็ว
+
+
+══════════════════════════════════════════════════════════════════════
+PowerShell - Quick Commands
+══════════════════════════════════════════════════════════════════════
+
+# Test 1: Ringing (รอสาย)
+$body = @{
+    call_id = "test-001"
+    caller_number = "0812345678"
+    callee_number = "900"
+    queue_extension = "900"
+    agent_id = "101"
+    agent_name = "Agent 101"
+    timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+    direction = "inbound"
+    event_type = "call_ringing"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "https://tpp-thanakon.store/api/webhooks/yalecom-call" -Method Post -ContentType "application/json" -Body $body
+
+
+# Test 2: Answered (รับสาย)
+$body = @{
+    call_id = "test-002"
+    caller_number = "0898765432"
+    callee_number = "900"
+    queue_extension = "900"
+    agent_id = "102"
+    agent_name = "Agent 102"
+    timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+    direction = "inbound"
+    event_type = "call_answered"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "https://tpp-thanakon.store/api/webhooks/yalecom-call" -Method Post -ContentType "application/json" -Body $body
+
+
+# Test 3: Outbound (โทรออก)
+$body = @{
+    call_id = "test-003"
+    caller_number = "101"
+    callee_number = "0823456789"
+    queue_extension = "900"
+    agent_id = "101"
+    agent_name = "Agent 101"
+    timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+    direction = "outbound"
+    event_type = "call_started"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "https://tpp-thanakon.store/api/webhooks/yalecom-call" -Method Post -ContentType "application/json" -Body $body
+
+
+# Test GET Endpoint
+Invoke-RestMethod -Uri "https://tpp-thanakon.store/api/webhooks/yalecom-call" -Method Get
+
+
+══════════════════════════════════════════════════════════════════════
+curl - Quick Commands (Windows)
+══════════════════════════════════════════════════════════════════════
+
+# Test 1: Ringing
+curl -X POST https://tpp-thanakon.store/api/webhooks/yalecom-call ^
+  -H "Content-Type: application/json" ^
+  -d "{\"call_id\":\"test-001\",\"caller_number\":\"0812345678\",\"callee_number\":\"900\",\"queue_extension\":\"900\",\"agent_id\":\"101\",\"agent_name\":\"Agent 101\",\"timestamp\":\"2025-11-07T10:00:00.000Z\",\"direction\":\"inbound\",\"event_type\":\"call_ringing\"}"
+
+
+# Test 2: Answered
+curl -X POST https://tpp-thanakon.store/api/webhooks/yalecom-call ^
+  -H "Content-Type: application/json" ^
+  -d "{\"call_id\":\"test-002\",\"caller_number\":\"0898765432\",\"callee_number\":\"900\",\"queue_extension\":\"900\",\"agent_id\":\"102\",\"agent_name\":\"Agent 102\",\"timestamp\":\"2025-11-07T10:00:00.000Z\",\"direction\":\"inbound\",\"event_type\":\"call_answered\"}"
+
+
+# Test GET
+curl https://tpp-thanakon.store/api/webhooks/yalecom-call
+
+
+══════════════════════════════════════════════════════════════════════
+JavaScript/Node.js
+══════════════════════════════════════════════════════════════════════
+
+// Test Ringing
+fetch('https://tpp-thanakon.store/api/webhooks/yalecom-call', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    call_id: 'test-001',
+    caller_number: '0812345678',
+    callee_number: '900',
+    queue_extension: '900',
+    agent_id: '101',
+    agent_name: 'Agent 101',
+    timestamp: new Date().toISOString(),
+    direction: 'inbound',
+    event_type: 'call_ringing'
+  })
+})
+.then(res => res.json())
+.then(data => console.log(data))
+.catch(err => console.error(err));
+
+
+══════════════════════════════════════════════════════════════════════
+Python
+══════════════════════════════════════════════════════════════════════
+
+import requests
+from datetime import datetime
+
+payload = {
+    "call_id": "test-001",
+    "caller_number": "0812345678",
+    "callee_number": "900",
+    "queue_extension": "900",
+    "agent_id": "101",
+    "agent_name": "Agent 101",
+    "timestamp": datetime.utcnow().isoformat() + "Z",
+    "direction": "inbound",
+    "event_type": "call_ringing"
+}
+
+response = requests.post(
+    "https://tpp-thanakon.store/api/webhooks/yalecom-call",
+    json=payload
+)
+
+print(response.status_code)
+print(response.json())
+
+
+══════════════════════════════════════════════════════════════════════
+Postman Collection JSON
+══════════════════════════════════════════════════════════════════════
+
+{
+  "info": {
+    "name": "Yalecom Webhook Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Test Ringing",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"call_id\": \"test-{{$timestamp}}\",\n  \"caller_number\": \"0812345678\",\n  \"callee_number\": \"900\",\n  \"queue_extension\": \"900\",\n  \"agent_id\": \"101\",\n  \"agent_name\": \"Agent 101\",\n  \"timestamp\": \"{{$isoTimestamp}}\",\n  \"direction\": \"inbound\",\n  \"event_type\": \"call_ringing\"\n}"
+        },
+        "url": {
+          "raw": "https://tpp-thanakon.store/api/webhooks/yalecom-call",
+          "protocol": "https",
+          "host": ["tpp-thanakon", "store"],
+          "path": ["api", "webhooks", "yalecom-call"]
+        }
+      }
+    },
+    {
+      "name": "Test Answered",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"call_id\": \"test-{{$timestamp}}\",\n  \"caller_number\": \"0898765432\",\n  \"callee_number\": \"900\",\n  \"queue_extension\": \"900\",\n  \"agent_id\": \"102\",\n  \"agent_name\": \"Agent 102\",\n  \"timestamp\": \"{{$isoTimestamp}}\",\n  \"direction\": \"inbound\",\n  \"event_type\": \"call_answered\"\n}"
+        },
+        "url": {
+          "raw": "https://tpp-thanakon.store/api/webhooks/yalecom-call",
+          "protocol": "https",
+          "host": ["tpp-thanakon", "store"],
+          "path": ["api", "webhooks", "yalecom-call"]
+        }
+      }
+    },
+    {
+      "name": "Get Endpoint Info",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "https://tpp-thanakon.store/api/webhooks/yalecom-call",
+          "protocol": "https",
+          "host": ["tpp-thanakon", "store"],
+          "path": ["api", "webhooks", "yalecom-call"]
+        }
+      }
+    }
+  ]
+}
+
+
+══════════════════════════════════════════════════════════════════════
+วิธีใช้งาน
+══════════════════════════════════════════════════════════════════════
+
+วิธีที่ 1: ใช้ HTML Tester (แนะนำ! ⭐)
+  1. เปิดไฟล์ webhook-tester.html ในเว็บเบราว์เซอร์
+  2. คลิกปุ่มเลือก template
+  3. กด "Send Webhook"
+
+วิธีที่ 2: ใช้ PowerShell Script
+  1. เปิด PowerShell
+  2. รัน: .\test-webhook.ps1
+  3. เลือกเมนูที่ต้องการทดสอบ
+
+วิธีที่ 3: Copy-Paste คำสั่งเหล่านี้
+  - เลือกคำสั่งที่ต้องการจากด้านบน
+  - Paste ใน Terminal/PowerShell
+  - Enter
+
+
+══════════════════════════════════════════════════════════════════════
+สถานะที่ควรได้รับ
+══════════════════════════════════════════════════════════════════════
+
+✅ HTTP 200 OK - Webhook ทำงานสำเร็จ
+{
+  "success": true,
+  "message": "Incoming call webhook processed",
+  "data": { ... }
+}
+
+❌ HTTP 404 Not Found - Webhook endpoint ยังไม่ได้ deploy
+{
+  "message": "Not Found"
+}
+
+❌ HTTP 500 Internal Server Error - เกิดข้อผิดพลาดใน webhook
+{
+  "success": false,
+  "error": "..."
+}
+
+
+══════════════════════════════════════════════════════════════════════
+Created: November 7, 2025

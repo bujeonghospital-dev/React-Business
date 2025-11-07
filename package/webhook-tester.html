@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Yalecom Webhook Tester</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        text-align: center;
+        color: white;
+        margin-bottom: 30px;
+        font-size: 2.5em;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      .card {
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        color: #333;
+        font-weight: 600;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      textarea {
+        font-family: "Courier New", monospace;
+        min-height: 200px;
+      }
+
+      .btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 30px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+
+      .btn:active {
+        transform: translateY(0);
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .response-box {
+        margin-top: 20px;
+        padding: 20px;
+        background: #f5f5f5;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+        display: none;
+      }
+
+      .response-box.show {
+        display: block;
+      }
+
+      .response-box.success {
+        background: #e8f5e9;
+        border-left-color: #4caf50;
+      }
+
+      .response-box.error {
+        background: #ffebee;
+        border-left-color: #f44336;
+      }
+
+      .response-title {
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: #333;
+      }
+
+      .response-content {
+        background: white;
+        padding: 15px;
+        border-radius: 5px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+
+      .preset-buttons {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .preset-btn {
+        background: #f5f5f5;
+        border: 2px solid #e0e0e0;
+        padding: 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .preset-btn:hover {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+      }
+
+      .info-box {
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+      }
+
+      .info-box strong {
+        color: #1976d2;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+      }
+
+      @media (max-width: 768px) {
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🚀 Yalecom Webhook Tester</h1>
+
+      <div class="card">
+        <div class="info-box">
+          <strong>📍 Webhook URL:</strong>
+          <span id="webhook-url"
+            >https://tpp-thanakon.store/api/webhooks/yalecom-call</span
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="url">Webhook Endpoint URL</label>
+          <input
+            type="text"
+            id="url"
+            value="https://tpp-thanakon.store/api/webhooks/yalecom-call"
+            placeholder="Enter webhook URL"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Quick Templates</label>
+          <div class="preset-buttons">
+            <button class="preset-btn" onclick="loadPreset('ringing')">
+              📞 Ringing (รอสาย)
+            </button>
+            <button class="preset-btn" onclick="loadPreset('answered')">
+              ✅ Answered (รับสาย)
+            </button>
+            <button class="preset-btn" onclick="loadPreset('incall')">
+              ☎️ In Call (SALE ติดต่อ)
+            </button>
+            <button class="preset-btn" onclick="loadPreset('outbound')">
+              📤 Outbound (โทรออก)
+            </button>
+            <button class="preset-btn" onclick="loadPreset('ended')">
+              🔚 Call Ended
+            </button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="callId">Call ID</label>
+            <input
+              type="text"
+              id="callId"
+              value="call-test-001"
+              placeholder="call-123456"
+            />
+          </div>
+          <div class="form-group">
+            <label for="eventType">Event Type</label>
+            <select id="eventType">
+              <option value="call_ringing">call_ringing</option>
+              <option value="call_started">call_started</option>
+              <option value="call_answered">call_answered</option>
+              <option value="call_ended">call_ended</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="callerNumber">Caller Number (เบอร์ผู้โทร)</label>
+            <input
+              type="text"
+              id="callerNumber"
+              value="0812345678"
+              placeholder="0812345678"
+            />
+          </div>
+          <div class="form-group">
+            <label for="calleeNumber">Callee Number (Queue Extension)</label>
+            <input
+              type="text"
+              id="calleeNumber"
+              value="900"
+              placeholder="900"
+            />
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="agentId">Agent ID</label>
+            <input type="text" id="agentId" value="101" placeholder="101" />
+          </div>
+          <div class="form-group">
+            <label for="agentName">Agent Name</label>
+            <input
+              type="text"
+              id="agentName"
+              value="Agent 101"
+              placeholder="Agent 101"
+            />
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="queueName">Queue Name</label>
+            <input
+              type="text"
+              id="queueName"
+              value="Sales Queue"
+              placeholder="Sales Queue"
+            />
+          </div>
+          <div class="form-group">
+            <label for="direction">Direction</label>
+            <select id="direction">
+              <option value="inbound">inbound</option>
+              <option value="outbound">outbound</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="payload">JSON Payload (แก้ไขได้)</label>
+          <textarea id="payload"></textarea>
+        </div>
+
+        <button class="btn" onclick="sendWebhook()" id="sendBtn">
+          🚀 Send Webhook
+        </button>
+
+        <div class="response-box" id="responseBox">
+          <div class="response-title" id="responseTitle">Response:</div>
+          <div class="response-content" id="responseContent"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const presets = {
+        ringing: {
+          event_type: "call_ringing",
+          direction: "inbound",
+          call_status: "ringing",
+        },
+        answered: {
+          event_type: "call_answered",
+          direction: "inbound",
+          call_status: "answered",
+        },
+        incall: {
+          event_type: "call_answered",
+          direction: "inbound",
+          call_status: "answered",
+        },
+        outbound: {
+          event_type: "call_started",
+          direction: "outbound",
+          call_status: "started",
+        },
+        ended: {
+          event_type: "call_ended",
+          direction: "inbound",
+          call_status: "ended",
+        },
+      };
+
+      function loadPreset(type) {
+        const preset = presets[type];
+        document.getElementById("eventType").value = preset.event_type;
+        document.getElementById("direction").value = preset.direction;
+        updatePayload();
+      }
+
+      function updatePayload() {
+        const payload = {
+          call_id: document.getElementById("callId").value,
+          caller_number: document.getElementById("callerNumber").value,
+          callee_number: document.getElementById("calleeNumber").value,
+          queue_name: document.getElementById("queueName").value,
+          queue_extension: document.getElementById("calleeNumber").value,
+          agent_id: document.getElementById("agentId").value,
+          agent_name: document.getElementById("agentName").value,
+          call_status: document
+            .getElementById("eventType")
+            .value.replace("call_", ""),
+          timestamp: new Date().toISOString(),
+          direction: document.getElementById("direction").value,
+          event_type: document.getElementById("eventType").value,
+        };
+
+        document.getElementById("payload").value = JSON.stringify(
+          payload,
+          null,
+          2
+        );
+      }
+
+      async function sendWebhook() {
+        const url = document.getElementById("url").value;
+        const payload = document.getElementById("payload").value;
+        const btn = document.getElementById("sendBtn");
+        const responseBox = document.getElementById("responseBox");
+        const responseTitle = document.getElementById("responseTitle");
+        const responseContent = document.getElementById("responseContent");
+
+        btn.disabled = true;
+        btn.textContent = "⏳ Sending...";
+        responseBox.classList.remove("show", "success", "error");
+
+        try {
+          const response = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: payload,
+          });
+
+          const data = await response.json();
+
+          responseBox.classList.add("show");
+          if (response.ok) {
+            responseBox.classList.add("success");
+            responseTitle.textContent =
+              "✅ Success! Status: " + response.status;
+          } else {
+            responseBox.classList.add("error");
+            responseTitle.textContent = "❌ Error! Status: " + response.status;
+          }
+
+          responseContent.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+          responseBox.classList.add("show", "error");
+          responseTitle.textContent = "❌ Network Error!";
+          responseContent.textContent = error.message;
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "🚀 Send Webhook";
+        }
+      }
+
+      // Auto-update payload when inputs change
+      document.querySelectorAll("input, select").forEach((element) => {
+        element.addEventListener("input", updatePayload);
+      });
+
+      // Initial load
+      updatePayload();
+    </script>
+  </body>
+</html>

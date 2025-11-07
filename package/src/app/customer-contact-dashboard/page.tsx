@@ -24,6 +24,8 @@ import {
   PhoneCall,
   MessageSquare,
   AlertCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import Container from "@/components/Container";
 import CustomerContactForm from "@/components/CustomerContactForm";
@@ -39,9 +41,16 @@ interface ContactRecord {
   lastContact: string;
   notes: string;
   createdAt: string;
+  [key: string]: any; // สำหรับ dynamic columns จาก Google Sheets
 }
 
 type StatusType = "outgoing" | "received" | "waiting" | "sale" | "all";
+
+// Google Sheets Types
+interface GoogleSheetsData {
+  id: string;
+  [key: string]: any; // Dynamic columns
+}
 
 // Yalecom API Types
 interface YalecomAgent {
@@ -57,6 +66,20 @@ interface YalecomQueueStatus {
   queue_extension: string;
   waiting_calls_in_queue: number;
   agents: YalecomAgent[];
+}
+
+// Robocall API Types
+interface RobocallRecord {
+  id: number;
+  status: string;
+  effective_caller_id_number: string;
+  caller_destination: string;
+  created_at: string;
+  processed_at: string;
+  transfer_to: string;
+  last_destination: string;
+  call_duration: string;
+  last_fail_cause: string;
 }
 
 // Status Configuration
@@ -128,9 +151,24 @@ const CustomerContactDashboard = () => {
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [queueData, setQueueData] = useState<YalecomQueueStatus | null>(null);
   const [agentContacts, setAgentContacts] = useState<ContactRecord[]>([]);
+  const [allAgents, setAllAgents] = useState<ContactRecord[]>([]); // เก็บ agents ทั้งหมดสำหรับแสดงในส่วนล่าง
+  const [robocallData, setRobocallData] = useState<RobocallRecord[]>([]); // เก็บข้อมูล Robocall
+  const [logCallAiData, setLogCallAiData] = useState<any[]>([]); // เก็บข้อมูล Log_call_ai
+
+  // Google Sheets States
+  const [googleSheetsData, setGoogleSheetsData] = useState<GoogleSheetsData[]>(
+    []
+  );
+  const [googleSheetsHeaders, setGoogleSheetsHeaders] = useState<string[]>([]);
+  const [googleSheetsLoading, setGoogleSheetsLoading] = useState(false);
+
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   // Calculate statistics
   const allContacts = agentContacts.length > 0 ? agentContacts : contacts;
+  const displayAgents = allAgents.length > 0 ? allAgents : allContacts; // ใช้สำหรับแสดงในส่วนล่าง
   const stats = {
     outgoing: allContacts.filter((c) => c.status === "outgoing").length,
     received: allContacts.filter((c) => c.status === "received").length,
@@ -142,10 +180,15 @@ const CustomerContactDashboard = () => {
   // Auto-fetch on component mount and every 5 seconds
   useEffect(() => {
     fetchContacts();
+    fetchGoogleSheetsData();
+    fetchRobocallData();
+    fetchLogCallAiData(); // เพิ่มการดึงข้อมูล Log_call_ai
 
     // Auto refresh every 5 seconds
     const interval = setInterval(() => {
       fetchYalecomQueueStatus(undefined, "900");
+      fetchRobocallData();
+      fetchLogCallAiData(); // รีเฟรชข้อมูล Log_call_ai ทุก 5 วินาที
     }, 5000);
 
     return () => clearInterval(interval);
@@ -188,12 +231,82 @@ const CustomerContactDashboard = () => {
     }).format(date);
   };
 
+  // Fetch Robocall API data
+  const fetchRobocallData = async () => {
+    try {
+      const response = await fetch("/api/robocall");
+      const result = await response.json();
+
+      if (result.success && Array.isArray(result.data)) {
+        // กรองเฉพาะสถานะ "กำลังดำเนินการ"
+        const activeRobocalls = result.data.filter(
+          (call: RobocallRecord) => call.status === "กำลังดำเนินการ"
+        );
+        setRobocallData(activeRobocalls);
+      }
+    } catch (error) {
+      console.error("Error fetching Robocall data:", error);
+    }
+  };
+
+  // Fetch Log_call_ai data from Google Sheets
+  const fetchLogCallAiData = async () => {
+    try {
+      const response = await fetch("/api/google-sheets-log-call-ai");
+      const result = await response.json();
+
+      if (result.success && Array.isArray(result.data)) {
+        setLogCallAiData(result.data);
+        console.log("✅ Log_call_ai data loaded:", result.data.length, "rows");
+        console.log("📋 Log_call_ai sample data:", result.data[0]); // แสดงข้อมูลตัวอย่าง
+        console.log("📋 Headers:", result.headers); // แสดง headers
+      } else {
+        console.error("❌ Failed to load Log_call_ai:", result.error);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching Log_call_ai data:", error);
+    }
+  };
+
   // Fetch queue status from Yalecom API (via internal API route)
   const fetchYalecomQueueStatus = async (
     queueUuid?: string,
     queueExtension?: string
   ) => {
     try {
+      // ดึงข้อมูล Log_call_ai ก่อนทุกอย่าง
+      const logResponse = await fetch("/api/google-sheets-log-call-ai");
+      const logResult = await logResponse.json();
+
+      let currentLogData: any[] = [];
+      if (logResult.success && Array.isArray(logResult.data)) {
+        currentLogData = logResult.data;
+        setLogCallAiData(currentLogData);
+        console.log(
+          "🔄 โหลด Log_call_ai สำเร็จ:",
+          currentLogData.length,
+          "rows"
+        );
+        console.log("📋 ข้อมูลตัวอย่าง:", currentLogData[0]);
+      }
+
+      // ดึงข้อมูล Robocall ต่อ
+      const robocallResponse = await fetch("/api/robocall");
+      const robocallResult = await robocallResponse.json();
+
+      let activeRobocalls: RobocallRecord[] = [];
+      if (robocallResult.success && Array.isArray(robocallResult.data)) {
+        activeRobocalls = robocallResult.data.filter(
+          (call: RobocallRecord) => call.status === "กำลังดำเนินการ"
+        );
+        setRobocallData(activeRobocalls);
+        console.log(
+          "🔄 โหลด Robocall สำเร็จ:",
+          activeRobocalls.length,
+          "calls"
+        );
+      }
+
       const params = new URLSearchParams();
 
       if (queueUuid) {
@@ -216,48 +329,54 @@ const CustomerContactDashboard = () => {
 
       setQueueData(data);
 
-      // แปลงข้อมูล agents เป็น ContactRecord ตามระบบใหม่
-      const agentContactsData: ContactRecord[] = data.agents.map((agent) => {
+      // Agent Name Mapping
+      const agentNameMap: { [key: string]: string } = {
+        "101": "สา",
+        "102": "พัชชา",
+        "103": "ตั้งโอ๋",
+        "104": "Test",
+        "105": "จีน",
+        "106": "มุก",
+        "107": "เจ",
+        "108": "ว่าน",
+      };
+
+      // แปลงข้อมูล agents เป็น ContactRecord สำหรับแสดงในส่วนล่าง (ทุกคน)
+      const allAgentsData: ContactRecord[] = data.agents.map((agent) => {
+        const agentName = agentNameMap[agent.agent_id];
+        const displayName = agentName
+          ? `${agent.agent_id} - ${agentName}`
+          : agent.agent_name;
+
         let status: ContactRecord["status"] = "waiting";
         let customerPhone = "-";
 
-        // 1. โทรออก - Robocall API (กำลังดำเนินการ)
-        if (
-          agent.agent_queue_status === "Outbound" ||
-          agent.agent_queue_status === "Dialing"
-        ) {
-          status = "outgoing"; // แท็กเป็น "โทรออก"
+        // กำหนดสถานะและเบอร์
+        if (agent.agent_queue_status === "Dialing") {
+          status = "outgoing";
           customerPhone = agent.agent_outbound_callee_number || "-";
-        }
-        // 2. รอสาย - Queue Status API (Ringing)
-        else if (agent.agent_queue_status === "Ringing") {
-          status = "waiting"; // แท็กเป็น "รอสาย"
+        } else if (agent.agent_queue_status === "Ringing") {
+          status = "waiting";
           customerPhone = agent.agent_queue_caller_number || "-";
-        }
-        // 3. SALE ติดต่อ - Queue Status API (InCall/Inbound)
-        else if (
+        } else if (
           agent.agent_queue_status === "InCall" ||
           agent.agent_queue_status === "Busy" ||
-          agent.agent_queue_status === "Inbound"
+          agent.agent_queue_status === "Inbound" ||
+          agent.agent_queue_status === "Outbound"
         ) {
-          status = "sale"; // แท็กเป็น "SALE ติดต่อ"
+          status = "sale";
           customerPhone =
             agent.agent_queue_caller_number ||
             agent.agent_outbound_callee_number ||
             "-";
-        }
-        // 4. รับสาย - จะมาจาก Webhook แทน (แสดงเป็น waiting ในตอนแรก)
-        else if (agent.agent_queue_status === "Waiting") {
-          status = "waiting";
-          customerPhone = "-";
-        } else if (agent.agent_queue_status === "Offline") {
+        } else if (agent.agent_queue_status === "Waiting") {
           status = "waiting";
           customerPhone = "-";
         }
 
         return {
           id: agent.agent_id,
-          name: agent.agent_name,
+          name: displayName,
           company: data.queue_name,
           phone: customerPhone,
           email: "",
@@ -268,7 +387,185 @@ const CustomerContactDashboard = () => {
         };
       });
 
-      setAgentContacts(agentContactsData);
+      setAllAgents(allAgentsData); // เก็บทุกคนไว้สำหรับแสดงในส่วนล่าง
+
+      // แปลงข้อมูลจาก Robocall API เป็น ContactRecord สำหรับ "โทรออก"
+      const robocallContacts: ContactRecord[] = activeRobocalls.map((call) => {
+        // ใช้เบอร์ caller (effective_caller_id_number) เป็นชื่อแสดง
+        const callerNumber = call.effective_caller_id_number;
+
+        // ทำความสะอาดเบอร์โทรศัพท์ (เอาเฉพาะตัวเลข)
+        const cleanPhone = (phone: string) => {
+          return phone.replace(/\D/g, ""); // เอาเฉพาะตัวเลข
+        };
+
+        // ตัดเลข 0 ออกจากเบอร์ลูกค้า (caller_destination) เพื่อแมพกับ Log_call_ai
+        const customerPhone = call.caller_destination;
+        const customerPhoneClean = cleanPhone(customerPhone);
+        const customerPhoneWithoutZero = customerPhoneClean.replace(/^0/, "");
+
+        // ตรวจสอบว่ามีเบอร์นี้ใน Log_call_ai หรือไม่ และ status = "2" (รับสาย)
+        const isAnswered = currentLogData.some((log) => {
+          const logPhone =
+            log.phone || log.Phone || log.เบอร์ || log["เบอร์"] || "";
+          const logPhoneClean = cleanPhone(String(logPhone));
+          const logPhoneWithoutZero = logPhoneClean.replace(/^0/, "");
+          const logStatus = String(log.status || log.Status || log.สถานะ || "");
+
+          const phoneMatch =
+            customerPhoneClean === logPhoneClean ||
+            customerPhoneWithoutZero === logPhoneWithoutZero ||
+            customerPhone === logPhone;
+
+          return phoneMatch && logStatus === "2";
+        });
+
+        // ตรวจสอบว่ามีเบอร์นี้ใน Log_call_ai หรือไม่ และ status = "3" (รอสาย)
+        const isWaiting = currentLogData.some((log) => {
+          const logPhone =
+            log.phone || log.Phone || log.เบอร์ || log["เบอร์"] || "";
+          const logPhoneClean = cleanPhone(String(logPhone));
+          const logPhoneWithoutZero = logPhoneClean.replace(/^0/, "");
+          const logStatus = String(log.status || log.Status || log.สถานะ || "");
+
+          const phoneMatch =
+            customerPhoneClean === logPhoneClean ||
+            customerPhoneWithoutZero === logPhoneWithoutZero ||
+            customerPhone === logPhone;
+
+          return phoneMatch && logStatus === "3";
+        });
+
+        // Debug logging
+        const matchedLog = currentLogData.find((log) => {
+          const logPhone =
+            log.phone || log.Phone || log.เบอร์ || log["เบอร์"] || "";
+          const logPhoneClean = cleanPhone(String(logPhone));
+          const logPhoneWithoutZero = logPhoneClean.replace(/^0/, "");
+
+          return (
+            customerPhoneClean === logPhoneClean ||
+            customerPhoneWithoutZero === logPhoneWithoutZero ||
+            customerPhone === logPhone
+          );
+        });
+
+        if (matchedLog) {
+          const logStatus = String(
+            matchedLog.status || matchedLog.Status || matchedLog.สถานะ || ""
+          );
+          console.log("📞 เจอเบอร์ตรงกัน:", {
+            robocallPhone: customerPhone,
+            logPhone: matchedLog.phone || matchedLog.เบอร์,
+            logStatus: logStatus,
+            result:
+              logStatus === "2"
+                ? "✅ ย้ายไป รับสาย"
+                : logStatus === "3"
+                ? "⏳ ย้ายไป รอสาย"
+                : "🔴 อยู่ที่ โทรออก",
+          });
+        } else if (currentLogData.length > 0) {
+          console.log("🔍 ตรวจสอบเบอร์:", {
+            robocallPhone: customerPhone,
+            cleanPhone: customerPhoneClean,
+            withoutZero: customerPhoneWithoutZero,
+            logDataCount: currentLogData.length,
+            availableLogPhones: currentLogData.map((log) => ({
+              phone: log.phone || log.เบอร์,
+              status: log.status,
+            })),
+            status: "ไม่เจอเบอร์ตรงกัน - อยู่ที่ โทรออก",
+          });
+        } else if (currentLogData.length === 0) {
+          console.warn("⚠️ Log_call_ai ยังไม่มีข้อมูล - รอโหลด...");
+        }
+
+        // กำหนด status และ display name
+        let finalStatus: ContactRecord["status"] = "outgoing";
+        let displayName = `Robocall - ${callerNumber}`;
+        let companyName = "Robocall (กำลังดำเนินการ)";
+
+        if (isAnswered) {
+          finalStatus = "received";
+          displayName = customerPhone;
+          companyName = "Robocall (รับสายแล้ว)";
+        } else if (isWaiting) {
+          finalStatus = "waiting";
+          displayName = customerPhone;
+          companyName = "Robocall (รอสาย)";
+        }
+
+        return {
+          id: `robocall-${call.id}`,
+          name: displayName,
+          company: companyName,
+          phone: call.caller_destination,
+          email: "",
+          status: finalStatus,
+          lastContact: call.created_at,
+          notes: `Robocall ID: ${call.id}, Transfer to: ${call.transfer_to}, Duration: ${call.call_duration}`,
+          createdAt: call.created_at,
+        };
+      });
+
+      // แปลงข้อมูล agents เป็น ContactRecord ตามระบบใหม่ (สำหรับ Kanban Board)
+      const agentContactsData: ContactRecord[] = data.agents
+        .map((agent): ContactRecord | null => {
+          let status: ContactRecord["status"] | null = null;
+          let customerPhone = "-";
+
+          // ใช้ชื่อจาก mapping พร้อม ID หรือใช้ชื่อเดิมถ้าไม่มีใน mapping
+          const agentName = agentNameMap[agent.agent_id];
+          const displayName = agentName
+            ? `${agent.agent_id} - ${agentName}`
+            : agent.agent_name;
+
+          // 1. โทรออก - Robocall API (กำลังดำเนินการ)
+          if (agent.agent_queue_status === "Dialing") {
+            status = "outgoing"; // แท็กเป็น "โทรออก"
+            customerPhone = agent.agent_outbound_callee_number || "-";
+          }
+          // 2. รอสาย - ไม่แสดง (ซ่อนไว้)
+          // else if (agent.agent_queue_status === "Ringing") {
+          //   status = "waiting";
+          //   customerPhone = agent.agent_queue_caller_number || "-";
+          // }
+          // 3. SALE ติดต่อ - Queue Status API (InCall/Inbound/Outbound)
+          else if (
+            agent.agent_queue_status === "InCall" ||
+            agent.agent_queue_status === "Busy" ||
+            agent.agent_queue_status === "Inbound" ||
+            agent.agent_queue_status === "Outbound"
+          ) {
+            status = "sale"; // แท็กเป็น "SALE ติดต่อ"
+            customerPhone =
+              agent.agent_queue_caller_number ||
+              agent.agent_outbound_callee_number ||
+              "-";
+          }
+          // ถ้าไม่ใช่สถานะที่ต้องการ ไม่ต้องแสดง
+          else {
+            return null;
+          }
+
+          return {
+            id: agent.agent_id,
+            name: displayName,
+            company: data.queue_name,
+            phone: customerPhone,
+            email: "",
+            status: status!,
+            lastContact: new Date().toISOString(),
+            notes: `สถานะ: ${agent.agent_queue_status}`,
+            createdAt: new Date().toISOString(),
+          };
+        })
+        .filter((contact) => contact !== null) as ContactRecord[]; // กรอง null ออก
+
+      // รวม Robocall contacts กับ agent contacts
+      const combinedContacts = [...robocallContacts, ...agentContactsData];
+      setAgentContacts(combinedContacts);
       return data;
     } catch (error) {
       console.error("Error fetching Yalecom queue status:", error);
@@ -281,15 +578,16 @@ const CustomerContactDashboard = () => {
     try {
       setIsLoading(true);
 
-      // Fetch from Yalecom API (ใช้ queue_extension 900)
-      await fetchYalecomQueueStatus(undefined, "900");
+      // Fetch from Supabase API
+      const response = await fetch("/api/customer-contacts");
+      const result = await response.json();
 
-      // หรือ fetch จาก internal API
-      // const response = await fetch("/api/customer-contacts");
-      // const result = await response.json();
-      // if (result.success) {
-      //   setContacts(result.data);
-      // }
+      if (result.success) {
+        setContacts(result.data);
+      }
+
+      // Also fetch from Yalecom API (ใช้ queue_extension 900)
+      await fetchYalecomQueueStatus(undefined, "900");
     } catch (error) {
       console.error("Error fetching contacts:", error);
     } finally {
@@ -297,9 +595,67 @@ const CustomerContactDashboard = () => {
     }
   };
 
+  // Fetch Google Sheets Data (สรุป call_AI)
+  const fetchGoogleSheetsData = async () => {
+    try {
+      setGoogleSheetsLoading(true);
+
+      const response = await fetch("/api/google-sheets-call-ai");
+      const result = await response.json();
+
+      if (result.success) {
+        setGoogleSheetsData(result.data);
+
+        // Debug: ดูว่า headers มีอะไรบ้าง
+        console.log("📋 All available headers:", result.headers);
+
+        // กรองเฉพาะคอลัมน์ที่ต้องการ (รองรับทั้ง End และ end)
+        const desiredHeaders = [
+          "ชื่อลูกค้า",
+          "ช่องทาง",
+          "status",
+          "เบอร์",
+          "start",
+        ];
+
+        // หา End column (case insensitive)
+        const endColumn = result.headers.find(
+          (h: string) => h.toLowerCase() === "end"
+        );
+
+        if (endColumn) {
+          desiredHeaders.push(endColumn);
+        }
+
+        const filteredHeaders = result.headers.filter((header: string) =>
+          desiredHeaders.includes(header)
+        );
+
+        console.log("✅ Filtered headers:", filteredHeaders);
+
+        setGoogleSheetsHeaders(
+          filteredHeaders.length > 0 ? filteredHeaders : desiredHeaders
+        );
+        setCurrentPage(1); // รีเซ็ตกลับไปหน้า 1 เมื่อโหลดข้อมูลใหม่
+        console.log(
+          "✅ Google Sheets Data loaded:",
+          result.data.length,
+          "rows"
+        );
+      } else {
+        console.error("❌ Failed to fetch Google Sheets:", result.error);
+      }
+    } catch (error) {
+      console.error("Error fetching Google Sheets data:", error);
+    } finally {
+      setGoogleSheetsLoading(false);
+    }
+  };
+
   // Refresh data
   const handleRefresh = async () => {
     await fetchContacts();
+    await fetchGoogleSheetsData();
   };
 
   // Open form for creating new contact
@@ -493,52 +849,6 @@ const CustomerContactDashboard = () => {
         </motion.div>
 
         {/* Filters and Search */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white rounded-2xl shadow-lg p-6 mb-8"
-        >
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="ค้นหาด้วยชื่อ, บริษัท, เบอร์โทร, อีเมล..."
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
-              />
-            </div>
-
-            {/* Status Filter */}
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setSelectedStatus("all")}
-                className={`px-6 py-3 rounded-xl font-semibold whitespace-nowrap transition-all ${
-                  selectedStatus === "all"
-                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                ทั้งหมด ({stats.total})
-              </motion.button>
-            </div>
-
-            {/* Export Button */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center gap-2 whitespace-nowrap"
-            >
-              <Download className="w-5 h-5" />
-              ส่งออก Excel
-            </motion.button>
-          </div>
-        </motion.div>
 
         {/* Kanban Board - Contact Tables by Status */}
         <motion.div
@@ -608,7 +918,11 @@ const CustomerContactDashboard = () => {
                             <p
                               className={`text-base font-bold ${config.textColor} whitespace-nowrap`}
                             >
-                              {contact.phone}
+                              {/* กรองเบอร์ 101-108 ออก */}
+                              {contact.phone &&
+                              !contact.phone.match(/^10[1-8]-/)
+                                ? contact.phone
+                                : "-"}
                             </p>
                           </div>
                         </motion.div>
@@ -626,7 +940,7 @@ const CustomerContactDashboard = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="bg-white rounded-2xl shadow-xl p-6"
+          className="bg-white rounded-2xl shadow-xl p-6 mb-8"
         >
           <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
             <UserCheck className="w-7 h-7 text-indigo-600" />
@@ -634,7 +948,7 @@ const CustomerContactDashboard = () => {
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {allContacts.map((contact) => {
+            {displayAgents.map((contact) => {
               const config = STATUS_CONFIG[contact.status];
               const StatusIcon = config.icon;
 
@@ -682,13 +996,560 @@ const CustomerContactDashboard = () => {
             })}
           </div>
 
-          {allContacts.length === 0 && (
+          {displayAgents.length === 0 && (
             <div className="text-center py-12 text-gray-400">
               <AlertCircle className="w-16 h-16 mx-auto mb-4 opacity-50" />
               <p className="text-lg">ไม่มีข้อมูล Agent</p>
               <p className="text-sm mt-2">กรุณารอสักครู่...</p>
             </div>
           )}
+        </motion.div>
+
+        {/* Contact History Table - ตารางประวัติการติดต่อลูกค้า */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+          className="bg-white rounded-2xl shadow-xl overflow-hidden"
+        >
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+              <PhoneCall className="w-7 h-7" />
+              ตารางสรุป call_AI จาก Google Sheets
+            </h2>
+          </div>
+
+          {/* Loading State */}
+          {googleSheetsLoading && (
+            <div className="flex items-center justify-center py-12">
+              <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin" />
+              <span className="ml-3 text-lg text-gray-600">
+                กำลังโหลดข้อมูล...
+              </span>
+            </div>
+          )}
+
+          {/* Table */}
+          {!googleSheetsLoading && googleSheetsData.length > 0 && (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b-2 border-gray-200">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
+                        ลำดับ
+                      </th>
+                      {googleSheetsHeaders.map((header, index) => (
+                        <th
+                          key={index}
+                          className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider"
+                        >
+                          {header}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    <AnimatePresence mode="popLayout">
+                      {googleSheetsData
+                        .slice(
+                          (currentPage - 1) * itemsPerPage,
+                          currentPage * itemsPerPage
+                        )
+                        .map((row, rowIndex) => {
+                          const actualRowIndex =
+                            (currentPage - 1) * itemsPerPage + rowIndex;
+                          return (
+                            <motion.tr
+                              key={row.id}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, x: 20 }}
+                              transition={{ delay: rowIndex * 0.02 }}
+                              className="hover:bg-gray-50 transition-colors"
+                            >
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {actualRowIndex + 1}
+                              </td>
+                              {googleSheetsHeaders.map((header, colIndex) => (
+                                <td
+                                  key={colIndex}
+                                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-700"
+                                >
+                                  {row[header] || "-"}
+                                </td>
+                              ))}
+                            </motion.tr>
+                          );
+                        })}
+                    </AnimatePresence>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Controls */}
+              {(() => {
+                const filteredData = googleSheetsData;
+                return (
+                  filteredData.length > itemsPerPage && (
+                    <div className="bg-white px-6 py-4 border-t border-gray-200">
+                      <div className="flex items-center justify-between">
+                        {/* Page Info */}
+                        <div className="text-sm text-gray-600">
+                          แสดง{" "}
+                          <span className="font-semibold text-gray-900">
+                            {(currentPage - 1) * itemsPerPage + 1}
+                          </span>{" "}
+                          ถึง{" "}
+                          <span className="font-semibold text-gray-900">
+                            {Math.min(
+                              currentPage * itemsPerPage,
+                              filteredData.length
+                            )}
+                          </span>{" "}
+                          จากทั้งหมด{" "}
+                          <span className="font-semibold text-gray-900">
+                            {filteredData.length}
+                          </span>{" "}
+                          รายการ
+                        </div>
+
+                        {/* Pagination Buttons */}
+                        <div className="flex items-center gap-2">
+                          {/* Previous Button */}
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() =>
+                              setCurrentPage((prev) => Math.max(prev - 1, 1))
+                            }
+                            disabled={currentPage === 1}
+                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 ${
+                              currentPage === 1
+                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                : "bg-white border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50"
+                            }`}
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                            ก่อนหน้า
+                          </motion.button>
+
+                          {/* Page Numbers */}
+                          <div className="flex items-center gap-1">
+                            {(() => {
+                              const totalPages = Math.ceil(
+                                filteredData.length / itemsPerPage
+                              );
+                              const pageButtons = [];
+                              const maxVisiblePages = 5;
+
+                              let startPage = Math.max(
+                                1,
+                                currentPage - Math.floor(maxVisiblePages / 2)
+                              );
+                              let endPage = Math.min(
+                                totalPages,
+                                startPage + maxVisiblePages - 1
+                              );
+
+                              // Adjust startPage if we're near the end
+                              if (endPage - startPage < maxVisiblePages - 1) {
+                                startPage = Math.max(
+                                  1,
+                                  endPage - maxVisiblePages + 1
+                                );
+                              }
+
+                              // First page
+                              if (startPage > 1) {
+                                pageButtons.push(
+                                  <motion.button
+                                    key={1}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => setCurrentPage(1)}
+                                    className="w-10 h-10 rounded-lg font-semibold text-sm bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                                  >
+                                    1
+                                  </motion.button>
+                                );
+                                if (startPage > 2) {
+                                  pageButtons.push(
+                                    <span
+                                      key="dots-start"
+                                      className="px-2 text-gray-400"
+                                    >
+                                      ...
+                                    </span>
+                                  );
+                                }
+                              }
+
+                              // Page numbers
+                              for (let i = startPage; i <= endPage; i++) {
+                                pageButtons.push(
+                                  <motion.button
+                                    key={i}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => setCurrentPage(i)}
+                                    className={`w-10 h-10 rounded-lg font-semibold text-sm transition-all ${
+                                      currentPage === i
+                                        ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg"
+                                        : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                                    }`}
+                                  >
+                                    {i}
+                                  </motion.button>
+                                );
+                              }
+
+                              // Last page
+                              if (endPage < totalPages) {
+                                if (endPage < totalPages - 1) {
+                                  pageButtons.push(
+                                    <span
+                                      key="dots-end"
+                                      className="px-2 text-gray-400"
+                                    >
+                                      ...
+                                    </span>
+                                  );
+                                }
+                                pageButtons.push(
+                                  <motion.button
+                                    key={totalPages}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => setCurrentPage(totalPages)}
+                                    className="w-10 h-10 rounded-lg font-semibold text-sm bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                                  >
+                                    {totalPages}
+                                  </motion.button>
+                                );
+                              }
+
+                              return pageButtons;
+                            })()}
+                          </div>
+
+                          {/* Next Button */}
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() =>
+                              setCurrentPage((prev) =>
+                                Math.min(
+                                  prev + 1,
+                                  Math.ceil(filteredData.length / itemsPerPage)
+                                )
+                              )
+                            }
+                            disabled={
+                              currentPage ===
+                              Math.ceil(filteredData.length / itemsPerPage)
+                            }
+                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 ${
+                              currentPage ===
+                              Math.ceil(filteredData.length / itemsPerPage)
+                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                : "bg-white border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50"
+                            }`}
+                          >
+                            ถัดไป
+                            <ChevronRight className="w-4 h-4" />
+                          </motion.button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                );
+              })()}
+            </>
+          )}
+
+          {/* Empty State */}
+          {!googleSheetsLoading &&
+            (() => {
+              const filteredData = googleSheetsData;
+              return (
+                filteredData.length === 0 && (
+                  <div className="text-center py-12 text-gray-400">
+                    <AlertCircle className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-semibold">ไม่พบข้อมูล</p>
+                    <p className="text-sm mt-2">
+                      ไม่มีข้อมูลในชีท "สรุป call_AI"
+                    </p>
+                  </div>
+                )
+              );
+            })()}
+
+          {/* Table Footer with Summary */}
+          {!googleSheetsLoading &&
+            (() => {
+              const filteredData = googleSheetsData;
+              return (
+                filteredData.length > 0 && (
+                  <div className="bg-gray-50 px-6 py-4 border-t-2 border-gray-200">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-6 text-gray-600">
+                        <span>
+                          แสดง{" "}
+                          <span className="font-bold text-gray-900">
+                            {filteredData.length}
+                          </span>{" "}
+                          รายการ
+                        </span>
+                        <span>•</span>
+                        <span>
+                          จำนวนคอลัมน์{" "}
+                          <span className="font-bold text-gray-900">
+                            {googleSheetsHeaders.length}
+                          </span>{" "}
+                          คอลัมน์
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Calendar className="w-4 h-4" />
+                        <span className="text-xs">
+                          อัพเดทล่าสุด:{" "}
+                          {new Date().toLocaleString("th-TH", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              );
+            })()}
+        </motion.div>
+
+        {/* Call Schedule Table - ตารางบันทึกการโทรตามช่วงเวลา */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          className="bg-white rounded-2xl shadow-xl overflow-hidden mt-8"
+        >
+          <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
+            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+              <Clock className="w-7 h-7" />
+              ตารางบันทึกการโทรตามช่วงเวลา
+            </h2>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[120px]">
+                    เวลา
+                  </th>
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[100px]">
+                    101
+                  </th>
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[100px]">
+                    102
+                  </th>
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[100px]">
+                    103
+                  </th>
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[100px]">
+                    104
+                  </th>
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[100px]">
+                    105
+                  </th>
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[100px]">
+                    106
+                  </th>
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[100px]">
+                    107
+                  </th>
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[100px]">
+                    108
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* 11-12:00 น. */}
+                <tr className="hover:bg-gray-50 transition-colors">
+                  <td className="border border-gray-300 px-4 py-3 font-semibold text-gray-700 bg-gray-50">
+                    11-12:00 น.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
+                    <div className="space-y-1">
+                      <div className="text-sm text-gray-600">จำนวนโทร</div>
+                      <div className="text-sm text-gray-600">จำนวนนับ</div>
+                    </div>
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
+                    <div className="space-y-1">
+                      <div className="text-sm text-gray-600">จำนวนโทร</div>
+                      <div className="text-sm text-gray-600">จำนวนนับ</div>
+                    </div>
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
+                    <div className="space-y-1">
+                      <div className="text-sm text-gray-600">จำนวนโทร</div>
+                      <div className="text-sm text-gray-600">จำนวนนับ</div>
+                    </div>
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
+                    <div className="space-y-1">
+                      <div className="text-sm text-gray-600">จำนวนโทร</div>
+                      <div className="text-sm text-gray-600">จำนวนนับ</div>
+                    </div>
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
+                    <div className="space-y-1">
+                      <div className="text-sm text-gray-600">จำนวนโทร</div>
+                      <div className="text-sm text-gray-600">จำนวนนับ</div>
+                    </div>
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
+                    <div className="space-y-1">
+                      <div className="text-sm text-gray-600">จำนวนโทร</div>
+                      <div className="text-sm text-gray-600">จำนวนนับ</div>
+                    </div>
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
+                    <div className="space-y-1">
+                      <div className="text-sm text-gray-600">จำนวนโทร</div>
+                      <div className="text-sm text-gray-600">จำนวนนับ</div>
+                    </div>
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
+                    <div className="space-y-1">
+                      <div className="text-sm text-gray-600">จำนวนโทร</div>
+                      <div className="text-sm text-gray-600">จำนวนนับ</div>
+                    </div>
+                  </td>
+                </tr>
+
+                {/* 12-13:00 น. */}
+                <tr className="hover:bg-gray-50 transition-colors">
+                  <td className="border border-gray-300 px-4 py-3 font-semibold text-gray-700 bg-gray-50">
+                    12-13:00 น.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                </tr>
+
+                {/* 13-14:00 น. */}
+                <tr className="hover:bg-gray-50 transition-colors">
+                  <td className="border border-gray-300 px-4 py-3 font-semibold text-gray-700 bg-gray-50">
+                    13-14:00 น.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                </tr>
+
+                {/* 15-16:00 น. */}
+                <tr className="hover:bg-gray-50 transition-colors">
+                  <td className="border border-gray-300 px-4 py-3 font-semibold text-gray-700 bg-gray-50">
+                    15-16:00 น.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                </tr>
+
+                {/* 16-17:00 น. */}
+                <tr className="hover:bg-gray-50 transition-colors">
+                  <td className="border border-gray-300 px-4 py-3 font-semibold text-gray-700 bg-gray-50">
+                    16-17:00 น.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                </tr>
+
+                {/* 17-18:00 น. */}
+                <tr className="hover:bg-gray-50 transition-colors">
+                  <td className="border border-gray-300 px-4 py-3 font-semibold text-gray-700 bg-gray-50">
+                    17-18:00 น.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                </tr>
+
+                {/* 18-19:00 น. */}
+                <tr className="hover:bg-gray-50 transition-colors">
+                  <td className="border border-gray-300 px-4 py-3 font-semibold text-gray-700 bg-gray-50">
+                    18-19:00 น.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Table Footer */}
+          <div className="bg-gray-50 px-6 py-4 border-t-2 border-gray-200">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-6 text-gray-600">
+                <span>
+                  ช่วงเวลา <span className="font-bold text-gray-900">7</span>{" "}
+                  ช่วง
+                </span>
+                <span>•</span>
+                <span>
+                  เซลล์ <span className="font-bold text-gray-900">8</span> คน
+                  (101-108)
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-600">
+                <Calendar className="w-4 h-4" />
+                <span className="text-xs">
+                  วันที่:{" "}
+                  {new Date().toLocaleDateString("th-TH", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </span>
+              </div>
+            </div>
+          </div>
         </motion.div>
       </Container>
 

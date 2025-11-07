@@ -1,0 +1,75 @@
+========================================
+คู่มือ Deploy Webhook API ขึ้น Production
+========================================
+
+ตอนนี้ Webhook API ที่เราสร้างยังอยู่ใน Local เท่านั้น
+ต้อง Deploy ขึ้น https://tpp-thanakon.store ก่อนจึงจะใช้งานได้
+
+========================================
+ขั้นตอนการ Deploy
+========================================
+
+1. ตรวจสอบว่าไฟล์ Webhook API พร้อมหรือยัง:
+   ✓ src/app/api/webhooks/yalecom-call/route.ts
+   ✓ src/app/api/yalecom/robocall/route.ts
+   ✓ src/app/api/yalecom/queue-status/route.ts (ถ้ามี)
+
+2. Commit และ Push code ขึ้น GitHub:
+
+   git add .
+   git commit -m "Add Yalecom webhook and API endpoints"
+   git push origin main
+
+3. Vercel จะ Auto-deploy (ถ้าเชื่อม Vercel กับ GitHub แล้ว)
+   หรือ Deploy manual:
+
+   vercel --prod
+
+4. รอ deployment เสร็จ (1-2 นาที)
+
+5. ทดสอบ webhook endpoint:
+
+   curl https://tpp-thanakon.store/api/webhooks/yalecom-call
+
+   ควรได้ response:
+   {
+     "success": true,
+     "message": "Yalecom Call Webhook Endpoint",
+     ...
+   }
+
+========================================
+ตรวจสอบว่า Deploy สำเร็จหรือยัง
+========================================
+
+เปิดเว็บเบราว์เซอร์ไปที่:
+https://tpp-thanakon.store/api/webhooks/yalecom-call
+
+ถ้าเห็น JSON response → Deploy สำเร็จ ✅
+ถ้าเห็นหน้า 404 Not Found → ยังไม่ได้ Deploy ❌
+
+========================================
+Environment Variables
+========================================
+
+อย่าลืมตั้งค่า Environment Variables ใน Vercel:
+
+1. ไปที่ Vercel Dashboard
+2. เลือก Project: tpp-thanakon.store
+3. ไปที่ Settings → Environment Variables
+4. เพิ่ม:
+   - YALECOM_API_KEY
+   - YALECOM_WEBHOOK_SECRET
+   - YALECOM_API_URL
+   - (ตัวแปรอื่นๆ ที่จำเป็น)
+
+========================================
+หลัง Deploy แล้ว
+========================================
+
+ให้ URL นี้กับ Yalecom:
+https://tpp-thanakon.store/api/webhooks/yalecom-call
+
+และขอให้เขาส่ง test webhook มาทดสอบ
+
+========================================

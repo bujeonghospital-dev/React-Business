@@ -18,7 +18,7 @@ interface ContactFormData {
   company: string;
   phone: string;
   email: string;
-  status: "outgoing" | "received" | "waiting" | "sale";
+  status: "outgoing" | "received" | "waiting" | "sale" | "Ringing";
   notes: string;
 }
 

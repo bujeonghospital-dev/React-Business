@@ -25,58 +25,110 @@ export async function POST(request: NextRequest) {
 
     console.log("📞 Webhook received:", payload);
 
-    // ตรวจสอบว่าเป็นสายเข้า (Incoming Call)
+    // ========================================
+    // เมื่อสายจบ (call_ended) - บันทึกลง Call Matrix
+    // ========================================
+    if (payload.event_type === "call_ended" && payload.agent_id) {
+      const callLogData = {
+        agent_id: payload.agent_id,
+        customer_phone:
+          payload.caller_number || payload.callee_number || "Unknown",
+        customer_name: null,
+        call_type: payload.direction === "inbound" ? "incoming" : "outgoing",
+        call_status: "answered", // เมื่อจบสายถือว่ารับสายสำเร็จ
+        start_time: payload.timestamp || new Date().toISOString(),
+        end_time: new Date().toISOString(),
+        duration_seconds: 0, // ถ้า Yalecom ส่งมาให้ใช้ payload.duration
+        notes: `Webhook: ${payload.event_type} - Queue: ${payload.queue_name}`,
+      };
+
+      // บันทึกลง Call Matrix Database
+      const saveResponse = await fetch(`${getBaseUrl()}/api/call-matrix`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(callLogData),
+      });
+
+      const saveResult = await saveResponse.json();
+
+      if (saveResult.success) {
+        console.log("✅ Call log saved to database:", saveResult.data);
+        return NextResponse.json({
+          success: true,
+          message: "Call ended - logged successfully",
+          saved_data: saveResult.data,
+        });
+      } else {
+        console.error("❌ Failed to save call log:", saveResult.error);
+      }
+    }
+
+    // ========================================
+    // สายเข้า - บันทึกลง customer_contacts
+    // ========================================
     if (
       payload.direction === "inbound" &&
       payload.event_type === "call_ringing"
     ) {
-      // บันทึกข้อมูลการรับสาย
       const contactData = {
-        id: payload.call_id || `call-${Date.now()}`,
         name: payload.agent_name || "Unknown Agent",
         company: payload.queue_name || "Unknown Queue",
         phone: payload.caller_number || "Unknown",
         email: "",
         status: "received", // แท็กเป็น "รับสาย"
-        lastContact: payload.timestamp || new Date().toISOString(),
         notes: `สายเข้าจาก Queue ${payload.queue_extension}`,
-        createdAt: new Date().toISOString(),
       };
 
-      // TODO: บันทึกลง Database (Supabase, MongoDB, etc.)
-      // await saveContactToDatabase(contactData);
+      // บันทึกลง customer_contacts
+      const contactResponse = await fetch(
+        `${getBaseUrl()}/api/customer-contacts`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(contactData),
+        }
+      );
+
+      const contactResult = await contactResponse.json();
 
       return NextResponse.json({
         success: true,
         message: "Incoming call webhook processed",
-        data: contactData,
+        data: contactResult.data,
       });
     }
 
-    // กรณีสายออก (Outbound Call)
+    // ========================================
+    // สายออก - บันทึกลง customer_contacts
+    // ========================================
     if (
       payload.direction === "outbound" &&
       payload.event_type === "call_started"
     ) {
       const contactData = {
-        id: payload.call_id || `call-${Date.now()}`,
         name: payload.agent_name || "Unknown Agent",
         company: payload.queue_name || "Unknown Queue",
         phone: payload.callee_number || "Unknown",
         email: "",
         status: "outgoing", // แท็กเป็น "โทรออก"
-        lastContact: payload.timestamp || new Date().toISOString(),
         notes: `โทรออกจาก Agent ${payload.agent_id}`,
-        createdAt: new Date().toISOString(),
       };
 
-      // TODO: บันทึกลง Database
-      // await saveContactToDatabase(contactData);
+      const contactResponse = await fetch(
+        `${getBaseUrl()}/api/customer-contacts`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(contactData),
+        }
+      );
+
+      const contactResult = await contactResponse.json();
 
       return NextResponse.json({
         success: true,
         message: "Outbound call webhook processed",
-        data: contactData,
+        data: contactResult.data,
       });
     }
 
@@ -96,6 +148,14 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// ฟังก์ชันช่วย: ดึง Base URL
+function getBaseUrl(): string {
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 }
 
 // รองรับ GET สำหรับทดสอบ

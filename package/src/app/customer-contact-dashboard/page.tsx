@@ -166,6 +166,13 @@ const CustomerContactDashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
+  // Call Matrix States
+  const [callMatrixData, setCallMatrixData] = useState<any>(null);
+  const [callMatrixLoading, setCallMatrixLoading] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+
   // Calculate statistics
   const allContacts = agentContacts.length > 0 ? agentContacts : contacts;
   const displayAgents = allAgents.length > 0 ? allAgents : allContacts; // ใช้สำหรับแสดงในส่วนล่าง
@@ -183,17 +190,19 @@ const CustomerContactDashboard = () => {
     fetchGoogleSheetsData();
     fetchRobocallData();
     fetchLogCallAiData(); // เพิ่มการดึงข้อมูล Log_call_ai
+    fetchCallMatrix(); // เพิ่มการดึงข้อมูล Call Matrix
 
     // Auto refresh every 5 seconds
     const interval = setInterval(() => {
       fetchYalecomQueueStatus(undefined, "900");
       fetchRobocallData();
       fetchLogCallAiData(); // รีเฟรชข้อมูล Log_call_ai ทุก 5 วินาที
+      fetchCallMatrix(); // รีเฟรชข้อมูล Call Matrix ทุก 5 วินาที
     }, 5000);
 
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedDate]); // เพิ่ม selectedDate เป็น dependency
 
   // Filter contacts
   useEffect(() => {
@@ -652,6 +661,27 @@ const CustomerContactDashboard = () => {
     }
   };
 
+  // Fetch Call Matrix Data
+  const fetchCallMatrix = async () => {
+    try {
+      setCallMatrixLoading(true);
+
+      const response = await fetch(`/api/call-matrix?date=${selectedDate}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setCallMatrixData(result);
+        console.log("✅ Call Matrix loaded:", result);
+      } else {
+        console.error("❌ Failed to fetch Call Matrix:", result.error);
+      }
+    } catch (error) {
+      console.error("Error fetching Call Matrix data:", error);
+    } finally {
+      setCallMatrixLoading(false);
+    }
+  };
+
   // Refresh data
   const handleRefresh = async () => {
     await fetchContacts();
@@ -735,8 +765,8 @@ const CustomerContactDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <Container className="py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 w-full">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
         {/* Header Title */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -1335,190 +1365,180 @@ const CustomerContactDashboard = () => {
           className="bg-white rounded-2xl shadow-xl overflow-hidden mt-8"
         >
           <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
-            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-              <Clock className="w-7 h-7" />
-              ตารางบันทึกการโทรตามช่วงเวลา
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                <Clock className="w-7 h-7" />
+                ตารางบันทึกการโทรตามช่วงเวลา
+              </h2>
+              <div className="flex items-center gap-3">
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="px-4 py-2 rounded-lg text-gray-700 font-semibold"
+                />
+                {callMatrixLoading && (
+                  <RefreshCw className="w-5 h-5 text-white animate-spin" />
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[120px]">
+                  <th
+                    rowSpan={2}
+                    className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[120px]"
+                  >
                     เวลา
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[100px]">
+                  <th
+                    colSpan={2}
+                    className="border border-gray-300 px-2 py-2 text-center font-bold text-gray-700 min-w-[80px]"
+                  >
                     101
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[100px]">
+                  <th
+                    colSpan={2}
+                    className="border border-gray-300 px-2 py-2 text-center font-bold text-gray-700 min-w-[80px]"
+                  >
                     102
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[100px]">
+                  <th
+                    colSpan={2}
+                    className="border border-gray-300 px-2 py-2 text-center font-bold text-gray-700 min-w-[80px]"
+                  >
                     103
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[100px]">
+                  <th
+                    colSpan={2}
+                    className="border border-gray-300 px-2 py-2 text-center font-bold text-gray-700 min-w-[80px]"
+                  >
                     104
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[100px]">
+                  <th
+                    colSpan={2}
+                    className="border border-gray-300 px-2 py-2 text-center font-bold text-gray-700 min-w-[80px]"
+                  >
                     105
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[100px]">
+                  <th
+                    colSpan={2}
+                    className="border border-gray-300 px-2 py-2 text-center font-bold text-gray-700 min-w-[80px]"
+                  >
                     106
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[100px]">
+                  <th
+                    colSpan={2}
+                    className="border border-gray-300 px-2 py-2 text-center font-bold text-gray-700 min-w-[80px]"
+                  >
                     107
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700 min-w-[100px]">
+                  <th
+                    colSpan={2}
+                    className="border border-gray-300 px-2 py-2 text-center font-bold text-gray-700 min-w-[80px]"
+                  >
                     108
+                  </th>
+                </tr>
+                <tr className="bg-gray-100">
+                  <th className="border border-gray-300 px-2 py-2 text-center font-normal text-sm text-gray-700">
+                    จำนวนโทร
+                  </th>
+                  <th className="border border-gray-300 px-2 py-2 text-center font-normal text-sm text-gray-700">
+                    จำนวนนับ
+                  </th>
+                  <th className="border border-gray-300 px-2 py-2 text-center font-normal text-sm text-gray-700">
+                    จำนวนโทร
+                  </th>
+                  <th className="border border-gray-300 px-2 py-2 text-center font-normal text-sm text-gray-700">
+                    จำนวนนับ
+                  </th>
+                  <th className="border border-gray-300 px-2 py-2 text-center font-normal text-sm text-gray-700">
+                    จำนวนโทร
+                  </th>
+                  <th className="border border-gray-300 px-2 py-2 text-center font-normal text-sm text-gray-700">
+                    จำนวนนับ
+                  </th>
+                  <th className="border border-gray-300 px-2 py-2 text-center font-normal text-sm text-gray-700">
+                    จำนวนโทร
+                  </th>
+                  <th className="border border-gray-300 px-2 py-2 text-center font-normal text-sm text-gray-700">
+                    จำนวนนับ
+                  </th>
+                  <th className="border border-gray-300 px-2 py-2 text-center font-normal text-sm text-gray-700">
+                    จำนวนโทร
+                  </th>
+                  <th className="border border-gray-300 px-2 py-2 text-center font-normal text-sm text-gray-700">
+                    จำนวนนับ
+                  </th>
+                  <th className="border border-gray-300 px-2 py-2 text-center font-normal text-sm text-gray-700">
+                    จำนวนโทร
+                  </th>
+                  <th className="border border-gray-300 px-2 py-2 text-center font-normal text-sm text-gray-700">
+                    จำนวนนับ
+                  </th>
+                  <th className="border border-gray-300 px-2 py-2 text-center font-normal text-sm text-gray-700">
+                    จำนวนโทร
+                  </th>
+                  <th className="border border-gray-300 px-2 py-2 text-center font-normal text-sm text-gray-700">
+                    จำนวนนับ
+                  </th>
+                  <th className="border border-gray-300 px-2 py-2 text-center font-normal text-sm text-gray-700">
+                    จำนวนโทร
+                  </th>
+                  <th className="border border-gray-300 px-2 py-2 text-center font-normal text-sm text-gray-700">
+                    จำนวนนับ
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {/* 11-12:00 น. */}
-                <tr className="hover:bg-gray-50 transition-colors">
-                  <td className="border border-gray-300 px-4 py-3 font-semibold text-gray-700 bg-gray-50">
-                    11-12:00 น.
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className="space-y-1">
-                      <div className="text-sm text-gray-600">จำนวนโทร</div>
-                      <div className="text-sm text-gray-600">จำนวนนับ</div>
-                    </div>
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className="space-y-1">
-                      <div className="text-sm text-gray-600">จำนวนโทร</div>
-                      <div className="text-sm text-gray-600">จำนวนนับ</div>
-                    </div>
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className="space-y-1">
-                      <div className="text-sm text-gray-600">จำนวนโทร</div>
-                      <div className="text-sm text-gray-600">จำนวนนับ</div>
-                    </div>
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className="space-y-1">
-                      <div className="text-sm text-gray-600">จำนวนโทร</div>
-                      <div className="text-sm text-gray-600">จำนวนนับ</div>
-                    </div>
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className="space-y-1">
-                      <div className="text-sm text-gray-600">จำนวนโทร</div>
-                      <div className="text-sm text-gray-600">จำนวนนับ</div>
-                    </div>
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className="space-y-1">
-                      <div className="text-sm text-gray-600">จำนวนโทร</div>
-                      <div className="text-sm text-gray-600">จำนวนนับ</div>
-                    </div>
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className="space-y-1">
-                      <div className="text-sm text-gray-600">จำนวนโทร</div>
-                      <div className="text-sm text-gray-600">จำนวนนับ</div>
-                    </div>
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className="space-y-1">
-                      <div className="text-sm text-gray-600">จำนวนโทร</div>
-                      <div className="text-sm text-gray-600">จำนวนนับ</div>
-                    </div>
-                  </td>
-                </tr>
+                {callMatrixData?.tableData?.map((row: any, index: number) => {
+                  const hourSlot = row.hour_slot;
+                  const agentIds = [
+                    "101",
+                    "102",
+                    "103",
+                    "104",
+                    "105",
+                    "106",
+                    "107",
+                    "108",
+                  ];
 
-                {/* 12-13:00 น. */}
-                <tr className="hover:bg-gray-50 transition-colors">
-                  <td className="border border-gray-300 px-4 py-3 font-semibold text-gray-700 bg-gray-50">
-                    12-13:00 น.
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                </tr>
+                  return (
+                    <tr key={index}>
+                      <td className="border border-gray-300 px-4 py-3 font-semibold text-gray-700 bg-gray-50 text-center">
+                        {hourSlot}:00 น.
+                      </td>
+                      {agentIds.map((agentId) => {
+                        const agentData = row[`agent_${agentId}`];
+                        const outgoingCalls = agentData?.outgoing_calls || 0;
+                        const successfulCalls =
+                          agentData?.successful_calls || 0;
 
-                {/* 13-14:00 น. */}
-                <tr className="hover:bg-gray-50 transition-colors">
-                  <td className="border border-gray-300 px-4 py-3 font-semibold text-gray-700 bg-gray-50">
-                    13-14:00 น.
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                </tr>
-
-                {/* 15-16:00 น. */}
-                <tr className="hover:bg-gray-50 transition-colors">
-                  <td className="border border-gray-300 px-4 py-3 font-semibold text-gray-700 bg-gray-50">
-                    15-16:00 น.
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                </tr>
-
-                {/* 16-17:00 น. */}
-                <tr className="hover:bg-gray-50 transition-colors">
-                  <td className="border border-gray-300 px-4 py-3 font-semibold text-gray-700 bg-gray-50">
-                    16-17:00 น.
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                </tr>
-
-                {/* 17-18:00 น. */}
-                <tr className="hover:bg-gray-50 transition-colors">
-                  <td className="border border-gray-300 px-4 py-3 font-semibold text-gray-700 bg-gray-50">
-                    17-18:00 น.
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                </tr>
-
-                {/* 18-19:00 น. */}
-                <tr className="hover:bg-gray-50 transition-colors">
-                  <td className="border border-gray-300 px-4 py-3 font-semibold text-gray-700 bg-gray-50">
-                    18-19:00 น.
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                  <td className="border border-gray-300 px-4 py-3 text-center bg-gray-100"></td>
-                </tr>
+                        return (
+                          <>
+                            <td
+                              key={`${agentId}-out`}
+                              className="border border-gray-300 px-2 py-3 text-center bg-white font-semibold text-gray-700"
+                            >
+                              {outgoingCalls > 0 ? outgoingCalls : ""}
+                            </td>
+                            <td
+                              key={`${agentId}-success`}
+                              className="border border-gray-300 px-2 py-3 text-center bg-white font-semibold text-green-600"
+                            >
+                              {successfulCalls > 0 ? successfulCalls : ""}
+                            </td>
+                          </>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1541,7 +1561,7 @@ const CustomerContactDashboard = () => {
                 <Calendar className="w-4 h-4" />
                 <span className="text-xs">
                   วันที่:{" "}
-                  {new Date().toLocaleDateString("th-TH", {
+                  {new Date(selectedDate).toLocaleDateString("th-TH", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
@@ -1551,7 +1571,7 @@ const CustomerContactDashboard = () => {
             </div>
           </div>
         </motion.div>
-      </Container>
+      </div>
 
       {/* Contact Form Modal */}
       <CustomerContactForm

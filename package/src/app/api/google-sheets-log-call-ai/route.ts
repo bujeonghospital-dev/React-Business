@@ -1,28 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
 
+// In-memory cache
+let cachedData: any = null;
+let cacheTime: number = 0;
+const CACHE_DURATION = 10000; // 10 วินาที
+
 export async function GET(request: NextRequest) {
+  // ตรวจสอบ cache ก่อน
+  const now = Date.now();
+  if (cachedData && now - cacheTime < CACHE_DURATION) {
+    console.log("✅ Returning cached Log_call_ai data");
+    return NextResponse.json(cachedData, {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, s-maxage=20, stale-while-revalidate=30",
+        "X-Cache-Status": "HIT",
+      },
+    });
+  }
   try {
-    const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+    const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID;
     const SHEET_NAME = "Log_call_ai"; // ชื่อชีทที่ต้องการดึง
 
     if (!SPREADSHEET_ID) {
       return NextResponse.json(
         {
           success: false,
-          error: "GOOGLE_SHEETS_SPREADSHEET_ID is not configured",
+          error: "GOOGLE_SPREADSHEET_ID is not configured",
         },
         { status: 500 }
       );
     }
 
     // ตรวจสอบว่ามี credentials หรือไม่
-    const credentials = process.env.GOOGLE_SHEETS_CREDENTIALS;
-    if (!credentials) {
+    const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+    const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
+
+    if (!clientEmail || !privateKey) {
       return NextResponse.json(
         {
           success: false,
-          error: "GOOGLE_SHEETS_CREDENTIALS is not configured",
+          error:
+            "GOOGLE_SERVICE_ACCOUNT_EMAIL or GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY is not configured",
         },
         { status: 500 }
       );
@@ -30,7 +50,10 @@ export async function GET(request: NextRequest) {
 
     // Parse credentials
     const auth = new google.auth.GoogleAuth({
-      credentials: JSON.parse(credentials),
+      credentials: {
+        client_email: clientEmail,
+        private_key: privateKey.replace(/\\n/g, "\n"),
+      },
       scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
     });
 
@@ -71,20 +94,23 @@ export async function GET(request: NextRequest) {
       return rowData;
     });
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: data,
-        headers: headers,
-        totalRows: data.length,
+    // อัพเดท cache
+    const responseData = {
+      success: true,
+      data: data,
+      headers: headers,
+      totalRows: data.length,
+    };
+    cachedData = responseData;
+    cacheTime = Date.now();
+
+    return NextResponse.json(responseData, {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, s-maxage=20, stale-while-revalidate=30",
+        "X-Cache-Status": "MISS",
       },
-      {
-        status: 200,
-        headers: {
-          "Cache-Control": "no-store, max-age=0",
-        },
-      }
-    );
+    });
   } catch (error: any) {
     console.error("Error fetching Google Sheets Log_call_ai:", error);
     return NextResponse.json(

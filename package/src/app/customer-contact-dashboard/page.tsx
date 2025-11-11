@@ -274,14 +274,14 @@ const CustomerContactDashboard = () => {
     fetchCallMatrixYaleSummary();
     fetchFilmData(); // เพิ่มการดึงข้อมูล Film data
 
-    // Auto refresh every 5 seconds
+    // Auto refresh every 30 seconds (ลด API calls เพื่อไม่เกิน quota limit)
     const interval = setInterval(() => {
       fetchYalecomQueueStatus(undefined, "900");
       fetchRobocallData();
-      fetchLogCallAiData(); // รีเฟรชข้อมูล Log_call_ai ทุก 5 วินาที
+      fetchLogCallAiData(); // รีเฟรชข้อมูล Log_call_ai ทุก 30 วินาที
       fetchCallMatrixYaleSummary();
-      fetchFilmData(); // รีเฟรชข้อมูล Film data ทุก 5 วินาที
-    }, 5000);
+      fetchFilmData(); // รีเฟรชข้อมูล Film data ทุก 30 วินาที
+    }, 30000); // เปลี่ยนจาก 5000 (5 วินาที) เป็น 30000 (30 วินาที)
 
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1253,40 +1253,40 @@ const CustomerContactDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                <tr className="bg-white">
-                  <th className="border border-gray-400 px-4 py-3 text-left font-semibold text-gray-700">
-                    จำนวนวันที่ได้นัดผ่าตัด
+                <tr className="bg-blue-50">
+                  <th className="border border-gray-400 px-4 py-3 text-left font-semibold text-gray-700 bg-blue-200">
+                    จำนวน นัดผ่าตัด
                   </th>
                   {agentDisplayList.map((agent) => {
                     const value = filmDataSurgeryCounts[agent.id] ?? 0;
                     return (
                       <td
                         key={`surgery-${agent.id}`}
-                        className="border border-gray-400 px-4 py-3 text-center font-semibold text-gray-900"
+                        className="border border-gray-400 px-4 py-3 text-center font-semibold text-gray-900 bg-blue-50"
                       >
                         {value > 0 ? value : ""}
                       </td>
                     );
                   })}
                 </tr>
-                <tr className="bg-white">
-                  <th className="border border-gray-400 px-4 py-3 text-left font-semibold text-gray-700">
-                    จำนวน วันที่ได้นัด consult
+                <tr className="bg-yellow-50">
+                  <th className="border border-gray-400 px-4 py-3 text-left font-semibold text-gray-700 bg-yellow-200">
+                    จำนวน consult
                   </th>
                   {agentDisplayList.map((agent) => {
                     const value = filmDataCounts[agent.id] ?? 0;
                     return (
                       <td
                         key={`appointment-${agent.id}`}
-                        className="border border-gray-400 px-4 py-3 text-center font-semibold text-gray-900"
+                        className="border border-gray-400 px-4 py-3 text-center font-semibold text-gray-900 bg-yellow-50"
                       >
                         {value > 0 ? value : ""}
                       </td>
                     );
                   })}
                 </tr>
-                <tr className="bg-green-100">
-                  <th className="border border-green-300 px-4 py-3 text-left font-semibold text-green-900 bg-green-200">
+                <tr className="bg-green-50">
+                  <th className="border border-gray-400 px-4 py-3 text-left font-semibold text-gray-700 bg-green-200">
                     จำนวนโทร
                   </th>
                   {agentDisplayList.map((agent) => {
@@ -1294,7 +1294,7 @@ const CustomerContactDashboard = () => {
                     return (
                       <td
                         key={`total-${agent.id}`}
-                        className="border border-green-300 px-4 py-3 text-center font-semibold text-green-900 bg-green-100"
+                        className="border border-gray-400 px-4 py-3 text-center font-semibold text-gray-900 bg-green-50"
                       >
                         {value > 0 ? value : ""}
                       </td>

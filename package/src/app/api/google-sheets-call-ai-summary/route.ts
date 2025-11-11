@@ -1,23 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
 
+// In-memory cache with date key
+const cache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 20000; // 20 วินาที
+
 export async function GET(request: NextRequest) {
   try {
-    // ตรวจสอบว่ามี environment variables ครบหรือไม่
-    if (
-      !process.env.GOOGLE_SA_CLIENT_EMAIL ||
-      !process.env.GOOGLE_SA_PRIVATE_KEY ||
-      !process.env.GOOGLE_SHEET_ID
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Missing Google Sheets credentials in environment variables",
-        },
-        { status: 500 }
-      );
-    }
-
     // ดึง date parameter จาก query string
     const searchParams = request.nextUrl.searchParams;
     const dateParam = searchParams.get("date");
@@ -32,11 +21,45 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // ตรวจสอบ cache ก่อน
+    const cacheKey = `summary-${dateParam}`;
+    const cached = cache.get(cacheKey);
+    const now = Date.now();
+
+    if (cached && now - cached.timestamp < CACHE_DURATION) {
+      console.log(`✅ Returning cached call-ai-summary for ${dateParam}`);
+      return NextResponse.json(cached.data, {
+        status: 200,
+        headers: {
+          "Cache-Control": "public, s-maxage=20, stale-while-revalidate=30",
+          "X-Cache-Status": "HIT",
+        },
+      });
+    }
+
+    // ตรวจสอบว่ามี environment variables ครบหรือไม่
+    if (
+      !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
+      !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY ||
+      !process.env.GOOGLE_SPREADSHEET_ID
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Missing Google Sheets credentials in environment variables",
+        },
+        { status: 500 }
+      );
+    }
+
     // สร้าง auth client ด้วย Service Account
     const auth = new google.auth.GoogleAuth({
       credentials: {
-        client_email: process.env.GOOGLE_SA_CLIENT_EMAIL,
-        private_key: process.env.GOOGLE_SA_PRIVATE_KEY.replace(/\\n/g, "\n"),
+        client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        private_key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(
+          /\\n/g,
+          "\n"
+        ),
       },
       scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
     });
@@ -45,7 +68,7 @@ export async function GET(request: NextRequest) {
 
     // ดึงข้อมูลจากชีท "สรุป call_AI"
     const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      spreadsheetId: process.env.GOOGLE_SPREADSHEET_ID,
       range: "สรุป call_AI!A:Z",
     });
 
@@ -211,13 +234,23 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => parseInt(a.hourStart, 10) - parseInt(b.hourStart, 10));
 
-    return NextResponse.json({
+    // อัพเดท cache
+    const responseData = {
       success: true,
       date: dateParam,
       timeSlots: timeSlotsArray,
       totals: agentTotals,
       totalCalls: filteredRows.length,
       message: `Counted ${filteredRows.length} calls for ${dateParam} with duration >= 30 seconds`,
+    };
+    cache.set(cacheKey, { data: responseData, timestamp: Date.now() });
+
+    return NextResponse.json(responseData, {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, s-maxage=20, stale-while-revalidate=30",
+        "X-Cache-Status": "MISS",
+      },
     });
   } catch (error: any) {
     console.error("Error fetching Google Sheets call AI summary:", error);

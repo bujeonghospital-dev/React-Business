@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
 
+// In-memory cache with date key
+const cache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 20000; // 20 วินาที
+
 export async function GET(request: NextRequest) {
   try {
     // รับพารามิเตอร์ date จาก query string (รูปแบบ YYYY-MM-DD)
@@ -8,11 +12,27 @@ export async function GET(request: NextRequest) {
     const targetDate =
       searchParams.get("date") || new Date().toISOString().split("T")[0];
 
+    // ตรวจสอบ cache ก่อน
+    const cacheKey = `film-${targetDate}`;
+    const cached = cache.get(cacheKey);
+    const now = Date.now();
+
+    if (cached && now - cached.timestamp < CACHE_DURATION) {
+      console.log(`✅ Returning cached film-data for ${targetDate}`);
+      return NextResponse.json(cached.data, {
+        status: 200,
+        headers: {
+          "Cache-Control": "public, s-maxage=20, stale-while-revalidate=30",
+          "X-Cache-Status": "HIT",
+        },
+      });
+    }
+
     // ตรวจสอบว่ามี environment variables ครบหรือไม่
     if (
-      !process.env.GOOGLE_SA_CLIENT_EMAIL ||
-      !process.env.GOOGLE_SA_PRIVATE_KEY ||
-      !process.env.GOOGLE_SHEET_ID
+      !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
+      !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY ||
+      !process.env.GOOGLE_SPREADSHEET_ID
     ) {
       return NextResponse.json(
         {
@@ -26,8 +46,11 @@ export async function GET(request: NextRequest) {
     // สร้าง auth client ด้วย Service Account
     const auth = new google.auth.GoogleAuth({
       credentials: {
-        client_email: process.env.GOOGLE_SA_CLIENT_EMAIL,
-        private_key: process.env.GOOGLE_SA_PRIVATE_KEY.replace(/\\n/g, "\n"),
+        client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        private_key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(
+          /\\n/g,
+          "\n"
+        ),
       },
       scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
     });
@@ -36,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     // ดึงข้อมูลจากชีท "Film data"
     const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      spreadsheetId: process.env.GOOGLE_SPREADSHEET_ID,
       range: "Film data!A:Z", // ดึงข้อมูลทั้งหมดจากชีท
     });
 
@@ -225,7 +248,8 @@ export async function GET(request: NextRequest) {
     console.log("Total consults:", totalConsults);
     console.log("Total surgeries:", totalSurgeries);
 
-    return NextResponse.json({
+    // อัพเดท cache
+    const responseData = {
       success: true,
       date: targetDate,
       agentCounts: agentCounts,
@@ -240,6 +264,15 @@ export async function GET(request: NextRequest) {
         consultDateColumn: headers[consultDateIndex],
         surgeryDateColumn:
           surgeryDateIndex !== -1 ? headers[surgeryDateIndex] : "Not found",
+      },
+    };
+    cache.set(cacheKey, { data: responseData, timestamp: Date.now() });
+
+    return NextResponse.json(responseData, {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, s-maxage=20, stale-while-revalidate=30",
+        "X-Cache-Status": "MISS",
       },
     });
   } catch (error: any) {

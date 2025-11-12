@@ -1,0 +1,24 @@
+# Dependencies
+node_modules
+npm-debug.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build output
+.next
+out
+dist
+
+# Python API (ไม่ต้อง deploy Python API บน Vercel)
+python-api
+
+# Cache
+.cache
+.vercel
+
+# Development
+.DS_Store
+*.log

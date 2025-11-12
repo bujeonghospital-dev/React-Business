@@ -1,0 +1,12 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "installCommand": "npm install",
+  "rewrites": [
+    {
+      "source": "/dl/policy-2568",
+      "destination": "/downloads/ข้อบังคับเกี่ยวกับการทำงาน%20ฉบับปรับปรุง%20ปี%202568.pdf"
+    }
+  ]
+}

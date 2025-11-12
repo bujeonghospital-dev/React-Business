@@ -3,20 +3,10 @@
 import React, { useState, useEffect } from "react";
 import "./styles.css";
 import SurgeryDetailsModal from "./SurgeryDetailsModal";
-import { SurgeryScheduleData } from "@/utils/googleSheets";
-
-// Mapping for contact person (ย้ายมาจาก googleSheets)
-export const CONTACT_PERSON_MAPPING: Record<string, string> = {
-  "101-สา": "สา",
-  "102-พิชชา": "พิชชา",
-  "103-ตั้งโอ๋": "ตั้งโอ๋",
-  "104-Test": "Test",
-  "105-จีน": "จีน",
-  "106-มุก": "มุก",
-  "107-เจ": "เจ",
-  "108-ว่าน": "ว่าน",
-  "109-ไม่ระบุ": "ไม่ระบุ",
-};
+import {
+  SurgeryScheduleData,
+  CONTACT_PERSON_MAPPING,
+} from "@/utils/googleSheets";
 import {
   fetchSurgeryScheduleFromSupabase,
   countSupabaseSurgeriesByDateAndPerson,

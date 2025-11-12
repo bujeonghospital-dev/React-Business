@@ -197,7 +197,7 @@ const ContactDashboard = () => {
           );
 
           // Try to match with both original format and cleaned format
-          let agentId =
+          const agentId =
             agentMap.get(contact.phoneNumber) ||
             agentMap.get(cleanContactNumber);
 
@@ -369,6 +369,7 @@ const ContactDashboard = () => {
     }, 30000);
 
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handle refresh

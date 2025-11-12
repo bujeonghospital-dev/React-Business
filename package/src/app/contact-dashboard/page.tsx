@@ -32,6 +32,22 @@ interface ContactRecord {
   contactDate: string;
   company?: string;
   email?: string;
+  agentId?: string; // ผู้ติดต่อ - Agent ID from YaleCom
+}
+
+interface YaleComAgent {
+  agent_id: string;
+  agent_name: string;
+  agent_queue_status: "Inbound" | "Outbound" | "Waiting";
+  agent_outbound_callee_number: string;
+  agent_queue_caller_number: string;
+}
+
+interface YaleComQueueStatus {
+  queue_name: string;
+  queue_extension: string;
+  waiting_calls_in_queue: number;
+  agents: YaleComAgent[];
 }
 
 // Animation variants
@@ -75,10 +91,87 @@ const ContactDashboard = () => {
     completed: contactsArray.filter((c) => c.status === "completed").length,
   };
 
+  // Fetch YaleCom queue status and map agents
+  const fetchYaleComAgents = async (): Promise<Map<string, string>> => {
+    try {
+      console.log("🔄 Fetching YaleCom queue status...");
+      const response = await fetch("/api/yalecom-queue");
+
+      console.log("📡 YaleCom API Response Status:", response.status);
+
+      if (response.ok) {
+        const rawData = await response.json();
+        console.log(
+          "✅ YaleCom API Raw Data:",
+          JSON.stringify(rawData, null, 2)
+        );
+
+        // Handle both array and single object responses
+        const data: YaleComQueueStatus[] = Array.isArray(rawData)
+          ? rawData
+          : [rawData];
+        console.log("✅ YaleCom API Data (normalized):", data);
+
+        const agentMap = new Map<string, string>(); // phoneNumber -> agentId
+
+        // Map agents with Inbound status to their caller numbers
+        data.forEach((queue) => {
+          console.log(
+            `📋 Queue: ${queue.queue_name}, Agents:`,
+            queue.agents.length
+          );
+          queue.agents.forEach((agent) => {
+            console.log(`👤 Agent ${agent.agent_id}:`, {
+              status: agent.agent_queue_status,
+              caller: agent.agent_queue_caller_number,
+              callee: agent.agent_outbound_callee_number,
+            });
+
+            if (
+              agent.agent_queue_status === "Inbound" &&
+              agent.agent_queue_caller_number
+            ) {
+              // Clean phone number (remove dashes, spaces, and leading zeros for matching)
+              const cleanNumber = agent.agent_queue_caller_number.replace(
+                /[-\s()]/g,
+                ""
+              );
+
+              // Store multiple formats for better matching
+              agentMap.set(cleanNumber, agent.agent_id);
+
+              // Also store with dashes (089-123-4567 format)
+              if (cleanNumber.length === 10) {
+                const dashedFormat = `${cleanNumber.slice(
+                  0,
+                  3
+                )}-${cleanNumber.slice(3, 6)}-${cleanNumber.slice(6)}`;
+                agentMap.set(dashedFormat, agent.agent_id);
+              }
+
+              console.log(
+                `✅ Mapped: ${cleanNumber} -> Agent ${agent.agent_id}`
+              );
+            }
+          });
+        });
+
+        console.log("🗺️ Final Agent Map:", Array.from(agentMap.entries()));
+        return agentMap;
+      }
+    } catch (error) {
+      console.error("❌ Error fetching YaleCom agents:", error);
+    }
+    return new Map();
+  };
+
   // Fetch contacts from API
   const fetchContacts = async () => {
     try {
       setIsLoading(true);
+
+      // Fetch YaleCom agent data first
+      const agentMap = await fetchYaleComAgents();
 
       // Fetch from Film API (Google Sheets - Film_dev)
       const response = await fetch("/api/film-contacts");
@@ -86,7 +179,53 @@ const ContactDashboard = () => {
       if (response.ok) {
         const result = await response.json();
         // Check if result has a data property (API response format)
-        const contactsData = Array.isArray(result) ? result : result.data || [];
+        let contactsData: ContactRecord[] = Array.isArray(result)
+          ? result
+          : result.data || [];
+
+        // Map agents to contacts
+        console.log("📞 Total contacts before mapping:", contactsData.length);
+        console.log(
+          "🗺️ Available agent mappings:",
+          Array.from(agentMap.entries())
+        );
+
+        contactsData = contactsData.map((contact) => {
+          const cleanContactNumber = contact.phoneNumber.replace(
+            /[-\s()]/g,
+            ""
+          );
+
+          // Try to match with both original format and cleaned format
+          let agentId =
+            agentMap.get(contact.phoneNumber) ||
+            agentMap.get(cleanContactNumber);
+
+          console.log(`🔍 Checking contact ${contact.customerName}:`, {
+            original: contact.phoneNumber,
+            cleaned: cleanContactNumber,
+            agentId: agentId || "not found",
+          });
+
+          if (agentId) {
+            console.log(
+              `✅ MATCHED! Contact ${contact.customerName} (${contact.phoneNumber}) -> Agent ${agentId}`
+            );
+            // Update contact with agent and change status to incoming
+            return {
+              ...contact,
+              agentId,
+              status: "incoming" as const,
+            };
+          }
+          return contact;
+        });
+
+        const matchedCount = contactsData.filter((c) => c.agentId).length;
+        console.log(
+          `✅ Agent mapping complete: ${matchedCount}/${contactsData.length} contacts matched`
+        );
+
         setContacts(contactsData);
         setFilteredContacts(contactsData);
       } else {
@@ -189,20 +328,44 @@ const ContactDashboard = () => {
     fetchContacts();
 
     // Auto-refresh every 30 seconds (background refresh only - no UI disruption)
-    const interval = setInterval(() => {
-      // Silent refresh without showing loading state
-      fetch("/api/film-contacts")
-        .then((response) => response.json())
-        .then((result) => {
-          const contactsData = Array.isArray(result)
-            ? result
-            : result.data || [];
-          setContacts(contactsData);
-        })
-        .catch((error) => {
-          console.error("Background refresh error:", error);
-          // Silently fail - don't disrupt user experience
+    const interval = setInterval(async () => {
+      try {
+        // Silent refresh without showing loading state
+        const agentMap = await fetchYaleComAgents();
+        const response = await fetch("/api/film-contacts");
+        const result = await response.json();
+
+        let contactsData: ContactRecord[] = Array.isArray(result)
+          ? result
+          : result.data || [];
+
+        // Map agents to contacts
+        contactsData = contactsData.map((contact) => {
+          const cleanContactNumber = contact.phoneNumber.replace(
+            /[-\s()]/g,
+            ""
+          );
+
+          // Try to match with both original format and cleaned format
+          const agentId =
+            agentMap.get(contact.phoneNumber) ||
+            agentMap.get(cleanContactNumber);
+
+          if (agentId) {
+            return {
+              ...contact,
+              agentId,
+              status: "incoming" as const,
+            };
+          }
+          return contact;
         });
+
+        setContacts(contactsData);
+      } catch (error) {
+        console.error("Background refresh error:", error);
+        // Silently fail - don't disrupt user experience
+      }
     }, 30000);
 
     return () => clearInterval(interval);
@@ -577,6 +740,9 @@ const ContactDashboard = () => {
                     หมายเหตุ
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
+                    ผู้ติดต่อ
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
                     สถานะ
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
@@ -588,7 +754,7 @@ const ContactDashboard = () => {
                 <AnimatePresence mode="popLayout">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center">
+                      <td colSpan={7} className="px-6 py-12 text-center">
                         <div className="flex items-center justify-center">
                           <RefreshCw className="w-8 h-8 text-purple-600 animate-spin mr-3" />
                           <span className="text-lg text-gray-600">
@@ -599,7 +765,7 @@ const ContactDashboard = () => {
                     </tr>
                   ) : filteredContacts.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center">
+                      <td colSpan={7} className="px-6 py-12 text-center">
                         <div className="flex flex-col items-center justify-center text-gray-400">
                           <MessageSquare className="w-16 h-16 mb-4 opacity-50" />
                           <p className="text-lg font-semibold">ไม่พบข้อมูล</p>
@@ -653,6 +819,20 @@ const ContactDashboard = () => {
                           <div className="text-gray-700 max-w-xs truncate">
                             {contact.remarks || "-"}
                           </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {contact.agentId ? (
+                            <div className="flex items-center gap-2">
+                              <div className="bg-gradient-to-r from-blue-500 to-cyan-500 p-2 rounded-lg">
+                                <User className="w-4 h-4 text-white" />
+                              </div>
+                              <span className="font-semibold text-gray-900">
+                                Agent {contact.agentId}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {getStatusBadge(contact.status)}
@@ -845,6 +1025,34 @@ const ContactDashboard = () => {
                             <p className="text-lg font-semibold text-gray-900 mt-1">
                               {selectedContact.product}
                             </p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {/* ผู้ติดต่อ (Agent) */}
+                    {selectedContact.agentId && (
+                      <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.27 }}
+                        className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 border-2 border-blue-200"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="bg-gradient-to-br from-blue-500 to-cyan-500 p-3 rounded-xl">
+                            <User className="w-6 h-6 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
+                              ผู้ติดต่อ (Agent)
+                            </label>
+                            <p className="text-xl font-bold text-gray-900 mt-1">
+                              Agent {selectedContact.agentId}
+                            </p>
+                            <div className="mt-2 inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-lg text-sm font-semibold">
+                              <PhoneIncoming className="w-4 h-4" />
+                              กำลังรับสาย
+                            </div>
                           </div>
                         </div>
                       </motion.div>

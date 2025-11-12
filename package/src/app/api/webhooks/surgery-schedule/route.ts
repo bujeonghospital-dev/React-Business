@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Initialize Supabase client (server-side)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Helper function to get Supabase client (lazy initialization)
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error("Missing Supabase environment variables");
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error("Missing Supabase environment variables");
+  }
+
+  return createClient(supabaseUrl, supabaseServiceKey);
 }
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Interface สำหรับข้อมูลที่ส่งมาจาก Google Sheets
 interface SurgeryScheduleWebhookData {
@@ -137,22 +139,24 @@ export async function POST(request: NextRequest) {
         // ถ้ามี ID = update, ถ้าไม่มี = insert
         if (data.id) {
           // Update existing record
-          const { data: updateData, error: updateError } = await supabase
-            .from("film_data")
-            .update(filmDataRecord)
-            .eq("id", data.id)
-            .select()
-            .single();
+          const { data: updateData, error: updateError } =
+            await getSupabaseClient()
+              .from("film_data")
+              .update(filmDataRecord)
+              .eq("id", data.id)
+              .select()
+              .single();
 
           if (updateError) throw updateError;
           result = { action: "updated", data: updateData };
         } else {
           // Insert new record
-          const { data: insertData, error: insertError } = await supabase
-            .from("film_data")
-            .insert(filmDataRecord)
-            .select()
-            .single();
+          const { data: insertData, error: insertError } =
+            await getSupabaseClient()
+              .from("film_data")
+              .insert(filmDataRecord)
+              .select()
+              .single();
 
           if (insertError) throw insertError;
           result = { action: "inserted", data: insertData };

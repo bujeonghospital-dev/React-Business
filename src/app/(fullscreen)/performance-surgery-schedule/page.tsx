@@ -444,27 +444,31 @@ export default function PerformanceSurgerySchedule() {
               <strong>แนะนำการแก้ไข:</strong>
               <ol>
                 <li>
-                  ตรวจสอบว่า Python API กำลังทำงานอยู่ (port 5000 โดย default)
+                  ตรวจสอบว่า Python API บน Railway กำลังทำงานอยู่:
+                  <br />
+                  <code>
+                    https://believable-ambition-production.up.railway.app/health
+                  </code>
                 </li>
                 <li>
-                  รัน: <code>cd python-api && python app.py</code>
+                  ตรวจสอบ Environment Variables ใน Railway (Settings →
+                  Variables):
+                  <br />- <code>GOOGLE_SPREADSHEET_ID</code>
+                  <br />- <code>GOOGLE_SERVICE_ACCOUNT_EMAIL</code>
+                  <br />- <code>GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY</code>
                 </li>
                 <li>
-                  ตรวจสอบไฟล์ <code>python-api/.env</code> ว่ามี Google Sheets
-                  credentials
-                </li>
-                <li>
-                  ตรวจสอบว่า Environment variable <code>PYTHON_API_URL</code>{" "}
-                  ถูกต้อง (default: http://localhost:5000)
+                  ตรวจสอบ Environment variable ใน Vercel (Settings → Environment
+                  Variables):
+                  <br />
+                  <code>PYTHON_API_URL</code> =
+                  https://believable-ambition-production.up.railway.app
                 </li>
                 <li>
                   ตรวจสอบว่า Service Account มีสิทธิ์เข้าถึง Google Sheet "Film
                   data"
                 </li>
-                <li>
-                  ดูคู่มือเพิ่มเติมได้ที่{" "}
-                  <code>PYTHON_API_SURGERY_SCHEDULE_GUIDE.md</code>
-                </li>
+                <li>ลอง Redeploy Railway และ Vercel อีกครั้ง</li>
               </ol>
             </div>
             <button

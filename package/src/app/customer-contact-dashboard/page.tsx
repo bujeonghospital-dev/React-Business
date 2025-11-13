@@ -283,15 +283,7 @@ const CustomerContactDashboard = () => {
       fetchFilmData(); // รีเฟรชข้อมูล Film data ทุก 30 วินาที
     }, 30000); // เปลี่ยนจาก 5000 (5 วินาที) เป็น 30000 (30 วินาที)
 
-    // Auto refresh Google Sheets data every 1 minute (60 seconds)
-    const googleSheetsInterval = setInterval(() => {
-      fetchGoogleSheetsData(); // รีเฟรชข้อมูล Google Sheets ทุก 1 นาที
-    }, 60000); // 60000 ms = 1 นาที
-
-    return () => {
-      clearInterval(interval);
-      clearInterval(googleSheetsInterval);
-    };
+    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]); // เพิ่ม selectedDate เป็น dependency
 
@@ -318,32 +310,6 @@ const CustomerContactDashboard = () => {
 
     setFilteredContacts(filtered);
   }, [selectedStatus, searchQuery, contacts, agentContacts]);
-
-  // Filter Google Sheets data - กรองเฉพาะ "นัด Consult (VDO)"
-  const filteredGoogleSheetsData = googleSheetsData.filter((row) => {
-    // ตรวจสอบคอลัมน์ "สถานะ" (รองรับหลายรูปแบบ)
-    const status = row["สถานะ"] || row["status"] || row["Status"] || "";
-    const statusTrimmed = String(status).trim();
-
-    // Debug logging (แสดงข้อมูลตัวอย่าง 3 แถวแรก)
-    if (googleSheetsData.indexOf(row) < 3) {
-      console.log(`🔍 Row ${googleSheetsData.indexOf(row) + 1}:`, {
-        rawStatus: status,
-        trimmedStatus: statusTrimmed,
-        isMatch: statusTrimmed === "นัด Consult (VDO)",
-        allKeys: Object.keys(row),
-      });
-    }
-
-    return statusTrimmed === "นัด Consult (VDO)";
-  });
-
-  // Debug: แสดงจำนวนแถวที่กรองได้
-  if (googleSheetsData.length > 0) {
-    console.log(
-      `📊 Total rows: ${googleSheetsData.length}, Filtered: ${filteredGoogleSheetsData.length}`
-    );
-  }
 
   // Format date
   const formatDate = (dateString: string) => {
@@ -741,7 +707,6 @@ const CustomerContactDashboard = () => {
           "ช่องทาง",
           "status",
           "เบอร์",
-          "ผู้ติดต่อ",
           "start",
         ];
 
@@ -1422,7 +1387,7 @@ const CustomerContactDashboard = () => {
           )}
 
           {/* Table */}
-          {!googleSheetsLoading && filteredGoogleSheetsData.length > 0 && (
+          {!googleSheetsLoading && googleSheetsData.length > 0 && (
             <>
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -1443,7 +1408,7 @@ const CustomerContactDashboard = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     <AnimatePresence mode="popLayout">
-                      {filteredGoogleSheetsData
+                      {googleSheetsData
                         .slice(
                           (currentPage - 1) * itemsPerPage,
                           currentPage * itemsPerPage
@@ -1481,7 +1446,7 @@ const CustomerContactDashboard = () => {
 
               {/* Pagination Controls */}
               {(() => {
-                const filteredData = filteredGoogleSheetsData;
+                const filteredData = googleSheetsData;
                 return (
                   filteredData.length > itemsPerPage && (
                     <div className="bg-white px-6 py-4 border-t border-gray-200">
@@ -1663,14 +1628,14 @@ const CustomerContactDashboard = () => {
           {/* Empty State */}
           {!googleSheetsLoading &&
             (() => {
-              const filteredData = filteredGoogleSheetsData;
+              const filteredData = googleSheetsData;
               return (
                 filteredData.length === 0 && (
                   <div className="text-center py-12 text-gray-400">
                     <AlertCircle className="w-16 h-16 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-semibold">ไม่พบข้อมูล</p>
                     <p className="text-sm mt-2">
-                      ไม่มีข้อมูลที่มีสถานะ &quot;นัด Consult (VDO)&quot;
+                      ไม่มีข้อมูลในชีท &quot;สรุป call_AI&quot;
                     </p>
                   </div>
                 )
@@ -1680,7 +1645,7 @@ const CustomerContactDashboard = () => {
           {/* Table Footer with Summary */}
           {!googleSheetsLoading &&
             (() => {
-              const filteredData = filteredGoogleSheetsData;
+              const filteredData = googleSheetsData;
               return (
                 filteredData.length > 0 && (
                   <div className="bg-gray-50 px-6 py-4 border-t-2 border-gray-200">

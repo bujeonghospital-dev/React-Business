@@ -349,9 +349,9 @@ export async function GET(request: NextRequest) {
     const responseData = {
       success: true,
       date: targetDate,
-      agentCounts: combinedConsultCounts, // ใช้จำนวนรวมจาก Film data + Film_dev
+      agentCounts: agentCounts, // ใช้เฉพาะข้อมูลจาก Film data
       surgeryCounts: surgeryCounts,
-      totalConsults: totalCombinedConsults, // ใช้จำนวนรวม
+      totalConsults: totalConsults, // ใช้จำนวนจาก Film data เท่านั้น
       totalSurgeries: totalSurgeries,
       debug: {
         filmDataRows: dataRows.length,

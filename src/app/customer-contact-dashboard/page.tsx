@@ -214,7 +214,7 @@ const CustomerContactDashboard = () => {
 
   const agentDisplayList = [
     { id: "101", label: "101-สา" },
-    { id: "102", label: "102-พัชชา" },
+    { id: "102", label: "102-พัดชา" },
     { id: "103", label: "103-ตั้งโอ๋" },
     { id: "104", label: "104-Test" },
     { id: "105", label: "105-จีน" },
@@ -424,7 +424,7 @@ const CustomerContactDashboard = () => {
       // Agent Name Mapping
       const agentNameMap: { [key: string]: string } = {
         "101": "สา",
-        "102": "พัชชา",
+        "102": "พัดชา",
         "103": "ตั้งโอ๋",
         "104": "Test",
         "105": "จีน",

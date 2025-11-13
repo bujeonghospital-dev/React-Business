@@ -122,7 +122,7 @@ FOR EACH ROW EXECUTE FUNCTION update_hourly_call_stats();
 -- 9. เพิ่มข้อมูล Agents เริ่มต้น (101-108)
 INSERT INTO public.agents (agent_id, agent_name) VALUES
   ('101', 'สา'),
-  ('102', 'พัชชา'),
+  ('102', 'พัดชา'),
   ('103', 'ตั้งโอ๋'),
   ('104', 'Test'),
   ('105', 'จีน'),

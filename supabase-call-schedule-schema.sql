@@ -145,7 +145,7 @@ CREATE TRIGGER update_call_details_updated_at BEFORE UPDATE ON call_details
 
 INSERT INTO agents (agent_number, agent_name) VALUES
   ('101', 'สา'),
-  ('102', 'พัชชา'),
+  ('102', 'พัดชา'),
   ('103', 'ตั้งโอ๋'),
   ('104', 'Test'),
   ('105', 'จีน'),

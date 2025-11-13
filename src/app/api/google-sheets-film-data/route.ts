@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
     // Agent Name Mapping (ชื่อใน Google Sheet -> Agent ID)
     const agentNameMap: { [key: string]: string } = {
       สา: "101",
-      พัชชา: "102",
+      พัดชา: "102",
       ตั้งโอ๋: "103",
       Test: "104",
       จีน: "105",

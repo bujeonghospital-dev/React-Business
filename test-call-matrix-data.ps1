@@ -19,7 +19,7 @@ Write-Host ""
 # Agent IDs และ Names
 $agents = @(
     @{ id = "101"; name = "สา" }
-    @{ id = "102"; name = "พัชชา" }
+    @{ id = "102"; name = "พัดชา" }
     @{ id = "103"; name = "ตั้งโอ๋" }
     @{ id = "104"; name = "Test" }
     @{ id = "105"; name = "จีน" }

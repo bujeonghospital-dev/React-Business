@@ -474,23 +474,18 @@ export default function FacebookAdsManagerPage() {
     fetchDailyData,
   ]);
 
-  // Auto-refresh ทุก 50 วินาที (พื้นหลัง)
+  // Auto-refresh ทุก 50 วินาที (พื้นหลัง) - ไม่รวมข้อมูลรายวัน
   useEffect(() => {
     const refreshInterval = setInterval(() => {
       console.log("🔄 Background refresh...");
       fetchInsights(true); // ส่ง true เพื่อบอกว่าเป็น background refresh
       fetchGoogleSheetsData();
       fetchGoogleAdsData();
-      fetchDailyData();
+      // ไม่เรียก fetchDailyData() เพื่อลดภาระเซิร์ฟเวอร์
     }, 50000); // 50000ms = 50 วินาที
 
     return () => clearInterval(refreshInterval);
-  }, [
-    fetchInsights,
-    fetchGoogleSheetsData,
-    fetchGoogleAdsData,
-    fetchDailyData,
-  ]);
+  }, [fetchInsights, fetchGoogleSheetsData, fetchGoogleAdsData]);
 
   // Countdown timer
   useEffect(() => {

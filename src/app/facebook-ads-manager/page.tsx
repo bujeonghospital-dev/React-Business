@@ -221,6 +221,7 @@ export default function FacebookAdsManagerPage() {
   const fetchDailyData = useCallback(async () => {
     try {
       setDailyDataLoading(true);
+      setError(null);
 
       // กำหนดช่วงเวลา 30 วันย้อนหลังแบบคงที่ (ไม่ขึ้นกับ dateRange ที่เลือก)
       const endDate = new Date();
@@ -240,9 +241,10 @@ export default function FacebookAdsManagerPage() {
       const fbResult: ApiResponse = await fbResponse.json();
 
       if (!fbResponse.ok || !fbResult.success) {
-        throw new Error(
-          fbResult.error || "ไม่สามารถดึงข้อมูล Facebook Ads ได้"
-        );
+        console.error("❌ Facebook Ads Daily Data Error:", fbResult.error);
+        // ไม่ throw error - ให้แสดงตารางว่างแทน
+        setDailyData([]);
+        return;
       }
 
       // จัดกลุ่มข้อมูลตามวันที่
@@ -321,7 +323,7 @@ export default function FacebookAdsManagerPage() {
           });
         }
       } catch (sheetsErr) {
-        console.error("Error fetching Google Sheets daily data:", sheetsErr);
+        console.error("⚠️ Google Sheets daily data error (ignored):", sheetsErr);
         // ไม่ throw error เพราะเราต้องการให้แสดงข้อมูล FB Ads ต่อไป
       }
 
@@ -353,7 +355,7 @@ export default function FacebookAdsManagerPage() {
           });
         }
       } catch (adsErr) {
-        console.error("Error fetching Google Ads daily data:", adsErr);
+        console.error("⚠️ Google Ads daily data error (ignored):", adsErr);
         // ไม่ throw error เพราะเราต้องการให้แสดงข้อมูล FB Ads ต่อไป
       }
 
@@ -363,9 +365,12 @@ export default function FacebookAdsManagerPage() {
       );
 
       setDailyData(dailyArray);
+      console.log("✅ Daily data loaded successfully:", dailyArray.length, "days");
     } catch (err) {
-      console.error("Error fetching daily data:", err);
+      console.error("❌ Error fetching daily data:", err);
+      // ไม่ให้ crash - แสดงตารางว่างแทน
       setDailyData([]);
+      // ไม่ setError เพราะไม่ต้องการให้ error ของ daily data ทำให้หน้าเว็บ crash
     } finally {
       setDailyDataLoading(false);
     }
@@ -463,10 +468,17 @@ export default function FacebookAdsManagerPage() {
   }, [dateRange, customDateStart, customDateEnd]);
 
   useEffect(() => {
-    fetchInsights();
-    fetchGoogleSheetsData();
-    fetchGoogleAdsData();
-    fetchDailyData();
+    const loadAllData = async () => {
+      // เรียก API แบบ parallel เพื่อความเร็ว
+      await Promise.all([
+        fetchInsights(),
+        fetchGoogleSheetsData(),
+        fetchGoogleAdsData(),
+        fetchDailyData(),
+      ]);
+    };
+
+    loadAllData();
   }, [
     fetchInsights,
     fetchGoogleSheetsData,
@@ -476,11 +488,14 @@ export default function FacebookAdsManagerPage() {
 
   // Auto-refresh ทุก 50 วินาที (พื้นหลัง) - ไม่รวมข้อมูลรายวัน
   useEffect(() => {
-    const refreshInterval = setInterval(() => {
+    const refreshInterval = setInterval(async () => {
       console.log("🔄 Background refresh...");
-      fetchInsights(true); // ส่ง true เพื่อบอกว่าเป็น background refresh
-      fetchGoogleSheetsData();
-      fetchGoogleAdsData();
+      // เรียก API แบบ parallel เพื่อความเร็ว
+      await Promise.all([
+        fetchInsights(true), // ส่ง true เพื่อบอกว่าเป็น background refresh
+        fetchGoogleSheetsData(),
+        fetchGoogleAdsData(),
+      ]);
       // ไม่เรียก fetchDailyData() เพื่อลดภาระเซิร์ฟเวอร์
     }, 50000); // 50000ms = 50 วินาที
 

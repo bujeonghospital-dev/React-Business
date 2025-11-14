@@ -114,14 +114,45 @@ const CustomerAllDataPage = () => {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/google-sheets-all-data");
-      const result: ApiResponse = await response.json();
-      if (!result.success) return;
-      if (result.tables && result.tables.length > 0) {
-        const sanitizedTables = result.tables.map((table) => {
+      const response = await fetch("/api/film-data");
+      const result = await response.json();
+      if (
+        !result.data ||
+        !result.data.all_data ||
+        result.data.all_data.length === 0
+      )
+        return;
+
+      // แปลงข้อมูลจาก API ให้อยู่ในรูปแบบ tables
+      const allData = result.data.all_data;
+      const headers = allData[0]; // แถวแรกคือ headers
+      const dataRows = allData.slice(1); // แถวที่เหลือคือข้อมูล
+
+      // สร้าง array of objects จาก headers และข้อมูล
+      const formattedData = dataRows.map((row: any[]) => {
+        const rowObj: Record<string, any> = {};
+        headers.forEach((header: string, index: number) => {
+          rowObj[header] = row[index];
+        });
+        return rowObj;
+      });
+
+      const tables = [
+        {
+          tableNumber: 1,
+          headers: headers,
+          rowCount: dataRows.length,
+          data: formattedData,
+        },
+      ];
+
+      if (tables && tables.length > 0) {
+        const sanitizedTables = tables.map((table: TableData) => {
           // Trim whitespace so columns with stray spaces still render and match filters
-          const sanitizedHeaders = table.headers.map((header) => header.trim());
-          const sanitizedData = table.data.map((row) => {
+          const sanitizedHeaders = table.headers.map((header: string) =>
+            header.trim()
+          );
+          const sanitizedData = table.data.map((row: Record<string, any>) => {
             const sanitizedRow: Record<string, any> = {};
             Object.entries(row).forEach(([key, value]) => {
               sanitizedRow[key.trim()] = value;
@@ -176,8 +207,8 @@ const CustomerAllDataPage = () => {
         });
 
         // Then add any remaining headers not in the columnOrder
-        sanitizedTables.forEach((table) => {
-          table.headers.forEach((header) => {
+        sanitizedTables.forEach((table: TableData) => {
+          table.headers.forEach((header: string) => {
             if (!allHeadersSet.has(header)) {
               allHeadersSet.add(header);
               allHeaders.push(header);
@@ -185,10 +216,10 @@ const CustomerAllDataPage = () => {
           });
         });
 
-        const filteredHeaders = allHeaders.filter((header) => {
-          return sanitizedTables.some((table) => {
+        const filteredHeaders = allHeaders.filter((header: string) => {
+          return sanitizedTables.some((table: TableData) => {
             return table.data.some(
-              (row) =>
+              (row: Record<string, any>) =>
                 row[header] !== undefined &&
                 row[header] !== null &&
                 row[header] !== ""
@@ -196,7 +227,7 @@ const CustomerAllDataPage = () => {
           });
         });
         const allData: Record<string, any>[] = [];
-        sanitizedTables.forEach((table) => {
+        sanitizedTables.forEach((table: TableData) => {
           allData.push(...table.data);
         });
         // Keep all rows that have at least one value in any header
@@ -526,10 +557,10 @@ const CustomerAllDataPage = () => {
     { value: "all", label: "ทั้งหมด" },
     { value: "สา", label: "สา" },
     { value: "เจ", label: "เจ" },
-    { value: "พิชยา", label: "พิชยา" },
+    { value: "พิดยา", label: "พิดยา" },
     { value: "ว่าน", label: "ว่าน" },
     { value: "จีน", label: "จีน" },
-    { value: "นุช", label: "นุช" },
+    { value: "มุก", label: "มุก" },
     { value: "ตั้งโอ๋", label: "ตั้งโอ๋" },
   ];
 

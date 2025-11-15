@@ -108,18 +108,22 @@ export default function PerformanceSurgerySchedule() {
 
   // Fetch surgery data when component mounts
   useEffect(() => {
-    loadData();
+    (async () => {
+      await loadData();
+    })();
   }, []);
 
   // Fetch N_SaleIncentive data when component mounts or when month/year changes
   useEffect(() => {
-    loadSaleIncentiveData();
+    (async () => {
+      await loadSaleIncentiveData();
+    })();
   }, [selectedMonth, selectedYear]);
 
   // Auto-refresh surgery data every 30 seconds
   useEffect(() => {
-    const interval = setInterval(() => {
-      loadData();
+    const interval = setInterval(async () => {
+      await loadData();
     }, 30000); // 30 seconds
 
     return () => clearInterval(interval);
@@ -127,8 +131,8 @@ export default function PerformanceSurgerySchedule() {
 
   // Auto-refresh N_SaleIncentive data every 30 seconds
   useEffect(() => {
-    const interval = setInterval(() => {
-      loadSaleIncentiveData();
+    const interval = setInterval(async () => {
+      await loadSaleIncentiveData();
     }, 30000); // 30 seconds
 
     return () => clearInterval(interval);
@@ -156,11 +160,30 @@ export default function PerformanceSurgerySchedule() {
     const todayMonth = today.getMonth();
     const todayYear = today.getFullYear();
 
-    // If viewing a different month/year than current, return 0
-    if (selectedMonth !== todayMonth || selectedYear !== todayYear) {
+    // If viewing a future month/year, return 0 (haven't reached yet)
+    if (
+      selectedYear > todayYear ||
+      (selectedYear === todayYear && selectedMonth > todayMonth)
+    ) {
       return 0;
     }
 
+    // If viewing a past month/year, return total weekdays in that month
+    if (
+      selectedYear < todayYear ||
+      (selectedYear === todayYear && selectedMonth < todayMonth)
+    ) {
+      let weekdayCount = 0;
+      const totalDays = getDaysInMonth(selectedMonth, selectedYear);
+      for (let day = 1; day <= totalDays; day++) {
+        if (isWeekday(day)) {
+          weekdayCount++;
+        }
+      }
+      return weekdayCount;
+    }
+
+    // If viewing current month/year, count up to today
     let weekdayCount = 0;
     for (let day = 1; day <= todayDate; day++) {
       if (isWeekday(day)) {
@@ -514,7 +537,7 @@ export default function PerformanceSurgerySchedule() {
             )}
           </div>
           <button
-            onClick={() => loadData(true)}
+            onClick={async () => await loadData(true)}
             className="refresh-button"
             disabled={isRefreshing}
           >
@@ -711,7 +734,10 @@ export default function PerformanceSurgerySchedule() {
               </ol>
             </div>
             <button
-              onClick={() => window.location.reload()}
+              onClick={async () => {
+                await loadData();
+                await loadSaleIncentiveData();
+              }}
               className="retry-button"
             >
               ลองใหม่อีกครั้ง

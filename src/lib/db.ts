@@ -1,6 +1,8 @@
 import { Pool } from "pg";
 
 // สร้าง connection pool สำหรับ PostgreSQL
+const isSupabase = process.env.DB_HOST?.includes("supabase.co");
+
 const pool = new Pool({
   host: process.env.DB_HOST || "192.168.1.19",
   port: parseInt(process.env.DB_PORT || "5432"),
@@ -12,8 +14,9 @@ const pool = new Pool({
   connectionTimeoutMillis: 10000, // เพิ่มเป็น 10 วินาที
   statement_timeout: 30000, // Query timeout 30 วินาที
   query_timeout: 30000,
+  // เปิด SSL สำหรับ Supabase และ production
   ssl:
-    process.env.NODE_ENV === "production"
+    isSupabase || process.env.NODE_ENV === "production"
       ? { rejectUnauthorized: false }
       : false,
 });

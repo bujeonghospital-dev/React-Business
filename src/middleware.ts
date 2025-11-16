@@ -8,6 +8,33 @@ const defaultLocale = "th";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Check authentication for protected routes
+  const token = request.cookies.get("authToken")?.value;
+
+  // Protected paths that require authentication
+  const isProtectedPath =
+    pathname.includes("customer-all-data") ||
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/(fullscreen)");
+
+  // Public paths
+  const isPublicPath =
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/forgot-password" ||
+    pathname === "/" ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/images") ||
+    pathname.startsWith("/downloads");
+
+  // If accessing protected path without token, redirect to login
+  if (isProtectedPath && !token && !isPublicPath) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
   // ตรวจสอบว่า URL มี locale prefix หรือไม่
   const pathnameHasLocale = locales.some(
     (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`

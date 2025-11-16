@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { EditCustomerModal } from "@/components/EditCustomerModal";
+import UserMenu from "@/components/UserMenu";
 
 // Add custom styles for scrollbar (horizontal and vertical)
 const customScrollbarStyle = `
@@ -67,6 +68,7 @@ interface ApiResponse {
 const CustomerAllDataPage = () => {
   const [tableData, setTableData] = useState<TableData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterColumn, setFilterColumn] = useState<string>("all");
   const [showFilterMenu, setShowFilterMenu] = useState(false);
@@ -255,6 +257,18 @@ const CustomerAllDataPage = () => {
   };
 
   useEffect(() => {
+    // Check authentication and get user data
+    const checkAuth = () => {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) {
+        window.location.href = "/login";
+        return;
+      }
+      const user = JSON.parse(userStr);
+      setCurrentUser(user);
+    };
+
+    checkAuth();
     fetchData();
   }, []);
 
@@ -389,6 +403,28 @@ const CustomerAllDataPage = () => {
   const filteredAndSortedData = useMemo(() => {
     if (tableData.length === 0) return [];
     let filtered = [...tableData[0].data];
+
+    // Filter by current user if not superadmin or admin
+    if (
+      currentUser &&
+      currentUser.role_tag !== "superadmin" &&
+      currentUser.role_tag !== "admin"
+    ) {
+      const contactColumnIndex = tableData[0].headers.findIndex(
+        (h) =>
+          h.toLowerCase().includes("ผู้ติดต่อ") ||
+          h.toLowerCase().includes("contact") ||
+          h.toLowerCase().includes("ติดต่อ")
+      );
+      if (contactColumnIndex !== -1) {
+        const contactColumn = tableData[0].headers[contactColumnIndex];
+        filtered = filtered.filter((row) => {
+          const value = row[contactColumn];
+          // Match by user's name
+          return value && String(value).trim() === currentUser.name;
+        });
+      }
+    }
 
     if (statusFilter !== "all") {
       const statusColumnIndex = tableData[0].headers.findIndex(
@@ -723,7 +759,22 @@ const CustomerAllDataPage = () => {
     <>
       <style>{customScrollbarStyle}</style>
       <div className="w-full min-h-screen bg-gray-50 p-4 flex flex-col">
-        {/* Detail Panel - Top */}
+        {/* Header with User Menu */}
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              ข้อมูลลูกค้าทั้งหมด
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">
+              {currentUser &&
+              currentUser.role_tag !== "superadmin" &&
+              currentUser.role_tag !== "admin"
+                ? `แสดงข้อมูลของ: ${currentUser.name}`
+                : "แสดงข้อมูลทั้งหมด"}
+            </p>
+          </div>
+          <UserMenu />
+        </div>
 
         {/* Control Bar */}
         <div className="bg-white rounded-lg shadow-md p-4 mb-4">
@@ -898,55 +949,60 @@ const CustomerAllDataPage = () => {
               )}
             </div>
 
-            {/* Contact Filter */}
-            <div className="relative group">
-              <button
-                onClick={() => setShowContactMenu(!showContactMenu)}
-                className="px-4 py-2.5 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white rounded-lg flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
-              >
-                <span>
-                  ผู้ติดต่อ {contactFilter !== "all" && `(${contactFilter})`}
-                </span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${
-                    showContactMenu ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                  />
-                </svg>
-              </button>
-              {showContactMenu && (
-                <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 min-w-[180px] overflow-hidden">
-                  <div className="max-h-64 overflow-y-auto">
-                    {contactOptions.map((contact) => (
-                      <button
-                        key={contact.value}
-                        onClick={() => {
-                          setContactFilter(contact.value);
-                          setShowContactMenu(false);
-                        }}
-                        className={`w-full text-left px-4 py-3 transition-colors border-b border-gray-100 text-sm font-medium ${
-                          contactFilter === contact.value
-                            ? "bg-rose-50 text-rose-700"
-                            : "bg-white text-gray-700 hover:bg-rose-50 hover:text-rose-700"
-                        }`}
-                      >
-                        {contactFilter === contact.value && "✓ "}
-                        {contact.label}
-                      </button>
-                    ))}
-                  </div>
+            {/* Contact Filter - Only show for superadmin and admin */}
+            {currentUser &&
+              (currentUser.role_tag === "superadmin" ||
+                currentUser.role_tag === "admin") && (
+                <div className="relative group">
+                  <button
+                    onClick={() => setShowContactMenu(!showContactMenu)}
+                    className="px-4 py-2.5 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white rounded-lg flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
+                  >
+                    <span>
+                      ผู้ติดต่อ{" "}
+                      {contactFilter !== "all" && `(${contactFilter})`}
+                    </span>
+                    <svg
+                      className={`w-4 h-4 transition-transform ${
+                        showContactMenu ? "rotate-180" : ""
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                      />
+                    </svg>
+                  </button>
+                  {showContactMenu && (
+                    <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 min-w-[180px] overflow-hidden">
+                      <div className="max-h-64 overflow-y-auto">
+                        {contactOptions.map((contact) => (
+                          <button
+                            key={contact.value}
+                            onClick={() => {
+                              setContactFilter(contact.value);
+                              setShowContactMenu(false);
+                            }}
+                            className={`w-full text-left px-4 py-3 transition-colors border-b border-gray-100 text-sm font-medium ${
+                              contactFilter === contact.value
+                                ? "bg-rose-50 text-rose-700"
+                                : "bg-white text-gray-700 hover:bg-rose-50 hover:text-rose-700"
+                            }`}
+                          >
+                            {contactFilter === contact.value && "✓ "}
+                            {contact.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
 
             {/* Date Filter 1: Follow Up Last */}
             <div className="relative group">

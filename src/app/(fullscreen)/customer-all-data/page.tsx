@@ -114,7 +114,7 @@ const CustomerAllDataPage = () => {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/film-data");
+      const response = await fetch("/api/customer-data");
       const result = await response.json();
       if (
         !result.data ||
@@ -357,11 +357,33 @@ const CustomerAllDataPage = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveCustomer = (updatedData: Record<string, any>) => {
-    // TODO: บันทึกข้อมูลไปยัง API
-    console.log("Saved customer data:", updatedData);
-    alert("บันทึกข้อมูลสำเร็จ");
-    setIsEditModalOpen(false);
+  const handleSaveCustomer = async (updatedData: Record<string, any>) => {
+    try {
+      const response = await fetch("/api/customer-data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "update",
+          data: updatedData,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert("บันทึกข้อมูลสำเร็จ");
+        setIsEditModalOpen(false);
+        // รีโหลดข้อมูลใหม่
+        await fetchData();
+      } else {
+        alert(`เกิดข้อผิดพลาด: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Error saving customer:", error);
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+    }
   };
 
   const filteredAndSortedData = useMemo(() => {

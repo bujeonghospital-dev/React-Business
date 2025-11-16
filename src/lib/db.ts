@@ -9,7 +9,9 @@ const pool = new Pool({
   database: process.env.DB_NAME || "postgres",
   max: 20, // จำนวน connection สูงสุด
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000, // เพิ่มเป็น 10 วินาที
+  statement_timeout: 30000, // Query timeout 30 วินาที
+  query_timeout: 30000,
   ssl:
     process.env.NODE_ENV === "production"
       ? { rejectUnauthorized: false }
@@ -19,11 +21,18 @@ const pool = new Pool({
 // ตรวจสอบการเชื่อมต่อ
 pool.on("connect", () => {
   console.log("Connected to PostgreSQL database");
+  console.log(`Host: ${process.env.DB_HOST || "192.168.1.19"}`);
 });
 
 pool.on("error", (err) => {
   console.error("Unexpected error on idle client", err);
-  process.exit(-1);
+  console.error(
+    `Failed to connect to: ${process.env.DB_HOST || "192.168.1.19"}`
+  );
+  // ไม่ exit ใน production เพื่อให้ retry ได้
+  if (process.env.NODE_ENV !== "production") {
+    process.exit(-1);
+  }
 });
 
 export default pool;

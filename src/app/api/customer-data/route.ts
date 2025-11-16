@@ -62,9 +62,13 @@ const reverseColumnMapping: Record<string, string> = Object.entries(
 }, {} as Record<string, string>);
 
 export async function GET(request: NextRequest) {
+  let client;
   try {
+    // ใช้ client แทน pool.query โดยตรง เพื่อควบคุม timeout ได้ดีขึ้น
+    client = await pool.connect();
+
     // ดึงข้อมูลทั้งหมดจากตาราง bjh_all_leads ใน schema BJH-Server
-    const result = await pool.query(
+    const result = await client.query(
       'SELECT * FROM "BJH-Server".bjh_all_leads ORDER BY id DESC'
     );
 
@@ -87,17 +91,40 @@ export async function GET(request: NextRequest) {
         all_data: data,
       },
       totalRecords: customers.length,
+      source: `${process.env.DB_HOST || "192.168.1.19"}:${
+        process.env.DB_PORT || "5432"
+      }`,
     });
   } catch (error: any) {
     console.error("Database error:", error);
+    console.error("DB_HOST:", process.env.DB_HOST || "192.168.1.19");
+    console.error("Error code:", error.code);
+
+    // ให้ข้อความที่ชัดเจนกว่า
+    let errorMessage = "Failed to connect to database";
+    if (error.code === "ETIMEDOUT" || error.message.includes("timeout")) {
+      errorMessage =
+        "Database connection timeout. กรุณาตรวจสอบ DB_HOST environment variable หรือ migrate ไปยัง Supabase";
+    } else if (error.code === "ENOTFOUND") {
+      errorMessage =
+        "Database host not found. กรุณาตรวจสอบ DB_HOST environment variable";
+    }
+
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Failed to fetch data from database",
-        details: error.stack,
+        error: errorMessage,
+        details: error.message,
+        code: error.code,
+        host: process.env.DB_HOST || "192.168.1.19",
       },
       { status: 500 }
     );
+  } finally {
+    // Release client กลับไปยัง pool
+    if (client) {
+      client.release();
+    }
   }
 }
 

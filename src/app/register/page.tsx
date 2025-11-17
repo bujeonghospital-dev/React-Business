@@ -51,8 +51,8 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: "",
     phone: "",
-    department: "",
-    position: "",
+    department: undefined,
+    position: undefined,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);

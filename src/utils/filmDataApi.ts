@@ -5,10 +5,18 @@ const PYTHON_API_URL =
 
 export interface FilmDataContactsResponse {
   success: boolean;
+  error?: string;
   data: Array<{
-    ผู้ติดต่อ: string;
-    "วันที่ได้นัด consult": string;
-    วันที่ได้นัดผ่าตัด: string;
+    id: string;
+    contact_person: string;
+    consult_date: string;
+    consult_date_normalized: string;
+    surgery_appointment_date: string;
+    surgery_appointment_date_normalized: string | null;
+    // Support both Thai and English field names
+    ผู้ติดต่อ?: string;
+    "วันที่ได้นัด consult"?: string;
+    วันที่ได้นัดผ่าตัด?: string;
     [key: string]: any;
   }>;
   count_summary: {
@@ -42,15 +50,18 @@ export interface FilmDataCountsByAgent {
  * ดึงข้อมูล Film Data Contacts พร้อมจำนวน consult และนัดผ่าตัด
  * @param date - วันที่ในรูปแบบ YYYY-MM-DD (optional)
  * @param count - ขอ count summary ด้วยไหม (default: true)
+ * @param today - ดึงข้อมูลวันนี้เท่านั้น (default: false)
  */
 export async function fetchFilmDataContacts(
   date?: string,
-  count: boolean = true
+  count: boolean = true,
+  today: boolean = false
 ): Promise<FilmDataContactsResponse> {
   try {
     const params = new URLSearchParams();
     if (date) params.append("date", date);
     if (count) params.append("count", "true");
+    if (today) params.append("today", "true");
 
     const url = `${PYTHON_API_URL}/api/film-data-contacts?${params.toString()}`;
 
@@ -75,7 +86,8 @@ export async function fetchFilmDataContacts(
 
 /**
  * แปลงข้อมูล Film Data เป็นจำนวนแยกตาม Agent
- * สมมติว่า "ผู้ติดต่อ" มีรูปแบบเช่น "101", "102", "107" หรือ "101-ชื่อ"
+ * รองรับทั้ง field ภาษาไทยและอังกฤษ
+ * สมมติว่า contact_person มีรูปแบบเช่น "สา", "พัดชา", "ตั้งโอ๋" (ชื่อเซลล์)
  */
 export function transformFilmDataToAgentCounts(
   data: FilmDataContactsResponse
@@ -83,17 +95,47 @@ export function transformFilmDataToAgentCounts(
   const consultCounts: Record<string, number> = {};
   const surgeryCounts: Record<string, number> = {};
 
+  // Map ชื่อเซลล์ไปเป็น Agent ID
+  const agentNameMap: Record<string, string> = {
+    สา: "101",
+    พัดชา: "102",
+    ตั้งโอ๋: "103",
+    Test: "104",
+    โอ๋: "105",
+    เต้: "106",
+    เอ้: "107",
+    อ้อม: "108",
+  };
+
   // นับจากข้อมูลแต่ละแถว
   data.data.forEach((row) => {
-    const contact = row["ผู้ติดต่อ"] || "";
-    const consultDate = row["วันที่ได้นัด consult"] || "";
-    const surgeryDate = row["วันที่ได้นัดผ่าตัด"] || "";
+    // รองรับทั้ง field ภาษาอังกฤษและไทย
+    const contact = row.contact_person || row["ผู้ติดต่อ"] || "";
+    const consultDate = row.consult_date || row["วันที่ได้นัด consult"] || "";
+    const surgeryDate =
+      row.surgery_appointment_date || row["วันที่ได้นัดผ่าตัด"] || "";
 
-    // ดึง Agent ID จากชื่อผู้ติดต่อ (เช่น "101", "102-ชื่อ" → "102")
-    const agentMatch = contact.match(/^(\d{3})/);
-    if (!agentMatch) return;
+    // ดึง Agent ID จากชื่อผู้ติดต่อ
+    const contactName = contact.trim();
+    const agentId = agentNameMap[contactName];
 
-    const agentId = agentMatch[1];
+    if (!agentId) {
+      // ถ้าไม่เจอใน map ลองดึงจากตัวเลข 3 หลัก
+      const agentMatch = contactName.match(/^(\d{3})/);
+      if (!agentMatch) return;
+      const extractedId = agentMatch[1];
+
+      // นับ consult ถ้ามีวันที่
+      if (consultDate && consultDate.trim() !== "") {
+        consultCounts[extractedId] = (consultCounts[extractedId] || 0) + 1;
+      }
+
+      // นับนัดผ่าตัดถ้ามีวันที่
+      if (surgeryDate && surgeryDate.trim() !== "") {
+        surgeryCounts[extractedId] = (surgeryCounts[extractedId] || 0) + 1;
+      }
+      return;
+    }
 
     // นับ consult ถ้ามีวันที่
     if (consultDate && consultDate.trim() !== "") {

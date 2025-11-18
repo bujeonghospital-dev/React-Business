@@ -840,8 +840,8 @@ const CustomerContactDashboard = () => {
   // Fetch Film Data - จำนวนนับ (O) และจำนวนผ่า (P) จาก Python API
   const fetchFilmData = async () => {
     try {
-      // ใช้ Film Data Contacts API
-      const result = await fetchFilmDataContacts(selectedDate, true);
+      // ใช้ Film Data Contacts API (today=true เพื่อดึงเฉพาะวันนี้)
+      const result = await fetchFilmDataContacts(selectedDate, true, true);
 
       if (result.success) {
         // แปลงข้อมูลเป็นจำนวนแยกตาม Agent
@@ -858,26 +858,44 @@ const CustomerContactDashboard = () => {
         console.log("  - Total records:", result.total);
         console.log("  - Count summary:", result.count_summary);
       } else {
-        console.error("❌ Failed to fetch Film data from Python API:", result);
+        // API ตอบกลับมาแต่ไม่ success (เช่น quota exceeded, error)
+        console.warn(
+          "⚠️ Film data API returned error:",
+          result.error || result
+        );
 
-        // Fallback: ลอง Google Sheets API
-        console.log("⚠️ Trying fallback to Google Sheets API...");
-        try {
-          const response = await fetch(
-            `/api/google-sheets-film-data?date=${selectedDate}`
+        // ถ้าเป็น quota exceeded ให้ใช้ข้อมูลเก่าหรือข้ามไป
+        if (result.error && result.error.includes("Quota exceeded")) {
+          console.log(
+            "📊 Google Sheets quota exceeded - keeping existing data or empty"
           );
-          const fallbackResult = await response.json();
-
-          if (fallbackResult.success) {
-            setFilmDataCounts(fallbackResult.agentCounts || {});
-            setFilmDataSurgeryCounts(fallbackResult.surgeryCounts || {});
-            console.log(
-              "✅ Film data loaded from Google Sheets (fallback):",
-              fallbackResult
+          // ไม่ต้องทำอะไร ใช้ข้อมูลเก่าที่มีอยู่ หรือเป็นค่าว่าง
+          setFilmDataCounts({});
+          setFilmDataSurgeryCounts({});
+        } else {
+          console.error(
+            "❌ Failed to fetch Film data from Python API:",
+            result
+          );
+          // Fallback: ลอง Google Sheets API
+          console.log("⚠️ Trying fallback to Google Sheets API...");
+          try {
+            const response = await fetch(
+              `/api/google-sheets-film-data?date=${selectedDate}`
             );
+            const fallbackResult = await response.json();
+
+            if (fallbackResult.success) {
+              setFilmDataCounts(fallbackResult.agentCounts || {});
+              setFilmDataSurgeryCounts(fallbackResult.surgeryCounts || {});
+              console.log(
+                "✅ Film data loaded from Google Sheets (fallback):",
+                fallbackResult
+              );
+            }
+          } catch (fallbackError) {
+            console.error("❌ Fallback also failed:", fallbackError);
           }
-        } catch (fallbackError) {
-          console.error("❌ Fallback also failed:", fallbackError);
         }
       }
     } catch (error) {

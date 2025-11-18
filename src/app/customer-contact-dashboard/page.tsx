@@ -289,11 +289,18 @@ const CustomerContactDashboard = () => {
       fetchYalecomQueueStatus(undefined, "900");
       fetchRobocallData();
       fetchLogCallAiData(); // รีเฟรชข้อมูล Log_call_ai ทุก 30 วินาที
-      fetchCallMatrixYaleSummary();
-      fetchFilmData(); // รีเฟรชข้อมูล Film data ทุก 30 วินาที
-    }, 30000); // เปลี่ยนจาก 5000 (5 วินาที) เป็น 30000 (30 วินาที)
+    }, 30000); // 30 วินาที
 
-    return () => clearInterval(interval);
+    // Auto refresh Call Matrix และ Film Data แยกต่างหาก (ดีเลย์ 30 วินาที)
+    const callMatrixInterval = setInterval(() => {
+      fetchCallMatrixYaleSummary();
+      fetchFilmData();
+    }, 30000); // 30 วินาที
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(callMatrixInterval);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]); // เพิ่ม selectedDate เป็น dependency
 

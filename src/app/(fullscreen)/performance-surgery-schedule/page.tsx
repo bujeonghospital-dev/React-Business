@@ -136,21 +136,39 @@ export default function PerformanceSurgerySchedule() {
     }
   };
 
-  // Function to load Combined Revenue data (max_amount with DISTINCT ON sale_code)
+  // Function to load Combined Revenue data (DISTINCT ON with max_amount <= today)
   const loadRevenueCombinedData = async () => {
     try {
+      console.log(
+        "🔄 Starting to load Revenue data (n_saleIncentive + n_staff + bjh_all_leads)..."
+      );
       const combinedData = await fetchRevenueCombinedFromDatabase();
-      console.log("💰 Revenue Data Loaded (bjh_all_leads):", {
+      console.log("💰 Revenue Data Loaded (bjh_all_leads - TODAY only):", {
         totalRecords: combinedData.length,
-        sampleRecords: combinedData.slice(0, 3),
-        uniquePersons: [
+        sampleRecords: combinedData.slice(0, 5),
+        uniqueContactStaff: [
           ...new Set(combinedData.map((d) => d.contact_staff || "ไม่ระบุ")),
         ],
+        sampleData: combinedData.slice(0, 5).map((d) => ({
+          contact_staff: d.contact_staff,
+          surgery_date: d.surgery_date,
+          doctor: d.doctor,
+          customer_name: d.customer_name,
+          phone: d.phone,
+          proposed_amount: d.proposed_amount,
+          appointment_time: d.appointment_time,
+        })),
       });
       setRevenueCombinedData(combinedData);
-      console.log("✅ Loaded Combined Revenue data from Database");
+      console.log(
+        "✅ Loaded Revenue data (bjh_all_leads - surgery_date = TODAY)"
+      );
     } catch (error: any) {
-      console.error("❌ Error loading Combined Revenue data:", error);
+      console.error("❌ Error loading Revenue data:", error);
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+      });
       // Don't set error state - let revenue table just be empty
       setRevenueCombinedData([]);
     }
@@ -273,30 +291,49 @@ export default function PerformanceSurgerySchedule() {
     }
   }, [surgeryData, selectedMonth, selectedYear]);
 
-  // Update film revenue map when revenue data from bjh_all_leads changes
+  // Update film revenue map - ใช้ proposed_amount จาก bjh_all_leads (TODAY only)
   useEffect(() => {
+    console.log(
+      "🔄 Processing filmRevenueMap (bjh_all_leads - TODAY only)...",
+      {
+        combinedDataLength: revenueCombinedData.length,
+        selectedMonth,
+        selectedYear,
+        firstFewRecords: revenueCombinedData.slice(0, 3).map((d) => ({
+          surgery_date: d.surgery_date,
+          contact_staff: d.contact_staff,
+          proposed_amount: d.proposed_amount,
+        })),
+      }
+    );
+
     if (revenueCombinedData.length > 0) {
-      // Revenue from bjh_all_leads (proposed_amount)
+      // ใช้ proposed_amount และ contact_staff จาก bjh_all_leads โดยตรง
       const newFilmRevenueMap = calculateDailyRevenueByPersonCombined(
         revenueCombinedData,
         selectedMonth,
         selectedYear
       );
 
-      console.log("🔍 Film Revenue Map Debug (bjh_all_leads):", {
+      console.log("🔍 Film Revenue Map Debug (bjh_all_leads - TODAY):", {
         mapSize: newFilmRevenueMap.size,
         persons: Array.from(newFilmRevenueMap.keys()),
-        sampleData: Array.from(newFilmRevenueMap.entries())
-          .slice(0, 2)
-          .map(([person, dayMap]) => ({
+        allData: Array.from(newFilmRevenueMap.entries()).map(
+          ([person, dayMap]) => ({
             person,
-            days: Array.from(dayMap.entries()),
-          })),
+            totalDays: dayMap.size,
+            days: Array.from(dayMap.entries()).slice(0, 10),
+            totalRevenue: Array.from(dayMap.values()).reduce(
+              (sum, val) => sum + val,
+              0
+            ),
+          })
+        ),
       });
 
       setFilmRevenueMap(newFilmRevenueMap);
     } else {
-      // Clear revenue map if no data
+      console.log("⚠️ No revenue data to process, clearing map");
       setFilmRevenueMap(new Map());
     }
   }, [revenueCombinedData, selectedMonth, selectedYear]);
@@ -498,42 +535,65 @@ export default function PerformanceSurgerySchedule() {
     return surgeries ? surgeries.length : 0;
   };
 
-  // Get revenue for a specific cell (ใช้ max_amount จาก Combined Revenue API)
+  // Get revenue for a specific cell (ใช้ proposed_amount จาก bjh_all_leads)
   const getCellRevenue = (day: number, rowId: string): number => {
     const contactPerson = CONTACT_PERSON_MAPPING[rowId];
-    if (!contactPerson) return 0;
+    if (!contactPerson) {
+      console.warn(`⚠️ No contact person mapping for rowId: ${rowId}`);
+      return 0;
+    }
 
     let totalRevenue = 0;
 
     // Debug: ตรวจสอบ filmRevenueMap
-    if (day === 1 && rowId === "105-จีน") {
-      console.log("🔍 Debug getCellRevenue:", {
+    if (day === 1) {
+      console.log(`🔍 Debug getCellRevenue for day ${day}, rowId ${rowId}:`, {
         rowId,
         contactPerson,
         filmRevenueMapSize: filmRevenueMap.size,
         filmRevenueMapKeys: Array.from(filmRevenueMap.keys()),
-        day1Data: {
-          จีน: filmRevenueMap.get("จีน")?.get(1),
-          มุก: filmRevenueMap.get("มุก")?.get(1),
-          เจ: filmRevenueMap.get("เจ")?.get(1),
-          ว่าน: filmRevenueMap.get("ว่าน")?.get(1),
-        },
+        allDayData: Array.from(filmRevenueMap.entries()).map(
+          ([person, dayMap]) => ({
+            person,
+            day1Revenue: dayMap.get(1) || 0,
+            allDays: Array.from(dayMap.keys()),
+          })
+        ),
       });
     }
 
-    // ใช้ข้อมูลจาก filmRevenueMap (Combined Revenue: max_amount DISTINCT ON sale_code)
+    // ใช้ข้อมูลจาก filmRevenueMap (proposed_amount จาก bjh_all_leads)
     if (filmRevenueMap.size > 0) {
-      // For จีน row, combine จีน and มุก revenue (ไม่ซ้ำกัน)
+      // For จีน row, combine จีน and มุก revenue
       if (rowId === "105-จีน") {
-        // จีน - เช็คแค่ชื่อไทย
         const jinRevenue = filmRevenueMap.get("จีน")?.get(day) || 0;
-        // มุก - เช็คแค่ชื่อไทย
         const mukRevenue = filmRevenueMap.get("มุก")?.get(day) || 0;
         totalRevenue = jinRevenue + mukRevenue;
+
+        if (day === 1) {
+          console.log(`💰 Revenue for 105-จีน day ${day}:`, {
+            jinRevenue,
+            mukRevenue,
+            totalRevenue,
+          });
+        }
       } else {
-        // For other rows, ใช้ชื่อจาก mapping โดยตรง
+        // For other rows (107-เจ, 108-ว่าน), ใช้ nickname โดยตรง
         const revenue = filmRevenueMap.get(contactPerson)?.get(day) || 0;
         totalRevenue = revenue;
+
+        if (day === 1) {
+          console.log(
+            `💰 Revenue for ${rowId} (${contactPerson}) day ${day}:`,
+            {
+              revenue: totalRevenue,
+            }
+          );
+        }
+      }
+    } else {
+      if (day === 1) {
+        console.warn(`⚠️ filmRevenueMap is empty for day ${day}`);
       }
     }
 
@@ -619,51 +679,6 @@ export default function PerformanceSurgerySchedule() {
         </div>
 
         {/* Data Info and Refresh Button */}
-        <div className="data-info">
-          <div className="update-time">
-            {lastUpdated && (
-              <>
-                <span className="update-label">อัพเดทล่าสุด:</span>
-                <span className="update-value">
-                  {lastUpdated.toLocaleTimeString("th-TH", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  })}
-                </span>
-              </>
-            )}
-            {surgeryData.length > 0 && (
-              <span className="data-count">
-                📊 P: {surgeryData.length} รายการ
-                {surgeryActualData.length > 0 && (
-                  <> | L: {surgeryActualData.length} รายการ</>
-                )}
-                {revenueCombinedData.length > 0 && (
-                  <>
-                    {" "}
-                    | 💰 รายรับ: {revenueCombinedData.length} รายการ
-                    (n_saleIncentive)
-                  </>
-                )}
-                {" (PostgreSQL Database)"}
-              </span>
-            )}
-          </div>
-          <button
-            onClick={async () => await loadData(true)}
-            className="refresh-button"
-            disabled={isRefreshing}
-          >
-            {isRefreshing ? (
-              <>
-                <span className="refresh-spinner">⟳</span> กำลังอัพเดท...
-              </>
-            ) : (
-              <>🔄 รีเฟรชข้อมูล</>
-            )}
-          </button>
-        </div>
       </div>
 
       {/* Team Summary Dashboard */}
@@ -862,16 +877,13 @@ export default function PerformanceSurgerySchedule() {
                 <th className="header-cell name-header" rowSpan={2}>
                   จำนวนที่ได้นัดผ่าตัด
                 </th>
-                <th className="header-cell kpi-header">KPI Month</th>
-                <th className="header-cell kpi-header">KPI To Date</th>
-                <th className="header-cell kpi-header">Actual</th>
-                <th className="header-cell kpi-header">Diff</th>
                 {days.map((day) => (
                   <th
                     key={`p-day-${day}`}
-                    className={`header-cell day-header ${
+                    className={`header-cell day-header  ${
                       isWeekday(day) ? "weekday-header" : ""
                     }`}
+                    style={{ width: "62px" }}
                   >
                     {day}
                   </th>
@@ -885,38 +897,6 @@ export default function PerformanceSurgerySchedule() {
                   className={rowIndex % 2 === 0 ? "even-row" : "odd-row"}
                 >
                   <td className="name-cell">{row.name}</td>
-                  <td className="kpi-cell">
-                    {kpiData[row.id]?.kpiMonth
-                      ? row.id === "105-จีน"
-                        ? kpiData[row.id].kpiMonth * 2
-                        : kpiData[row.id].kpiMonth
-                      : ""}
-                  </td>
-                  <td className="kpi-cell">
-                    {kpiData[row.id]?.kpiToDate
-                      ? row.id === "105-จีน"
-                        ? kpiData[row.id].kpiToDate * 2
-                        : kpiData[row.id].kpiToDate
-                      : ""}
-                  </td>
-                  <td className="kpi-cell">{kpiData[row.id]?.actual || ""}</td>
-                  <td className="kpi-cell diff-cell">
-                    {(() => {
-                      if (kpiData[row.id]?.kpiToDate > 0) {
-                        const diff = calculateDiff(row.id);
-                        const diffColor = diff >= 0 ? "green" : "red";
-                        return (
-                          <span
-                            style={{ color: diffColor, fontWeight: "bold" }}
-                          >
-                            {diff >= 0 ? "+" : "−"}
-                            {Math.abs(diff)}
-                          </span>
-                        );
-                      }
-                      return "";
-                    })()}
-                  </td>
                   {days.map((day) => {
                     const count = getCellCount(day, row.id, "P");
                     return (
@@ -954,16 +934,13 @@ export default function PerformanceSurgerySchedule() {
                 <th className="header-cell name-header" rowSpan={2}>
                   จำนวนผ่าตัด L
                 </th>
-                <th className="header-cell kpi-header">KPI Month</th>
-                <th className="header-cell kpi-header">KPI To Date</th>
-                <th className="header-cell kpi-header">Actual</th>
-                <th className="header-cell kpi-header">Diff</th>
                 {days.map((day) => (
                   <th
                     key={`l-day-${day}`}
                     className={`header-cell day-header ${
                       isWeekday(day) ? "weekday-header" : ""
                     }`}
+                    style={{ width: "62px" }}
                   >
                     {day}
                   </th>
@@ -977,38 +954,6 @@ export default function PerformanceSurgerySchedule() {
                   className={rowIndex % 2 === 0 ? "even-row" : "odd-row"}
                 >
                   <td className="name-cell">{row.name}</td>
-                  <td className="kpi-cell">
-                    {kpiData[row.id]?.kpiMonth
-                      ? row.id === "105-จีน"
-                        ? kpiData[row.id].kpiMonth * 2
-                        : kpiData[row.id].kpiMonth
-                      : ""}
-                  </td>
-                  <td className="kpi-cell">
-                    {kpiData[row.id]?.kpiToDate
-                      ? row.id === "105-จีน"
-                        ? kpiData[row.id].kpiToDate * 2
-                        : kpiData[row.id].kpiToDate
-                      : ""}
-                  </td>
-                  <td className="kpi-cell">{kpiData[row.id]?.actual || ""}</td>
-                  <td className="kpi-cell diff-cell">
-                    {(() => {
-                      if (kpiData[row.id]?.kpiToDate > 0) {
-                        const diff = calculateDiff(row.id);
-                        const diffColor = diff >= 0 ? "green" : "red";
-                        return (
-                          <span
-                            style={{ color: diffColor, fontWeight: "bold" }}
-                          >
-                            {diff >= 0 ? "+" : "−"}
-                            {Math.abs(diff)}
-                          </span>
-                        );
-                      }
-                      return "";
-                    })()}
-                  </td>
                   {days.map((day) => {
                     const count = getCellCount(day, row.id, "L");
                     return (
@@ -1046,16 +991,13 @@ export default function PerformanceSurgerySchedule() {
                 <th className="header-cell name-header" rowSpan={2}>
                   ประมาณการรายรับ
                 </th>
-                <th className="header-cell kpi-header">KPI Month</th>
-                <th className="header-cell kpi-header">KPI To Date</th>
-                <th className="header-cell kpi-header">Actual</th>
-                <th className="header-cell kpi-header">Diff</th>
                 {days.map((day) => (
                   <th
                     key={`revenue-day-${day}`}
                     className={`header-cell day-header ${
                       isWeekday(day) ? "weekday-header" : ""
                     }`}
+                    style={{ width: "62px" }}
                   >
                     {day}
                   </th>
@@ -1069,66 +1011,9 @@ export default function PerformanceSurgerySchedule() {
                   className={rowIndex % 2 === 0 ? "even-row" : "odd-row"}
                 >
                   <td className="name-cell">{row.name}</td>
-                  <td className="kpi-cell">
-                    {kpiData[row.id]?.kpiMonth
-                      ? formatCurrency(
-                          (row.id === "105-จีน"
-                            ? kpiData[row.id].kpiMonth * 2
-                            : kpiData[row.id].kpiMonth) * 25000
-                        )
-                      : ""}
-                  </td>
-                  <td className="kpi-cell">
-                    {kpiData[row.id]?.kpiToDate > 0
-                      ? formatCurrency(
-                          (row.id === "105-จีน"
-                            ? kpiData[row.id].kpiToDate * 2
-                            : kpiData[row.id].kpiToDate) * 25000
-                        )
-                      : ""}
-                  </td>
-                  <td className="kpi-cell">
-                    {(() => {
-                      // Calculate total revenue for this row
-                      let totalRevenue = 0;
-                      days.forEach((day) => {
-                        totalRevenue += getCellRevenue(day, row.id);
-                      });
-                      return totalRevenue > 0
-                        ? formatCurrency(totalRevenue)
-                        : "";
-                    })()}
-                  </td>
-                  <td className="kpi-cell diff-cell">
-                    {(() => {
-                      if (kpiData[row.id]?.kpiToDate > 0) {
-                        // Calculate total revenue for this row
-                        let totalRevenue = 0;
-                        days.forEach((day) => {
-                          totalRevenue += getCellRevenue(day, row.id);
-                        });
-                        // For "105-จีน & มุก", multiply KPI by 2
-                        const kpiToDateAmount =
-                          row.id === "105-จีน"
-                            ? kpiData[row.id].kpiToDate * 2 * 25000
-                            : kpiData[row.id].kpiToDate * 25000;
-                        const diff = totalRevenue - kpiToDateAmount;
-                        const diffColor = diff >= 0 ? "green" : "red";
-                        return (
-                          <span
-                            style={{ color: diffColor, fontWeight: "bold" }}
-                          >
-                            {diff >= 0 ? "+" : "−"}
-                            {formatCurrency(Math.abs(diff))}
-                          </span>
-                        );
-                      }
-                      return "";
-                    })()}
-                  </td>
                   {days.map((day) => {
                     const revenue = getCellRevenue(day, row.id);
-                    const count = getCellCount(day, row.id, "P");
+                    const lCount = getCellCount(day, row.id, "L"); // ใช้ L table สำหรับประมาณการรายรับ
                     return (
                       <td
                         key={`revenue-cell-${row.id}-${day}`}
@@ -1136,13 +1021,13 @@ export default function PerformanceSurgerySchedule() {
                           revenue > 0 ? "has-data revenue-cell" : ""
                         }`}
                         onClick={() =>
-                          count > 0 && handleCellClick(day, row.id, "P")
+                          lCount > 0 && handleCellClick(day, row.id, "L")
                         }
                         title={
                           revenue > 0
                             ? `คลิกเพื่อดูรายละเอียด\nยอดรวม: ${formatCurrency(
                                 revenue
-                              )} บาท\nจำนวน: ${count} รายการ`
+                              )} บาท\nจำนวนผ่าตัด: ${lCount} รายการ`
                             : ""
                         }
                       >

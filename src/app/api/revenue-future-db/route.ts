@@ -9,8 +9,8 @@ const cache = new Map<
 const CACHE_DURATION = 30000; // 30 seconds
 
 /**
- * GET /api/revenue-combined-db
- * ดึงข้อมูลรายรับจาก bjh_all_leads
+ * GET /api/revenue-future-db
+ * ดึงข้อมูลรายรับจาก bjh_all_leads (surgery_date >= วันนี้)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -21,14 +21,14 @@ export async function GET(request: NextRequest) {
     const contactPerson = searchParams.get("contact_person");
 
     // Check cache first
-    const cacheKey = `revenue-combined-db-${month || "all"}-${year || "all"}-${
+    const cacheKey = `revenue-future-db-${month || "all"}-${year || "all"}-${
       contactPerson || "all"
     }`;
     const cached = cache.get(cacheKey);
     const now = Date.now();
 
     if (cached && now < cached.expiresAt) {
-      console.log(`✅ Returning cached revenue from database`);
+      console.log(`✅ Returning cached future revenue from database`);
       return NextResponse.json(cached.data, {
         status: 200,
         headers: {
@@ -39,34 +39,55 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    console.log(`📡 Fetching revenue from bjh_all_leads (TODAY only)...`);
+    console.log(
+      `📡 Fetching future revenue from bjh_all_leads (surgery_date >= today)...`
+    );
 
-    // SQL query ที่ดึงข้อมูลจาก bjh_all_leads เฉพาะวันนี้
+    // SQL query จาก bjh_all_leads - กรองเฉพาะวันที่ >= วันนี้
     let query = `
       SELECT 
         contact_staff,
-        TO_CHAR(surgery_date::date, 'YYYY-MM-DD') as surgery_date,
+        CASE 
+          WHEN surgery_date IS NOT NULL 
+          THEN TO_CHAR(surgery_date::date, 'YYYY-MM-DD')
+          ELSE NULL 
+        END as surgery_date,
         doctor,
         customer_name,
         phone,
-        proposed_amount,
+        CASE 
+          WHEN proposed_amount::text ~ '^[0-9,]+$' 
+          THEN ROUND(CAST(REPLACE(proposed_amount::text, ',', '') AS NUMERIC))::INTEGER
+          ELSE NULL
+        END AS proposed_amount,
         appointment_time
       FROM postgres."BJH-Server".bjh_all_leads
       WHERE surgery_date IS NOT NULL
-        AND DATE(surgery_date) = CURRENT_DATE
+        AND surgery_date::date >= CURRENT_DATE
     `;
 
     const params: any[] = [];
     let paramIndex = 1;
 
-    // Filter by contact person (contact_staff) if provided
+    // Filter by month and year if provided (ใช้ surgery_date)
+    if (month && year) {
+      query += ` AND EXTRACT(MONTH FROM surgery_date::date) = $${paramIndex++}`;
+      params.push(parseInt(month));
+      query += ` AND EXTRACT(YEAR FROM surgery_date::date) = $${paramIndex++}`;
+      params.push(parseInt(year));
+    } else if (year) {
+      query += ` AND EXTRACT(YEAR FROM surgery_date::date) = $${paramIndex++}`;
+      params.push(parseInt(year));
+    }
+
+    // Filter by contact person if provided
     if (contactPerson && contactPerson !== "all") {
       query += ` AND contact_staff = $${paramIndex++}`;
       params.push(contactPerson);
     }
 
     // Order by surgery_date
-    query += ` ORDER BY surgery_date DESC`;
+    query += ` ORDER BY surgery_date::date ASC`;
 
     // Execute query
     const client = await pool.connect();
@@ -74,18 +95,8 @@ export async function GET(request: NextRequest) {
       const result = await client.query(query, params);
 
       console.log(
-        `✅ Successfully fetched ${result.rows.length} revenue records from database (bjh_all_leads - TODAY)`
+        `✅ Successfully fetched ${result.rows.length} future revenue records from database`
       );
-      console.log("📊 Sample data:", {
-        sampleRows: result.rows.slice(0, 5),
-        uniqueContactStaff: [
-          ...new Set(result.rows.map((r: any) => r.contact_staff)),
-        ],
-        filters: {
-          contactPerson,
-          today: new Date().toISOString().split("T")[0],
-        },
-      });
 
       // Transform data to match expected format
       const transformedData = {
@@ -93,10 +104,11 @@ export async function GET(request: NextRequest) {
         data: result.rows,
         total: result.rows.length,
         timestamp: new Date().toISOString(),
-        source: "PostgreSQL Database (bjh_all_leads - TODAY only)",
+        source: "PostgreSQL Database (bjh_all_leads - surgery_date >= today)",
         debug: {
           filters: {
-            date: new Date().toISOString().split("T")[0],
+            month: month || "all",
+            year: year || "all",
             contact_person: contactPerson || "all",
           },
         },
@@ -128,10 +140,10 @@ export async function GET(request: NextRequest) {
       client.release();
     }
   } catch (error: any) {
-    console.error("Error fetching revenue combined from database:", error);
+    console.error("Error fetching future revenue from database:", error);
 
     // Return cached data if available even if expired
-    const cached = cache.get("revenue-combined-db");
+    const cached = cache.get("revenue-future-db");
     if (cached) {
       console.log("⚠️ Using expired cache due to database error");
       return NextResponse.json(cached.data, {
@@ -150,7 +162,7 @@ export async function GET(request: NextRequest) {
         details: {
           type: error.name,
           message: error.message,
-          hint: "ตรวจสอบว่า database มีตาราง n_saleIncentive และ n_staff",
+          hint: "ตรวจสอบว่า database มีตาราง bjh_all_leads",
         },
         data: [],
       },

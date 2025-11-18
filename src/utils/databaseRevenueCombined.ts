@@ -12,7 +12,7 @@ export interface RevenueCombinedData {
 }
 
 /**
- * Fetch revenue data from bjh_all_leads only
+ * Fetch revenue data from n_saleIncentive + n_staff
  */
 export async function fetchRevenueCombinedFromDatabase(): Promise<
   RevenueCombinedData[]
@@ -45,7 +45,7 @@ export async function fetchRevenueCombinedFromDatabase(): Promise<
         `ไม่สามารถโหลดข้อมูลได้: ${response.statusText}\n\n` +
           "กรุณาตรวจสอบ:\n" +
           "1. Database connection ทำงานปกติ\n" +
-          "2. ตาราง bjh_all_leads มีอยู่ในฐานข้อมูล\n" +
+          "2. ตาราง n_saleIncentive และ n_staff มีอยู่ในฐานข้อมูล\n" +
           "3. Environment variables ถูกต้อง"
       );
     }
@@ -61,12 +61,25 @@ export async function fetchRevenueCombinedFromDatabase(): Promise<
     console.log(
       `✅ Successfully fetched ${
         result.total || 0
-      } combined revenue records from Database`
+      } revenue records from Database (bjh_all_leads - CURRENT_DATE only)`
     );
 
-    return result.data || [];
+    // Transform data to ensure proposed_amount is a number
+    const transformedData = (result.data || []).map((item: any) => ({
+      ...item,
+      proposed_amount: item.proposed_amount
+        ? parseFloat(item.proposed_amount.toString().replace(/,/g, ""))
+        : 0,
+    }));
+
+    console.log("🔍 Transformed data sample:", {
+      raw: result.data?.[0],
+      transformed: transformedData[0],
+    });
+
+    return transformedData;
   } catch (error: any) {
-    console.error("Error fetching combined revenue from Database:", error);
+    console.error("Error fetching revenue from Database:", error);
     throw error;
   }
 }
@@ -122,8 +135,9 @@ export function parseDatabaseDate(dateStr: string): Date | null {
 }
 
 /**
- * Calculate daily revenue by person from bjh_all_leads data
- * ใช้ proposed_amount จาก bjh_all_leads
+ * Calculate daily revenue by person using proposed_amount from bjh_all_leads
+ * ใช้ contact_staff และ proposed_amount จาก bjh_all_leads โดยตรง
+ * แสดงเฉพาะข้อมูลที่ surgery_date ตรงกับวันที่ในตาราง (ไม่ใช่เฉพาะวันนี้)
  */
 export function calculateDailyRevenueByPersonCombined(
   data: RevenueCombinedData[],
@@ -135,45 +149,115 @@ export function calculateDailyRevenueByPersonCombined(
   let processedCount = 0;
   let matchedCount = 0;
   let totalRevenue = 0;
+  let skippedNoDate = 0;
+  let skippedInvalidDate = 0;
+  let skippedWrongMonth = 0;
+  let skippedNoAmount = 0;
 
-  data.forEach((item) => {
-    // ใช้ surgery_date (ที่แปลงแล้วจาก API)
+  console.log(`🔍 Starting calculation for ${year}-${month + 1}:`, {
+    totalDataRecords: data.length,
+    targetMonth: month + 1,
+    targetYear: year,
+  });
+
+  data.forEach((item, index) => {
+    // ใช้ surgery_date (วันที่นัดผ่าตัด)
     const dateStr = item.surgery_date || "";
 
-    if (dateStr) {
-      processedCount++;
-      const date = parseDatabaseDate(dateStr);
+    if (!dateStr) {
+      skippedNoDate++;
+      if (index < 3) {
+        console.log(`⚠️ Record ${index} has no surgery_date:`, item);
+      }
+      return;
+    }
 
-      if (date) {
-        if (date.getUTCMonth() === month && date.getUTCFullYear() === year) {
-          matchedCount++;
-          const day = date.getUTCDate();
+    processedCount++;
+    const date = parseDatabaseDate(dateStr);
 
-          // ใช้ contact_staff
-          const person = (item.contact_staff || "").trim() || "ไม่ระบุ";
+    if (!date) {
+      skippedInvalidDate++;
+      if (index < 3) {
+        console.log(`⚠️ Record ${index} has invalid date format:`, {
+          surgery_date: dateStr,
+          item,
+        });
+      }
+      return;
+    }
 
-          // ใช้ proposed_amount (เป็น number แล้ว)
-          const amount = item.proposed_amount || 0;
+    if (date.getUTCMonth() === month && date.getUTCFullYear() === year) {
+      matchedCount++;
+      const day = date.getUTCDate();
 
-          if (amount > 0) {
-            if (!revenueMap.has(person)) {
-              revenueMap.set(person, new Map<number, number>());
-            }
+      // ใช้ contact_staff จาก bjh_all_leads
+      const person = (item.contact_staff || "").trim() || "ไม่ระบุ";
 
-            const personMap = revenueMap.get(person)!;
-            const currentAmount = personMap.get(day) || 0;
-            personMap.set(day, currentAmount + amount);
-            totalRevenue += amount;
-          }
+      // ใช้ proposed_amount จาก bjh_all_leads (เก็บเฉพาะค่าที่อยู่ในวันนั้นๆ)
+      // Ensure it's a number (should already be converted in fetch function)
+      const amount =
+        typeof item.proposed_amount === "number"
+          ? item.proposed_amount
+          : item.proposed_amount
+          ? parseFloat(String(item.proposed_amount).replace(/,/g, ""))
+          : 0;
+
+      if (matchedCount <= 3) {
+        console.log(`🔢 Amount parsing for record ${index}:`, {
+          raw: item.proposed_amount,
+          type: typeof item.proposed_amount,
+          parsed: amount,
+          person,
+          day,
+        });
+      }
+
+      if (amount > 0) {
+        if (!revenueMap.has(person)) {
+          revenueMap.set(person, new Map<number, number>());
         }
+
+        const personMap = revenueMap.get(person)!;
+        const currentAmount = personMap.get(day) || 0;
+        personMap.set(day, currentAmount + amount);
+        totalRevenue += amount;
+
+        if (matchedCount <= 5) {
+          console.log(`✅ Added revenue: ${person} on day ${day}: ${amount}`, {
+            contact_staff: item.contact_staff,
+            surgery_date: item.surgery_date,
+            proposed_amount: item.proposed_amount,
+            parsedDate: date.toISOString(),
+          });
+        }
+      } else {
+        skippedNoAmount++;
+      }
+    } else {
+      skippedWrongMonth++;
+      if (skippedWrongMonth <= 3) {
+        console.log(`⏭️ Skipped (wrong month): ${dateStr}`, {
+          parsedMonth: date.getUTCMonth() + 1,
+          parsedYear: date.getUTCFullYear(),
+          targetMonth: month + 1,
+          targetYear: year,
+        });
       }
     }
   });
 
   console.log(
-    `💰 Calculate Revenue (bjh_all_leads): Processed ${processedCount} records, matched ${matchedCount} for ${year}-${
+    `💰 Calculate Revenue (proposed_amount): Processed ${processedCount} records, matched ${matchedCount} for ${year}-${
       month + 1
-    }, total revenue: ${totalRevenue.toLocaleString()} บาท`
+    }, total revenue: ${totalRevenue.toLocaleString()} บาท`,
+    {
+      skippedNoDate,
+      skippedInvalidDate,
+      skippedWrongMonth,
+      skippedNoAmount,
+      finalMapSize: revenueMap.size,
+      persons: Array.from(revenueMap.keys()),
+    }
   );
 
   return revenueMap;

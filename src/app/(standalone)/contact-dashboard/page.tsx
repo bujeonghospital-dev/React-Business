@@ -619,138 +619,94 @@ const ContactDashboard = () => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-6"
         >
-          <div className="bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-600 rounded-3xl shadow-2xl p-8 sm:p-12 text-center relative overflow-hidden">
-            {/* Decorative Elements */}
-            <div className="absolute top-0 left-0 w-full h-full opacity-10">
-              <div className="absolute top-10 left-10 w-32 h-32 bg-white rounded-full blur-3xl"></div>
-              <div className="absolute bottom-10 right-10 w-40 h-40 bg-white rounded-full blur-3xl"></div>
+          {/* Status Cards - Horizontal Layout */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+            {/* จำนวน Lead Card */}
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-full opacity-10">
+                <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full -translate-x-16 -translate-y-16"></div>
+                <div className="absolute bottom-0 right-0 w-24 h-24 bg-white rounded-full translate-x-12 translate-y-12"></div>
+              </div>
+              <div className="relative z-10">
+                <h3 className="text-lg font-bold mb-2">จำนวน Lead</h3>
+                <div className="text-center">
+                  <p className="text-sm mb-1">คงเหลือ</p>
+                  <p className="text-4xl font-bold">{stats.total}</p>
+                  <p className="text-sm mt-1">จำนวน</p>
+                </div>
+              </div>
             </div>
 
-            {/* Content */}
-            <div className="relative z-10">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring" }}
-                className="inline-block mb-4"
-              >
-                <div className="bg-white/20 backdrop-blur-sm p-4 rounded-2xl">
-                  <Phone className="w-16 h-16 text-white" />
+            {/* โทรแล้ว Card */}
+            <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-full opacity-10">
+                <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full -translate-x-16 -translate-y-16"></div>
+                <div className="absolute bottom-0 right-0 w-24 h-24 bg-white rounded-full translate-x-12 translate-y-12"></div>
+              </div>
+              <div className="relative z-10">
+                <h3 className="text-lg font-bold mb-2">โทรแล้ว</h3>
+                <div className="text-center">
+                  <p className="text-4xl font-bold">{stats.outgoing}</p>
+                  <p className="text-sm mt-1">จำนวน</p>
                 </div>
-              </motion.div>
+              </div>
+            </div>
 
-              <h1 className="text-4xl sm:text-5xl font-bold text-white mb-3">
-                YaleCom ที่สุดคำติดต่อเข้ามา
-              </h1>
+            {/* ไม่รับสาย Card */}
+            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-full opacity-10">
+                <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full -translate-x-16 -translate-y-16"></div>
+                <div className="absolute bottom-0 right-0 w-24 h-24 bg-white rounded-full translate-x-12 translate-y-12"></div>
+              </div>
+              <div className="relative z-10">
+                <h3 className="text-lg font-bold mb-2">ไม่รับสาย</h3>
+                <div className="text-center">
+                  <p className="text-4xl font-bold">{stats.pending}</p>
+                  <p className="text-sm mt-1">จำนวน</p>
+                </div>
+              </div>
+            </div>
 
-              <p className="text-white/90 text-lg sm:text-xl font-medium">
-                ระบบจัดการข้อมูลการติดต่อลูกค้าแบบ Real-time
-              </p>
+            {/* ติดสาย Card */}
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-full opacity-10">
+                <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full -translate-x-16 -translate-y-16"></div>
+                <div className="absolute bottom-0 right-0 w-24 h-24 bg-white rounded-full translate-x-12 translate-y-12"></div>
+              </div>
+              <div className="relative z-10">
+                <h3 className="text-lg font-bold mb-2">ติดสาย</h3>
+                <div className="text-center">
+                  <p className="text-4xl font-bold">{stats.incoming}</p>
+                  <p className="text-sm mt-1">จำนวน</p>
+                </div>
+              </div>
+            </div>
 
-              {/* Stats Bar */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="mt-8 flex flex-wrap justify-center gap-4 sm:gap-6"
-              >
-                <div className="bg-white/20 backdrop-blur-sm rounded-xl px-6 py-3">
-                  <div className="text-3xl font-bold text-white">
-                    {stats.total}
-                  </div>
-                  <div className="text-white/80 text-sm">ทั้งหมด</div>
+            {/* รับสาย Card */}
+            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-full opacity-10">
+                <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full -translate-x-16 -translate-y-16"></div>
+                <div className="absolute bottom-0 right-0 w-24 h-24 bg-white rounded-full translate-x-12 translate-y-12"></div>
+              </div>
+              <div className="relative z-10">
+                <h3 className="text-lg font-bold mb-2">รับสาย</h3>
+                <div className="text-center">
+                  <p className="text-4xl font-bold">{stats.completed}</p>
+                  <p className="text-sm mt-1">จำนวน</p>
                 </div>
-                <div className="bg-white/20 backdrop-blur-sm rounded-xl px-6 py-3">
-                  <div className="text-3xl font-bold text-white">
-                    {stats.incoming}
-                  </div>
-                  <div className="text-white/80 text-sm">รับสาย</div>
-                </div>
-                <div className="bg-white/20 backdrop-blur-sm rounded-xl px-6 py-3">
-                  <div className="text-3xl font-bold text-white">
-                    {stats.outgoing}
-                  </div>
-                  <div className="text-white/80 text-sm">โทรออก</div>
-                </div>
-                <div className="bg-white/20 backdrop-blur-sm rounded-xl px-6 py-3">
-                  <div className="text-3xl font-bold text-white">
-                    {stats.pending}
-                  </div>
-                  <div className="text-white/80 text-sm">รอดำเนินการ</div>
-                </div>
-              </motion.div>
+              </div>
             </div>
           </div>
         </motion.div>
 
-        {/* Action Buttons */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="flex flex-wrap justify-between items-center gap-4 mb-6"
-        >
-          <div className="flex items-center gap-3">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleRefresh}
-              disabled={isLoading}
-              className="bg-white hover:bg-gray-50 text-gray-700 px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 shadow-md disabled:opacity-50 border border-gray-200"
-            >
-              <RefreshCw
-                className={`w-5 h-5 ${isLoading ? "animate-spin" : ""}`}
-              />
-              รีเฟรช
-            </motion.button>
-
-            {(searchQuery.customerName ||
-              searchQuery.phoneNumber ||
-              searchQuery.product ||
-              searchQuery.remarks) && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleClearFilters}
-                className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 shadow-md"
-              >
-                <Filter className="w-5 h-5" />
-                ล้างตัวกรอง
-              </motion.button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 shadow-lg"
-            >
-              <Download className="w-5 h-5" />
-              Export Excel
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 shadow-lg"
-            >
-              <Plus className="w-5 h-5" />
-              เพิ่มรายการ
-            </motion.button>
-          </div>
-        </motion.div>
-
-        {/* Filter Section - 3 Columns */}
+        {/* Filter Section - Compact version for clean UI */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-white rounded-2xl shadow-xl p-6 mb-8 border border-gray-200"
+          transition={{ delay: 0.2 }}
+          className="bg-white rounded-2xl shadow-md p-4 mb-6 border border-gray-200 hidden"
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-3 rounded-xl">
@@ -864,9 +820,8 @@ const ContactDashboard = () => {
           transition={{ delay: 0.4 }}
           className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200"
         >
-          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4">
-            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-              <MessageSquare className="w-7 h-7" />
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 rounded-t-2xl">
+            <h2 className="text-2xl font-bold text-white text-center">
               รายการติดต่อทั้งหมด
             </h2>
           </div>
@@ -874,7 +829,7 @@ const ContactDashboard = () => {
           {/* Table */}
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b-2 border-gray-200">
+              <thead className="bg-blue-500 text-white border-b-2 border-blue-600">
                 <tr>
                   <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
                     ชื่อลูกค้า
@@ -1049,48 +1004,43 @@ const ContactDashboard = () => {
                 className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
               >
                 {/* Modal Header */}
-                <div className="bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-600 px-8 py-6 relative overflow-hidden">
+                <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-8 py-6 relative overflow-hidden rounded-t-3xl">
                   <div className="absolute top-0 left-0 w-full h-full opacity-10">
-                    <div className="absolute top-5 left-5 w-20 h-20 bg-white rounded-full blur-2xl"></div>
-                    <div className="absolute bottom-5 right-5 w-24 h-24 bg-white rounded-full blur-2xl"></div>
+                    <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full -translate-x-16 -translate-y-16"></div>
+                    <div className="absolute bottom-0 right-0 w-24 h-24 bg-white rounded-full translate-x-12 translate-y-12"></div>
                   </div>
 
-                  <div className="relative z-10 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-white/20 backdrop-blur-sm p-3 rounded-2xl">
-                        <User className="w-8 h-8 text-white" />
-                      </div>
-                      <div>
-                        <h2 className="text-2xl font-bold text-white">
-                          ข้อมูลผู้ติดต่อ
-                        </h2>
-                        <p className="text-white/80 text-sm mt-1">
-                          รายละเอียดทั้งหมด
-                        </p>
-                      </div>
+                  <div className="relative z-10 flex items-center justify-center">
+                    <div className="text-center">
+                      <h2 className="text-2xl font-bold text-white">
+                        ข้อมูลผู้ติดต่อ
+                      </h2>
+                      <p className="text-white/90 text-sm mt-1">
+                        รายละเอียดข้อมูลทั้งหมด
+                      </p>
                     </div>
-
-                    <motion.button
-                      whileHover={{ scale: 1.1, rotate: 90 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={handleCloseModal}
-                      className="bg-white/20 hover:bg-white/30 backdrop-blur-sm p-2 rounded-xl transition-colors"
-                    >
-                      <svg
-                        className="w-6 h-6 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </motion.button>
                   </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={handleCloseModal}
+                    className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 backdrop-blur-sm p-2 rounded-xl transition-colors z-20"
+                  >
+                    <svg
+                      className="w-6 h-6 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </motion.button>
                 </div>
 
                 {/* Modal Body */}
@@ -1098,252 +1048,151 @@ const ContactDashboard = () => {
                   <div className="space-y-6">
                     {/* ชื่อลูกค้า */}
                     <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.1 }}
-                      className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-6 border-2 border-purple-200"
+                      className="bg-slate-50 rounded-2xl p-6"
                     >
-                      <div className="flex items-start gap-4">
-                        <div className="bg-gradient-to-br from-purple-500 to-indigo-500 p-3 rounded-xl">
-                          <User className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
-                            ชื่อลูกค้า
-                          </label>
-                          <p className="text-2xl font-bold text-gray-900 mt-1">
-                            {selectedContact.customerName}
-                          </p>
-                          {selectedContact.company && (
-                            <div className="flex items-center gap-2 mt-2 text-gray-600">
-                              <Building2 className="w-4 h-4" />
-                              <span className="text-sm font-medium">
-                                {selectedContact.company}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      <label className="block text-base font-bold text-gray-800 mb-3">
+                        ชื่อลูกค้า
+                      </label>
+                      <p className="text-lg text-gray-900">
+                        {selectedContact.customerName}
+                      </p>
+                      {selectedContact.company && (
+                        <p className="text-sm text-gray-500 mt-2">
+                          {selectedContact.company}
+                        </p>
+                      )}
                     </motion.div>
 
                     {/* เบอร์โทร */}
                     <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 border-2 border-blue-200"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.15 }}
+                      className="bg-slate-50 rounded-2xl p-6"
                     >
-                      <div className="flex items-start gap-4">
-                        <div className="bg-gradient-to-br from-blue-500 to-cyan-500 p-3 rounded-xl">
-                          <Phone className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
-                            เบอร์โทรศัพท์
-                          </label>
-                          <p className="text-2xl font-bold text-gray-900 mt-1">
-                            {selectedContact.phoneNumber}
-                          </p>
-                          <a
-                            href={`tel:${selectedContact.phoneNumber}`}
-                            className="inline-flex items-center gap-2 mt-3 text-blue-600 hover:text-blue-700 font-semibold text-sm transition-colors"
-                          >
-                            <PhoneOutgoing className="w-4 h-4" />
-                            โทรออกทันที
-                          </a>
-                        </div>
-                      </div>
+                      <label className="block text-base font-bold text-gray-800 mb-3">
+                        เบอร์โทรศัพท์
+                      </label>
+                      <p className="text-lg text-gray-900">
+                        {selectedContact.phoneNumber}
+                      </p>
                     </motion.div>
 
                     {/* ผลิตภัณฑ์ที่สนใจ */}
                     {selectedContact.product && (
                       <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.25 }}
-                        className="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-2xl p-6 border-2 border-orange-200"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="bg-slate-50 rounded-2xl p-6"
                       >
-                        <div className="flex items-start gap-4">
-                          <div className="bg-gradient-to-br from-orange-500 to-yellow-500 p-3 rounded-xl">
-                            <TrendingUp className="w-6 h-6 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
-                              ผลิตภัณฑ์ที่สนใจ
-                            </label>
-                            <p className="text-lg font-semibold text-gray-900 mt-1">
-                              {selectedContact.product}
-                            </p>
-                          </div>
-                        </div>
+                        <label className="block text-base font-bold text-gray-800 mb-3">
+                          ผลิตภัณฑ์ที่สนใจ
+                        </label>
+                        <p className="text-lg text-gray-900">
+                          {selectedContact.product}
+                        </p>
                       </motion.div>
                     )}
 
-                    {/* ผู้ติดต่อ (Agent) */}
-                    {selectedContact.agentId && (
-                      <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.27 }}
-                        className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 border-2 border-blue-200"
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className="bg-gradient-to-br from-blue-500 to-cyan-500 p-3 rounded-xl">
-                            <User className="w-6 h-6 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
-                              ผู้ติดต่อ (Agent)
-                            </label>
-                            <p className="text-xl font-bold text-gray-900 mt-1">
-                              Agent {selectedContact.agentId}
-                            </p>
-                            <div className="mt-2 inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-lg text-sm font-semibold">
-                              <PhoneIncoming className="w-4 h-4" />
-                              กำลังรับสาย
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
+                    {/* ผู้ติดต่อ (Agent) - Hidden in screenshot, keep minimal */}
 
                     {/* สถานะ */}
                     <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.25 }}
+                      className="bg-slate-50 rounded-2xl p-6"
+                    >
+                      <label className="block text-base font-bold text-gray-800 mb-3">
+                        สถานะ
+                      </label>
+                      <div>{getStatusBadge(selectedContact.status)}</div>
+                    </motion.div>
+
+                    {/* วันที่ติดต่อ */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.3 }}
-                      className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border-2 border-green-200"
+                      className="bg-slate-50 rounded-2xl p-6"
                     >
-                      <div className="flex items-start gap-4">
-                        <div className="bg-gradient-to-br from-green-500 to-emerald-500 p-3 rounded-xl">
-                          <CheckCircle2 className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
-                            สถานะ
-                          </label>
-                          <div className="mt-2">
-                            {getStatusBadge(selectedContact.status)}
-                          </div>
-                        </div>
-                      </div>
+                      <label className="block text-base font-bold text-gray-800 mb-3">
+                        วันที่ติดต่อ
+                      </label>
+                      <p className="text-lg text-gray-900">
+                        {formatDate(selectedContact.contactDate)}
+                      </p>
                     </motion.div>
 
-                    {/* วันที่ติดต่อ - บันทึกอัตโนมัติ */}
+                    {/* ติดตามครั้งถัดไป */}
                     <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.35 }}
-                      className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl p-6 border-2 border-pink-200"
+                      className="bg-slate-50 rounded-2xl p-6"
                     >
-                      <div className="flex items-start gap-4">
-                        <div className="bg-gradient-to-br from-pink-500 to-rose-500 p-3 rounded-xl">
-                          <Calendar className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
-                            วันที่ติดต่อ (บันทึกอัตโนมัติ)
-                          </label>
-                          <p className="text-lg font-semibold text-gray-900 mt-1">
-                            {formatDate(selectedContact.contactDate)}
-                          </p>
-                          <p className="text-sm text-gray-500 mt-2">
-                            💡 บันทึกอัตโนมัติเมื่อเปิดดูรายละเอียด
-                          </p>
-                        </div>
-                      </div>
+                      <label className="block text-base font-bold text-gray-800 mb-3">
+                        ติดตามครั้งถัดไป
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={editedNextContactDate}
+                        onChange={(e) =>
+                          setEditedNextContactDate(e.target.value)
+                        }
+                        className="w-full bg-white rounded-xl px-4 py-3 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-gray-900"
+                      />
                     </motion.div>
 
-                    {/* วันที่ติดต่อครั้งถัดไป - แก้ไขได้ */}
+                    {/* หมายเหตุ */}
                     <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.37 }}
-                      className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-6 border-2 border-indigo-200"
-                    >
-                      <div className="flex items-start gap-4">
-                        <div className="bg-gradient-to-br from-indigo-500 to-purple-500 p-3 rounded-xl">
-                          <Calendar className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
-                            วันที่ติดต่อครั้งถัดไป (แก้ไขได้)
-                          </label>
-
-                          {/* แสดง last_followup */}
-                          <div className="mt-2 bg-gray-50 rounded-lg px-4 py-2 border border-gray-200">
-                            <span className="text-xs text-gray-500 font-medium">
-                              วันที่ติดต่อล่าสุด:
-                            </span>
-                            <p className="text-sm font-semibold text-gray-700 mt-1">
-                              {selectedContact.contactDate
-                                ? formatDate(selectedContact.contactDate)
-                                : "ยังไม่มีข้อมูล"}
-                            </p>
-                          </div>
-
-                          <input
-                            type="datetime-local"
-                            value={editedNextContactDate}
-                            onChange={(e) =>
-                              setEditedNextContactDate(e.target.value)
-                            }
-                            className="mt-3 w-full bg-white rounded-xl px-4 py-3 border-2 border-gray-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200 transition-all outline-none text-gray-900 font-medium"
-                          />
-                        </div>
-                      </div>
-                    </motion.div>
-
-                    {/* หมายเหตุ - แก้ไขได้ */}
-                    <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.4 }}
-                      className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-2xl p-6 border-2 border-gray-200"
+                      className="bg-slate-50 rounded-2xl p-6"
                     >
-                      <div className="flex items-start gap-4">
-                        <div className="bg-gradient-to-br from-gray-500 to-slate-600 p-3 rounded-xl">
-                          <MessageSquare className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
-                            หมายเหตุ (แก้ไขได้)
-                          </label>
-                          <textarea
-                            value={editedRemarks}
-                            onChange={(e) => setEditedRemarks(e.target.value)}
-                            placeholder="กรอกหมายเหตุ..."
-                            rows={6}
-                            className="mt-2 w-full bg-white rounded-xl p-4 border-2 border-gray-300 focus:border-purple-500 focus:ring-4 focus:ring-purple-200 transition-all outline-none text-gray-900 leading-relaxed resize-none"
-                          />
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={handleSaveAll}
-                            disabled={
-                              isSavingRemarks ||
-                              isSavingNextContact ||
-                              (editedRemarks === selectedContact.remarks &&
-                                editedNextContactDate ===
-                                  selectedContact.nextContactDate)
-                            }
-                            className="mt-3 w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-3 shadow-xl disabled:cursor-not-allowed"
-                          >
-                            {isSavingRemarks || isSavingNextContact ? (
-                              <>
-                                <RefreshCw className="w-6 h-6 animate-spin" />
-                                กำลังบันทึก...
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle2 className="w-6 h-6" />
-                                💾 บันทึกข้อมูลทั้งหมด
-                              </>
-                            )}
-                          </motion.button>
-                        </div>
-                      </div>
+                      <label className="block text-base font-bold text-gray-800 mb-3">
+                        หมายเหตุ
+                      </label>
+                      <textarea
+                        value={editedRemarks}
+                        onChange={(e) => setEditedRemarks(e.target.value)}
+                        placeholder="กรอกหมายเหตุ..."
+                        rows={6}
+                        className="w-full bg-white rounded-xl p-4 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-gray-900 leading-relaxed resize-none"
+                      />
                     </motion.div>
+
+                    {/* Save Button */}
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleSaveAll}
+                      disabled={
+                        isSavingRemarks ||
+                        isSavingNextContact ||
+                        (editedRemarks === selectedContact.remarks &&
+                          editedNextContactDate ===
+                            selectedContact.nextContactDate)
+                      }
+                      className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-3 shadow-lg disabled:cursor-not-allowed"
+                    >
+                      {isSavingRemarks || isSavingNextContact ? (
+                        <>
+                          <RefreshCw className="w-6 h-6 animate-spin" />
+                          กำลังบันทึก...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-6 h-6" />
+                          บันทึกข้อมูลทั้งหมด
+                        </>
+                      )}
+                    </motion.button>
                   </div>
                 </div>
 

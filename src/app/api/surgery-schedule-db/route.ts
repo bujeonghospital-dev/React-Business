@@ -50,10 +50,10 @@ export async function GET(request: NextRequest) {
         contact_staff as ผู้ติดต่อ,
         TO_CHAR(
           CASE 
-            WHEN booked_surgery_date ~ '^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}$' 
-            THEN TO_DATE(booked_surgery_date, 'DD/MM/YYYY')
-            WHEN booked_surgery_date ~ '^[0-9]+$' AND booked_surgery_date::INTEGER BETWEEN 1 AND 100000
-            THEN DATE '1899-12-30' + booked_surgery_date::INTEGER
+            WHEN booked_surgery_date::text ~ '^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}$' 
+            THEN TO_DATE(booked_surgery_date::text, 'DD/MM/YYYY')
+            WHEN booked_surgery_date::text ~ '^[0-9]+$' AND booked_surgery_date::text::INTEGER BETWEEN 1 AND 100000
+            THEN DATE '1899-12-30' + booked_surgery_date::text::INTEGER
             ELSE NULL 
           END, 
           'YYYY-MM-DD'
@@ -84,23 +84,23 @@ export async function GET(request: NextRequest) {
     if (month && year) {
       query += ` AND EXTRACT(MONTH FROM 
         CASE 
-          WHEN booked_surgery_date ~ '^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}$' THEN TO_DATE(booked_surgery_date, 'DD/MM/YYYY')
-          WHEN booked_surgery_date ~ '^[0-9]+$' THEN DATE '1899-12-30' + booked_surgery_date::INTEGER
+          WHEN booked_surgery_date::text ~ '^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}$' THEN TO_DATE(booked_surgery_date::text, 'DD/MM/YYYY')
+          WHEN booked_surgery_date::text ~ '^[0-9]+$' THEN DATE '1899-12-30' + booked_surgery_date::text::INTEGER
           ELSE NULL 
         END) = $${paramIndex++}`;
       params.push(parseInt(month));
       query += ` AND EXTRACT(YEAR FROM 
         CASE 
-          WHEN booked_surgery_date ~ '^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}$' THEN TO_DATE(booked_surgery_date, 'DD/MM/YYYY')
-          WHEN booked_surgery_date ~ '^[0-9]+$' THEN DATE '1899-12-30' + booked_surgery_date::INTEGER
+          WHEN booked_surgery_date::text ~ '^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}$' THEN TO_DATE(booked_surgery_date::text, 'DD/MM/YYYY')
+          WHEN booked_surgery_date::text ~ '^[0-9]+$' THEN DATE '1899-12-30' + booked_surgery_date::text::INTEGER
           ELSE NULL 
         END) = $${paramIndex++}`;
       params.push(parseInt(year));
     } else if (year) {
       query += ` AND EXTRACT(YEAR FROM 
         CASE 
-          WHEN booked_surgery_date ~ '^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}$' THEN TO_DATE(booked_surgery_date, 'DD/MM/YYYY')
-          WHEN booked_surgery_date ~ '^[0-9]+$' THEN DATE '1899-12-30' + booked_surgery_date::INTEGER
+          WHEN booked_surgery_date::text ~ '^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}$' THEN TO_DATE(booked_surgery_date::text, 'DD/MM/YYYY')
+          WHEN booked_surgery_date::text ~ '^[0-9]+$' THEN DATE '1899-12-30' + booked_surgery_date::text::INTEGER
           ELSE NULL 
         END) = $${paramIndex++}`;
       params.push(parseInt(year));
@@ -115,8 +115,8 @@ export async function GET(request: NextRequest) {
     // Order by date
     query += ` ORDER BY 
       CASE 
-        WHEN booked_surgery_date ~ '^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}$' THEN TO_DATE(booked_surgery_date, 'DD/MM/YYYY')
-        WHEN booked_surgery_date ~ '^[0-9]+$' THEN DATE '1899-12-30' + booked_surgery_date::INTEGER
+        WHEN booked_surgery_date::text ~ '^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}$' THEN TO_DATE(booked_surgery_date::text, 'DD/MM/YYYY')
+        WHEN booked_surgery_date::text ~ '^[0-9]+$' THEN DATE '1899-12-30' + booked_surgery_date::text::INTEGER
         ELSE NULL 
       END DESC NULLS LAST`;
 

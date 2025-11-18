@@ -69,10 +69,10 @@ export async function GET(request: NextRequest) {
         SELECT 
           contact_staff as sale_person,
           CASE 
-            WHEN surgery_date ~ '^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}$' 
-            THEN TO_DATE(surgery_date, 'DD/MM/YYYY')::DATE
-            WHEN surgery_date ~ '^[0-9]+$' AND surgery_date::INTEGER BETWEEN 1 AND 100000
-            THEN (DATE '1899-12-30' + surgery_date::INTEGER)::DATE
+            WHEN surgery_date::text ~ '^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}$' 
+            THEN TO_DATE(surgery_date::text, 'DD/MM/YYYY')::DATE
+            WHEN surgery_date::text ~ '^[0-9]+$' AND surgery_date::text::INTEGER BETWEEN 1 AND 100000
+            THEN (DATE '1899-12-30' + surgery_date::text::INTEGER)::DATE
             ELSE NULL 
           END as surgery_date,
           CASE 

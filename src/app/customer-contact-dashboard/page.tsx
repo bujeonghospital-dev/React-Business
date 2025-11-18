@@ -275,34 +275,35 @@ const CustomerContactDashboard = () => {
     0
   );
 
-  // Auto-fetch on component mount and every 5 seconds
+  // Auto-fetch on component mount
   useEffect(() => {
     fetchContacts();
     fetchGoogleSheetsData();
     fetchRobocallData();
-    fetchLogCallAiData(); // เพิ่มการดึงข้อมูล Log_call_ai
+    fetchLogCallAiData();
     fetchCallMatrixYaleSummary();
-    fetchFilmData(); // เพิ่มการดึงข้อมูล Film data
+    fetchFilmData();
 
-    // Auto refresh every 30 seconds (ลด API calls เพื่อไม่เกิน quota limit)
-    const interval = setInterval(() => {
+    // Auto refresh ทุก 5 วินาที - Yalecom Queue Status และ Robocall
+    const fastInterval = setInterval(() => {
       fetchYalecomQueueStatus(undefined, "900");
       fetchRobocallData();
-      fetchLogCallAiData(); // รีเฟรชข้อมูล Log_call_ai ทุก 30 วินาที
-    }, 30000); // 30 วินาที
+      fetchLogCallAiData(); // รีเฟรช Log_call_ai ทุก 5 วินาที
+    }, 5000); // 5 วินาที
 
-    // Auto refresh Call Matrix และ Film Data แยกต่างหาก (ดีเลย์ 30 วินาที)
-    const callMatrixInterval = setInterval(() => {
-      fetchCallMatrixYaleSummary();
-      fetchFilmData();
+    // Auto refresh ทุก 30 วินาที - ตารางบันทึกการโทรและ Google Sheets
+    const slowInterval = setInterval(() => {
+      fetchCallMatrixYaleSummary(); // ตารางบันทึกการโทรตามช่วงเวลา
+      fetchFilmData(); // Film data
+      fetchGoogleSheetsData(); // ตารางสรุป call_AI
     }, 30000); // 30 วินาที
 
     return () => {
-      clearInterval(interval);
-      clearInterval(callMatrixInterval);
+      clearInterval(fastInterval);
+      clearInterval(slowInterval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate]); // เพิ่ม selectedDate เป็น dependency
+  }, [selectedDate]);
 
   // Filter contacts
   useEffect(() => {

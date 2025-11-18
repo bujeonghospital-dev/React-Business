@@ -29,6 +29,16 @@ import {
 } from "lucide-react";
 import Container from "@/components/Container";
 import CustomerContactForm from "@/components/CustomerContactForm";
+import {
+  fetchCallMatrix,
+  logCall,
+  updateCallCount,
+  transformCallMatrixData,
+} from "@/utils/callMatrixApi";
+import {
+  fetchFilmDataContacts,
+  transformFilmDataToAgentCounts,
+} from "@/utils/filmDataApi";
 
 // Types
 interface ContactRecord {
@@ -670,12 +680,22 @@ const CustomerContactDashboard = () => {
     try {
       setIsLoading(true);
 
-      // Fetch from Supabase API
-      const response = await fetch("/api/customer-contacts");
-      const result = await response.json();
+      // Fetch from Supabase API (optional - ถ้าไม่มี Supabase ก็ข้ามไป)
+      try {
+        const response = await fetch("/api/customer-contacts");
+        const result = await response.json();
 
-      if (result.success) {
-        setContacts(result.data);
+        if (result.success) {
+          setContacts(result.data);
+          console.log("✅ Contacts loaded from Supabase:", result.data.length);
+        } else if (
+          result.error &&
+          result.error !== "Supabase is not configured"
+        ) {
+          console.warn("⚠️ Supabase API warning:", result.error);
+        }
+      } catch (supabaseError) {
+        console.warn("⚠️ Supabase not available, skipping...");
       }
 
       // Also fetch from Yalecom API (ใช้ queue_extension 900)
@@ -744,66 +764,147 @@ const CustomerContactDashboard = () => {
     }
   };
 
-  // Fetch Yale call summary from Google Sheets
+  // Fetch Yale call summary from Python API
   const fetchCallMatrixYaleSummary = async () => {
     try {
-      const response = await fetch(
-        `/api/google-sheets-call-ai-summary?date=${selectedDate}`
+      console.log(
+        "🔄 Fetching call matrix from Python API for date:",
+        selectedDate
       );
-      const result = await response.json();
+
+      const result = await fetchCallMatrix(selectedDate);
 
       if (result.success) {
-        const slotMap: Record<string, Record<string, number>> = {};
+        // แปลงข้อมูลจาก Python API format เป็น format ที่ใช้ใน dashboard
+        const { callMatrixYaleCounts, callMatrixYaleTotals } =
+          transformCallMatrixData(result);
 
-        if (Array.isArray(result.timeSlots)) {
-          result.timeSlots.forEach((slot: any) => {
-            if (!slot || typeof slot !== "object") {
-              return;
-            }
-
-            const hourKey = String(slot.hourStart ?? slot.key ?? "");
-            if (!hourKey) {
-              return;
-            }
-
-            slotMap[hourKey] = { ...(slot.agentCounts || {}) };
-          });
-        }
-
-        setCallMatrixYaleCounts(slotMap);
-        setCallMatrixYaleTotals(result.totals || {});
-        console.log("✅ Yale call summary loaded:", result);
+        setCallMatrixYaleCounts(callMatrixYaleCounts);
+        setCallMatrixYaleTotals(callMatrixYaleTotals);
+        console.log("✅ Call matrix loaded from Python API:", {
+          date: result.date,
+          grand_total: result.grand_total,
+          agents: Object.keys(result.matrix_data).length,
+          time_slots: result.time_slots.length,
+        });
       } else {
-        console.error("❌ Failed to fetch Yale summary:", result.error);
+        console.error(
+          "❌ Failed to fetch call matrix from Python API:",
+          result
+        );
       }
     } catch (error) {
-      console.error("Error fetching Yale summary:", error);
+      console.error("❌ Error fetching call matrix from Python API:", error);
+      // Fallback: ถ้า Python API ไม่ตอบสนอง ให้ลอง Google Sheets API แทน
+      console.log("⚠️ Trying fallback to Google Sheets API...");
+      try {
+        const response = await fetch(
+          `/api/google-sheets-call-ai-summary?date=${selectedDate}`
+        );
+        const result = await response.json();
+
+        if (result.success) {
+          const slotMap: Record<string, Record<string, number>> = {};
+
+          if (Array.isArray(result.timeSlots)) {
+            result.timeSlots.forEach((slot: any) => {
+              if (!slot || typeof slot !== "object") {
+                return;
+              }
+
+              const hourKey = String(slot.hourStart ?? slot.key ?? "");
+              if (!hourKey) {
+                return;
+              }
+
+              slotMap[hourKey] = { ...(slot.agentCounts || {}) };
+            });
+          }
+
+          setCallMatrixYaleCounts(slotMap);
+          setCallMatrixYaleTotals(result.totals || {});
+          console.log(
+            "✅ Call matrix loaded from Google Sheets API (fallback):",
+            result
+          );
+        }
+      } catch (fallbackError) {
+        console.error(
+          "❌ Fallback to Google Sheets API also failed:",
+          fallbackError
+        );
+      }
     }
   };
 
-  // Fetch Film Data - จำนวนนับ (O) และจำนวนผ่า (P)
+  // Fetch Film Data - จำนวนนับ (O) และจำนวนผ่า (P) จาก Python API
   const fetchFilmData = async () => {
     try {
-      const response = await fetch(
-        `/api/google-sheets-film-data?date=${selectedDate}`
-      );
-      const result = await response.json();
+      // ใช้ Film Data Contacts API
+      const result = await fetchFilmDataContacts(selectedDate, true);
 
       if (result.success) {
-        setFilmDataCounts(result.agentCounts || {});
-        setFilmDataSurgeryCounts(result.surgeryCounts || {});
-        console.log("✅ Film data loaded:", result);
-        console.log("  - Consult counts:", result.agentCounts);
-        console.log("  - Surgery counts:", result.surgeryCounts);
+        // แปลงข้อมูลเป็นจำนวนแยกตาม Agent
+        const { consultCounts, surgeryCounts } =
+          transformFilmDataToAgentCounts(result);
+
+        // ตั้งค่าจำนวน consult และนัดผ่าตัด
+        setFilmDataCounts(consultCounts);
+        setFilmDataSurgeryCounts(surgeryCounts);
+
+        console.log("✅ Film data loaded from Python API:", result);
+        console.log("  - Consult counts by agent:", consultCounts);
+        console.log("  - Surgery counts by agent:", surgeryCounts);
+        console.log("  - Total records:", result.total);
+        console.log("  - Count summary:", result.count_summary);
       } else {
-        console.error("❌ Failed to fetch Film data:", result.error);
+        console.error("❌ Failed to fetch Film data from Python API:", result);
+
+        // Fallback: ลอง Google Sheets API
+        console.log("⚠️ Trying fallback to Google Sheets API...");
+        try {
+          const response = await fetch(
+            `/api/google-sheets-film-data?date=${selectedDate}`
+          );
+          const fallbackResult = await response.json();
+
+          if (fallbackResult.success) {
+            setFilmDataCounts(fallbackResult.agentCounts || {});
+            setFilmDataSurgeryCounts(fallbackResult.surgeryCounts || {});
+            console.log(
+              "✅ Film data loaded from Google Sheets (fallback):",
+              fallbackResult
+            );
+          }
+        } catch (fallbackError) {
+          console.error("❌ Fallback also failed:", fallbackError);
+        }
       }
     } catch (error) {
-      console.error("Error fetching Film data:", error);
+      console.error("❌ Error fetching Film data:", error);
+
+      // Fallback: ลอง Google Sheets API
+      try {
+        const response = await fetch(
+          `/api/google-sheets-film-data?date=${selectedDate}`
+        );
+        const fallbackResult = await response.json();
+
+        if (fallbackResult.success) {
+          setFilmDataCounts(fallbackResult.agentCounts || {});
+          setFilmDataSurgeryCounts(fallbackResult.surgeryCounts || {});
+          console.log(
+            "✅ Film data loaded from Google Sheets (fallback):",
+            fallbackResult
+          );
+        }
+      } catch (fallbackError) {
+        console.error("❌ Fallback also failed:", fallbackError);
+      }
     }
   };
 
-  // Save call input to database
+  // Save call input to database via Python API
   const handleSaveCallInput = async () => {
     if (!callInputValues.outgoing && !callInputValues.successful) {
       alert("กรุณากรอกจำนวนอย่างน้อย 1 ค่า");
@@ -811,24 +912,45 @@ const CustomerContactDashboard = () => {
     }
 
     try {
-      // Extract hour range from hourSlot (e.g., "11-12" -> start at 11:00)
-      const [hourStart] = callInputModal.hourSlot.split("-");
-      const startTime = new Date(selectedDate);
-      startTime.setHours(parseInt(hourStart), 0, 0, 0);
-
-      // Save as individual call logs (we'll create multiple records based on count)
       const outgoingCount = parseInt(callInputValues.outgoing) || 0;
       const successfulCount = parseInt(callInputValues.successful) || 0;
 
-      // บันทึกข้อมูลเข้า Google Sheets (ยังไม่ได้ implement)
-      // TODO: สร้าง API สำหรับบันทึกข้อมูลลง Google Sheets
+      // สร้าง time_slot format (เช่น "9" -> "9-10")
+      const hourStart = parseInt(callInputModal.hourSlot);
+      const hourEnd = hourStart + 1;
+      const timeSlot = `${hourStart}-${hourEnd}`;
 
-      alert("บันทึกข้อมูลสำเร็จ");
-      setCallInputModal({ isOpen: false, agentId: "", hourSlot: "" });
-      setCallInputValues({ outgoing: "", successful: "" });
-      await fetchCallMatrixYaleSummary(); // Refresh table
+      console.log("💾 บันทึกข้อมูล:", {
+        agent_id: callInputModal.agentId,
+        time_slot: timeSlot,
+        outgoing: outgoingCount,
+        successful: successfulCount,
+      });
+
+      // อัพเดทค่าผ่าน Python API
+      // ใช้ค่า successful (จำนวนที่นับ) เป็นค่าที่บันทึก
+      if (successfulCount > 0) {
+        const result = await updateCallCount({
+          agent_id: callInputModal.agentId,
+          time_slot: timeSlot,
+          value: successfulCount,
+        });
+
+        if (result.success) {
+          console.log("✅ บันทึกสำเร็จผ่าน Python API:", result);
+          alert("บันทึกข้อมูลสำเร็จ");
+          setCallInputModal({ isOpen: false, agentId: "", hourSlot: "" });
+          setCallInputValues({ outgoing: "", successful: "" });
+          await fetchCallMatrixYaleSummary(); // Refresh table
+        } else {
+          console.error("❌ บันทึกล้มเหลว:", result.error);
+          alert("เกิดข้อผิดพลาด: " + result.error);
+        }
+      } else {
+        alert("กรุณากรอกจำนวนที่นับ (สำเร็จ)");
+      }
     } catch (error) {
-      console.error("Error saving call input:", error);
+      console.error("❌ Error saving call input:", error);
       alert("เกิดข้อผิดพลาด: " + (error as Error).message);
     }
   };

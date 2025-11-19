@@ -54,6 +54,22 @@ interface ContactRecord {
   [key: string]: any; // สำหรับ dynamic columns จาก Google Sheets
 }
 
+// Film Contact Types (from Film_dev sheet)
+interface FilmContactRecord {
+  id: string;
+  dbId?: number; // ID จาก database
+  customerName: string;
+  phoneNumber: string;
+  remarks: string;
+  product?: string; // ผลิตภัณฑ์ที่สนใจ (Column C)
+  status: "incoming" | "outgoing" | "pending" | "completed";
+  contactDate: string;
+  nextContactDate?: string; // วันที่ติดต่อครั้งถัดไป
+  company?: string;
+  email?: string;
+  agentId?: string; // ผู้ติดต่อ - Agent ID from YaleCom
+}
+
 type StatusType = "outgoing" | "received" | "waiting" | "sale" | "all";
 
 // Google Sheets Types
@@ -165,6 +181,27 @@ const CustomerContactDashboard = () => {
   const [robocallData, setRobocallData] = useState<RobocallRecord[]>([]); // เก็บข้อมูล Robocall
   const [logCallAiData, setLogCallAiData] = useState<any[]>([]); // เก็บข้อมูล Log_call_ai
 
+  // Film Contact States (from contact-dashboard)
+  const [filmContacts, setFilmContacts] = useState<FilmContactRecord[]>([]);
+  const [filteredFilmContacts, setFilteredFilmContacts] = useState<
+    FilmContactRecord[]
+  >([]);
+  const [filmSearchQuery, setFilmSearchQuery] = useState({
+    customerName: "",
+    phoneNumber: "",
+    product: "",
+    remarks: "",
+  });
+  const [selectedFilmContact, setSelectedFilmContact] =
+    useState<FilmContactRecord | null>(null);
+  const [isFilmModalOpen, setIsFilmModalOpen] = useState(false);
+  const [editedRemarks, setEditedRemarks] = useState("");
+  const [editedNextContactDate, setEditedNextContactDate] = useState("");
+  const [isSavingRemarks, setIsSavingRemarks] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
+
   // Google Sheets States
   const [googleSheetsData, setGoogleSheetsData] = useState<GoogleSheetsData[]>(
     []
@@ -270,6 +307,16 @@ const CustomerContactDashboard = () => {
     total: allContacts.length,
   };
 
+  // Film Contact Statistics
+  const filmContactsArray = Array.isArray(filmContacts) ? filmContacts : [];
+  const filmStats = {
+    total: filmContactsArray.length,
+    incoming: filmContactsArray.filter((c) => c.status === "incoming").length,
+    outgoing: filmContactsArray.filter((c) => c.status === "outgoing").length,
+    pending: filmContactsArray.filter((c) => c.status === "pending").length,
+    completed: filmContactsArray.filter((c) => c.status === "completed").length,
+  };
+
   const totalYaleCalls = Object.values(callMatrixYaleTotals).reduce(
     (sum, value) => sum + value,
     0
@@ -289,6 +336,7 @@ const CustomerContactDashboard = () => {
       fetchYalecomQueueStatus(undefined, "900");
       fetchRobocallData();
       fetchLogCallAiData(); // รีเฟรช Log_call_ai ทุก 5 วินาที
+      fetchFilmContacts(); // รีเฟรช Film contacts
     }, 5000); // 5 วินาที
 
     // Auto refresh ทุก 30 วินาที - ตารางบันทึกการโทรและ Google Sheets
@@ -328,6 +376,44 @@ const CustomerContactDashboard = () => {
 
     setFilteredContacts(filtered);
   }, [selectedStatus, searchQuery, contacts, agentContacts]);
+
+  // Filter Film Contacts
+  useEffect(() => {
+    const contactsArray = Array.isArray(filmContacts) ? filmContacts : [];
+    let filtered = [...contactsArray];
+
+    if (filmSearchQuery.customerName) {
+      filtered = filtered.filter((c) =>
+        c.customerName
+          .toLowerCase()
+          .includes(filmSearchQuery.customerName.toLowerCase())
+      );
+    }
+
+    if (filmSearchQuery.phoneNumber) {
+      filtered = filtered.filter((c) =>
+        c.phoneNumber.includes(filmSearchQuery.phoneNumber)
+      );
+    }
+
+    if (filmSearchQuery.product) {
+      filtered = filtered.filter((c) =>
+        (c.product || "")
+          .toLowerCase()
+          .includes(filmSearchQuery.product.toLowerCase())
+      );
+    }
+
+    if (filmSearchQuery.remarks) {
+      filtered = filtered.filter((c) =>
+        (c.remarks || "")
+          .toLowerCase()
+          .includes(filmSearchQuery.remarks.toLowerCase())
+      );
+    }
+
+    setFilteredFilmContacts(filtered);
+  }, [filmSearchQuery, filmContacts]);
 
   // Format date
   const formatDate = (dateString: string) => {
@@ -683,6 +769,26 @@ const CustomerContactDashboard = () => {
     }
   };
 
+  // Fetch Film Contacts from API (Google Sheets - Film_dev)
+  const fetchFilmContacts = async () => {
+    try {
+      const response = await fetch("/api/film-contacts");
+
+      if (response.ok) {
+        const result = await response.json();
+        let contactsData: FilmContactRecord[] = Array.isArray(result)
+          ? result
+          : result.data || [];
+
+        setFilmContacts(contactsData);
+        setFilteredFilmContacts(contactsData);
+        console.log("✅ Film contacts loaded:", contactsData.length);
+      }
+    } catch (error) {
+      console.error("Error fetching film contacts:", error);
+    }
+  };
+
   // Fetch contacts from API
   const fetchContacts = async () => {
     try {
@@ -708,6 +814,9 @@ const CustomerContactDashboard = () => {
 
       // Also fetch from Yalecom API (ใช้ queue_extension 900)
       await fetchYalecomQueueStatus(undefined, "900");
+
+      // Fetch Film contacts
+      await fetchFilmContacts();
     } catch (error) {
       console.error("Error fetching contacts:", error);
     } finally {
@@ -981,12 +1090,135 @@ const CustomerContactDashboard = () => {
     }
   };
 
+  // Film Contact Modal Handlers
+  const handleFilmRowClick = async (contact: FilmContactRecord) => {
+    setSelectedFilmContact(contact);
+    setEditedRemarks(contact.remarks || "");
+    setEditedNextContactDate(contact.nextContactDate || "");
+    setIsFilmModalOpen(true);
+
+    // บันทึก last_followup อัตโนมัติเป็นเวลาปัจจุบัน
+    if (contact.dbId) {
+      try {
+        const response = await fetch(
+          "/api/film-contacts/update-last-followup",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: contact.dbId }),
+          }
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          const newContactDate = result.data.last_followup;
+
+          const updatedContacts = filmContacts.map((c) =>
+            c.dbId === contact.dbId ? { ...c, contactDate: newContactDate } : c
+          );
+          setFilmContacts(updatedContacts);
+          setSelectedFilmContact((prev) =>
+            prev ? { ...prev, contactDate: newContactDate } : prev
+          );
+        }
+      } catch (error) {
+        console.error("Error auto-saving last followup:", error);
+      }
+    }
+  };
+
+  const handleCloseFilmModal = () => {
+    setIsFilmModalOpen(false);
+    setTimeout(() => {
+      setSelectedFilmContact(null);
+      setEditedRemarks("");
+      setEditedNextContactDate("");
+    }, 300);
+  };
+
+  const showToastNotification = (
+    message: string,
+    type: "success" | "error"
+  ) => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
+
+  const handleSaveFilmContact = async () => {
+    if (!selectedFilmContact || !selectedFilmContact.dbId) {
+      showToastNotification("ไม่สามารถบันทึกได้: ไม่พบ ID ของข้อมูล", "error");
+      return;
+    }
+
+    try {
+      setIsSavingRemarks(true);
+
+      const [remarksResponse, nextContactResponse] = await Promise.all([
+        fetch("/api/film-contacts/update-remarks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: selectedFilmContact.dbId,
+            remarks: editedRemarks,
+          }),
+        }),
+        fetch("/api/film-contacts/update-next-contact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: selectedFilmContact.dbId,
+            nextContactDate: editedNextContactDate,
+          }),
+        }),
+      ]);
+
+      if (remarksResponse.ok && nextContactResponse.ok) {
+        showToastNotification("✅ บันทึกข้อมูลทั้งหมดสำเร็จ!", "success");
+
+        const updatedContacts = filmContacts.map((c) =>
+          c.dbId === selectedFilmContact.dbId
+            ? {
+                ...c,
+                remarks: editedRemarks,
+                nextContactDate: editedNextContactDate,
+              }
+            : c
+        );
+        setFilmContacts(updatedContacts);
+        setSelectedFilmContact({
+          ...selectedFilmContact,
+          remarks: editedRemarks,
+          nextContactDate: editedNextContactDate,
+        });
+      } else {
+        const errors = [];
+        if (!remarksResponse.ok) {
+          const error = await remarksResponse.json();
+          errors.push(`หมายเหตุ: ${error.message || "ไม่สามารถบันทึกได้"}`);
+        }
+        if (!nextContactResponse.ok) {
+          const error = await nextContactResponse.json();
+          errors.push(`วันที่ติดต่อ: ${error.message || "ไม่สามารถบันทึกได้"}`);
+        }
+        showToastNotification(`❌ ${errors.join(", ")}`, "error");
+      }
+    } catch (error) {
+      console.error("Error saving data:", error);
+      showToastNotification("❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล", "error");
+    } finally {
+      setIsSavingRemarks(false);
+    }
+  };
+
   // Refresh data
   const handleRefresh = async () => {
     await fetchContacts();
     await fetchGoogleSheetsData();
     await fetchCallMatrixYaleSummary();
     await fetchFilmData();
+    await fetchFilmContacts();
   };
 
   // Open form for creating new contact
@@ -1107,15 +1339,6 @@ const CustomerContactDashboard = () => {
               className={`w-5 h-5 ${isLoading ? "animate-spin" : ""}`}
             />
             รีเฟรช
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleCreate}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 shadow-lg"
-          >
-            <Plus className="w-5 h-5" />
-            เพิ่มรายการใหม่
           </motion.button>
         </motion.div>
         {/* Statistics Cards */}
@@ -1514,6 +1737,173 @@ const CustomerContactDashboard = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.75 }}
+          className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8"
+        >
+          <div className="bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-4">
+            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+              <PhoneCall className="w-7 h-7" />
+              รายการติดต่อลูกค้า
+            </h2>
+          </div>
+
+          {/* Statistics Cards */}
+          <div className="px-6 py-4 bg-gray-50">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-4 text-white">
+                <h3 className="text-sm font-bold mb-1">จำนวน Lead</h3>
+                <p className="text-3xl font-bold">{filmStats.total}</p>
+              </div>
+              <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl shadow-lg p-4 text-white">
+                <h3 className="text-sm font-bold mb-1">โทรแล้ว</h3>
+                <p className="text-3xl font-bold">{filmStats.outgoing}</p>
+              </div>
+              <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-4 text-white">
+                <h3 className="text-sm font-bold mb-1">ไม่รับสาย</h3>
+                <p className="text-3xl font-bold">{filmStats.pending}</p>
+              </div>
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-4 text-white">
+                <h3 className="text-sm font-bold mb-1">ติดสาย</h3>
+                <p className="text-3xl font-bold">{filmStats.incoming}</p>
+              </div>
+              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-4 text-white">
+                <h3 className="text-sm font-bold mb-1">รับสาย</h3>
+                <p className="text-3xl font-bold">{filmStats.completed}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-purple-500 text-white border-b-2 border-purple-600">
+                <tr>
+                  <th className="px-6 py-4 text-left text-sm font-bold uppercase">
+                    ชื่อลูกค้า
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-bold uppercase">
+                    เบอร์โทร
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-bold uppercase">
+                    ผลิตภัณฑ์
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-bold uppercase">
+                    หมายเหตุ
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-bold uppercase">
+                    ผู้ติดต่อ
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-bold uppercase">
+                    สถานะ
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-bold uppercase">
+                    วันที่ติดต่อ
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center">
+                      <RefreshCw className="w-8 h-8 text-purple-600 animate-spin mx-auto" />
+                    </td>
+                  </tr>
+                ) : filteredFilmContacts.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="px-6 py-12 text-center text-gray-400"
+                    >
+                      <MessageSquare className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-semibold">ไม่พบข้อมูล</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredFilmContacts.map((contact, index) => (
+                    <motion.tr
+                      key={contact.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.02 }}
+                      onClick={() => handleFilmRowClick(contact)}
+                      className="hover:bg-purple-50 transition-colors cursor-pointer"
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="font-semibold text-gray-900">
+                          {contact.customerName}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2 text-gray-900">
+                          <Phone className="w-4 h-4 text-purple-600" />
+                          {contact.phoneNumber}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-gray-700">
+                          {contact.product || "-"}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 max-w-xs truncate">
+                        <div className="text-gray-700">
+                          {contact.remarks || "-"}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {contact.agentId ? (
+                          <span className="font-semibold text-blue-600">
+                            Agent {contact.agentId}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold ${
+                            contact.status === "incoming"
+                              ? "bg-green-500 text-white"
+                              : contact.status === "outgoing"
+                              ? "bg-blue-500 text-white"
+                              : contact.status === "pending"
+                              ? "bg-yellow-500 text-white"
+                              : "bg-gray-500 text-white"
+                          }`}
+                        >
+                          {contact.status === "incoming"
+                            ? "รับสาย"
+                            : contact.status === "outgoing"
+                            ? "โทรออก"
+                            : contact.status === "pending"
+                            ? "รอดำเนินการ"
+                            : "เสร็จสิ้น"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {formatDate(contact.contactDate)}
+                      </td>
+                    </motion.tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {filteredFilmContacts.length > 0 && (
+            <div className="bg-gray-50 px-6 py-4 border-t-2 border-gray-200">
+              <div className="text-sm text-gray-600">
+                แสดง{" "}
+                <span className="font-bold text-gray-900">
+                  {filteredFilmContacts.length}
+                </span>{" "}
+                รายการ
+              </div>
+            </div>
+          )}
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
           className="bg-white rounded-2xl shadow-xl overflow-hidden"
         >
@@ -1831,7 +2221,349 @@ const CustomerContactDashboard = () => {
               );
             })()}
         </motion.div>
+
+        {/* Film Contacts Section - รายการติดต่อจาก Film_dev */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.75 }}
+          className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8"
+        >
+          <div className="bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-4">
+            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+              <PhoneCall className="w-7 h-7" />
+              รายการติดต่อลูกค้า
+            </h2>
+          </div>
+
+          {/* Statistics Cards */}
+          <div className="px-6 py-4 bg-gray-50">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-4 text-white">
+                <h3 className="text-sm font-bold mb-1">จำนวน Lead</h3>
+                <p className="text-3xl font-bold">{filmStats.total}</p>
+              </div>
+              <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl shadow-lg p-4 text-white">
+                <h3 className="text-sm font-bold mb-1">โทรแล้ว</h3>
+                <p className="text-3xl font-bold">{filmStats.outgoing}</p>
+              </div>
+              <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-4 text-white">
+                <h3 className="text-sm font-bold mb-1">ไม่รับสาย</h3>
+                <p className="text-3xl font-bold">{filmStats.pending}</p>
+              </div>
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-4 text-white">
+                <h3 className="text-sm font-bold mb-1">ติดสาย</h3>
+                <p className="text-3xl font-bold">{filmStats.incoming}</p>
+              </div>
+              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-4 text-white">
+                <h3 className="text-sm font-bold mb-1">รับสาย</h3>
+                <p className="text-3xl font-bold">{filmStats.completed}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-purple-500 text-white border-b-2 border-purple-600">
+                <tr>
+                  <th className="px-6 py-4 text-left text-sm font-bold uppercase">
+                    ชื่อลูกค้า
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-bold uppercase">
+                    เบอร์โทร
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-bold uppercase">
+                    ผลิตภัณฑ์
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-bold uppercase">
+                    หมายเหตุ
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-bold uppercase">
+                    ผู้ติดต่อ
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-bold uppercase">
+                    สถานะ
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-bold uppercase">
+                    วันที่ติดต่อ
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center">
+                      <RefreshCw className="w-8 h-8 text-purple-600 animate-spin mx-auto" />
+                    </td>
+                  </tr>
+                ) : filteredFilmContacts.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="px-6 py-12 text-center text-gray-400"
+                    >
+                      <MessageSquare className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-semibold">ไม่พบข้อมูล</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredFilmContacts.map((contact, index) => (
+                    <motion.tr
+                      key={contact.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.02 }}
+                      onClick={() => handleFilmRowClick(contact)}
+                      className="hover:bg-purple-50 transition-colors cursor-pointer"
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="font-semibold text-gray-900">
+                          {contact.customerName}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2 text-gray-900">
+                          <Phone className="w-4 h-4 text-purple-600" />
+                          {contact.phoneNumber}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-gray-700">
+                          {contact.product || "-"}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 max-w-xs truncate">
+                        <div className="text-gray-700">
+                          {contact.remarks || "-"}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {contact.agentId ? (
+                          <span className="font-semibold text-blue-600">
+                            Agent {contact.agentId}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold ${
+                            contact.status === "incoming"
+                              ? "bg-green-500 text-white"
+                              : contact.status === "outgoing"
+                              ? "bg-blue-500 text-white"
+                              : contact.status === "pending"
+                              ? "bg-yellow-500 text-white"
+                              : "bg-gray-500 text-white"
+                          }`}
+                        >
+                          {contact.status === "incoming"
+                            ? "รับสาย"
+                            : contact.status === "outgoing"
+                            ? "โทรออก"
+                            : contact.status === "pending"
+                            ? "รอดำเนินการ"
+                            : "เสร็จสิ้น"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {formatDate(contact.contactDate)}
+                      </td>
+                    </motion.tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {filteredFilmContacts.length > 0 && (
+            <div className="bg-gray-50 px-6 py-4 border-t-2 border-gray-200">
+              <div className="text-sm text-gray-600">
+                แสดง{" "}
+                <span className="font-bold text-gray-900">
+                  {filteredFilmContacts.length}
+                </span>{" "}
+                รายการ
+              </div>
+            </div>
+          )}
+        </motion.div>
       </div>
+
+      {/* Film Contact Detail Modal */}
+      <AnimatePresence>
+        {isFilmModalOpen && selectedFilmContact && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={handleCloseFilmModal}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
+            >
+              <div className="bg-gradient-to-r from-purple-500 to-pink-500 px-8 py-6">
+                <h2 className="text-2xl font-bold text-white text-center">
+                  ข้อมูลผู้ติดต่อ
+                </h2>
+                <button
+                  onClick={handleCloseFilmModal}
+                  className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 p-2 rounded-xl"
+                >
+                  <svg
+                    className="w-6 h-6 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="p-8 overflow-y-auto max-h-[calc(90vh-140px)]">
+                <div className="space-y-6">
+                  <div className="bg-slate-50 rounded-2xl p-6">
+                    <label className="block text-base font-bold text-gray-800 mb-3">
+                      ชื่อลูกค้า
+                    </label>
+                    <p className="text-lg text-gray-900">
+                      {selectedFilmContact.customerName}
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-2xl p-6">
+                    <label className="block text-base font-bold text-gray-800 mb-3">
+                      เบอร์โทรศัพท์
+                    </label>
+                    <p className="text-lg text-gray-900">
+                      {selectedFilmContact.phoneNumber}
+                    </p>
+                  </div>
+
+                  {selectedFilmContact.product && (
+                    <div className="bg-slate-50 rounded-2xl p-6">
+                      <label className="block text-base font-bold text-gray-800 mb-3">
+                        ผลิตภัณฑ์ที่สนใจ
+                      </label>
+                      <p className="text-lg text-gray-900">
+                        {selectedFilmContact.product}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="bg-slate-50 rounded-2xl p-6">
+                    <label className="block text-base font-bold text-gray-800 mb-3">
+                      วันที่ติดต่อ
+                    </label>
+                    <p className="text-lg text-gray-900">
+                      {formatDate(selectedFilmContact.contactDate)}
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-2xl p-6">
+                    <label className="block text-base font-bold text-gray-800 mb-3">
+                      ติดตามครั้งถัดไป
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={editedNextContactDate}
+                      onChange={(e) => setEditedNextContactDate(e.target.value)}
+                      className="w-full bg-white rounded-xl px-4 py-3 border-2 border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none text-gray-900"
+                    />
+                  </div>
+
+                  <div className="bg-slate-50 rounded-2xl p-6">
+                    <label className="block text-base font-bold text-gray-800 mb-3">
+                      หมายเหตุ
+                    </label>
+                    <textarea
+                      value={editedRemarks}
+                      onChange={(e) => setEditedRemarks(e.target.value)}
+                      placeholder="กรอกหมายเหตุ..."
+                      rows={6}
+                      className="w-full bg-white rounded-xl p-4 border-2 border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none text-gray-900 resize-none"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleSaveFilmContact}
+                    disabled={isSavingRemarks}
+                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-400 disabled:to-gray-500 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-3 shadow-lg"
+                  >
+                    {isSavingRemarks ? (
+                      <>
+                        <RefreshCw className="w-6 h-6 animate-spin" />
+                        กำลังบันทึก...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-6 h-6" />
+                        บันทึกข้อมูล
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -50, scale: 0.9 }}
+            transition={{ type: "spring", duration: 0.5 }}
+            className="fixed top-6 right-6 z-[100] max-w-md"
+          >
+            <div
+              className={`${
+                toastType === "success"
+                  ? "bg-gradient-to-r from-green-500 to-emerald-500"
+                  : "bg-gradient-to-r from-red-500 to-rose-500"
+              } text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4`}
+            >
+              <div className="flex-1">
+                <p className="font-bold text-lg">{toastMessage}</p>
+              </div>
+              <button
+                onClick={() => setShowToast(false)}
+                className="hover:bg-white/20 p-1 rounded-lg transition-colors"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Call Input Modal */}
       <AnimatePresence>

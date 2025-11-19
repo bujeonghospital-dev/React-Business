@@ -9,8 +9,8 @@ const cache = new Map<
 const CACHE_DURATION = 30000; // 30 seconds
 
 /**
- * GET /api/revenue-combined-db
- * ดึงข้อมูลรายรับจาก bjh_all_leads
+ * GET /api/n-clinic-db
+ * ดึงข้อมูลรายรับจาก n_saleIncentive + n_staff + bjh_all_leads (sale_date <= วันนี้)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -21,14 +21,14 @@ export async function GET(request: NextRequest) {
     const contactPerson = searchParams.get("contact_person");
 
     // Check cache first
-    const cacheKey = `revenue-combined-db-${month || "all"}-${year || "all"}-${
+    const cacheKey = `n-clinic-db-${month || "all"}-${year || "all"}-${
       contactPerson || "all"
     }`;
     const cached = cache.get(cacheKey);
     const now = Date.now();
 
     if (cached && now < cached.expiresAt) {
-      console.log(`✅ Returning cached revenue from database`);
+      console.log(`✅ Returning cached n_clinic data from database`);
       return NextResponse.json(cached.data, {
         status: 200,
         headers: {
@@ -40,35 +40,54 @@ export async function GET(request: NextRequest) {
     }
 
     console.log(
-      `📡 Fetching revenue from bjh_all_leads (from TODAY onwards)...`
+      `📡 Fetching n_clinic data from n_saleIncentive + n_staff + bjh_all_leads (sale_date <= today)...`
     );
 
-    // SQL query ที่ดึงข้อมูลจาก bjh_all_leads ตั้งแต่วันนี้เป็นต้นไป
+    // SQL query - ใช้ sale_date แทน surgery_date
     let query = `
       SELECT 
-        contact_staff,
-        surgery_date,
-        doctor,
-        customer_name,
-        phone,
-        proposed_amount,
-        appointment_time
-      FROM postgres."BJH-Server".bjh_all_leads
-      WHERE surgery_date IS NOT NULL
-        AND surgery_date::date >= CURRENT_DATE
+        s.sale_code,
+        TO_CHAR(s.sale_date::date, 'YYYY-MM-DD') as sale_date,
+        s.item_name,
+        CASE 
+          WHEN bl.proposed_amount::text ~ '^[0-9,]+$' 
+          THEN ROUND(CAST(REPLACE(bl.proposed_amount::text, ',', '') AS NUMERIC))::INTEGER
+          ELSE NULL
+        END AS proposed_amount,
+        n.nickname as contact_staff,
+        CONCAT(n.name, ' ', n.surname) AS full_name
+      FROM postgres."BJH-Server"."n_saleIncentive" AS s
+      LEFT JOIN postgres."BJH-Server".n_staff AS n
+        ON s.emp_code = n.code
+      LEFT JOIN postgres."BJH-Server".bjh_all_leads AS bl
+        ON s.emp_name = bl.contact_staff
+        AND s.sale_date::date = bl.surgery_date::date
+      WHERE DATE(s.sale_date) <= DATE(NOW())
+        AND bl.proposed_amount IS NOT NULL
     `;
 
     const params: any[] = [];
     let paramIndex = 1;
 
-    // Filter by contact person (contact_staff) if provided
+    // Filter by month and year if provided (ใช้ sale_date)
+    if (month && year) {
+      query += ` AND EXTRACT(MONTH FROM s.sale_date::date) = $${paramIndex++}`;
+      params.push(parseInt(month));
+      query += ` AND EXTRACT(YEAR FROM s.sale_date::date) = $${paramIndex++}`;
+      params.push(parseInt(year));
+    } else if (year) {
+      query += ` AND EXTRACT(YEAR FROM s.sale_date::date) = $${paramIndex++}`;
+      params.push(parseInt(year));
+    }
+
+    // Filter by contact person if provided (ใช้ nickname)
     if (contactPerson && contactPerson !== "all") {
-      query += ` AND contact_staff = $${paramIndex++}`;
+      query += ` AND n.nickname = $${paramIndex++}`;
       params.push(contactPerson);
     }
 
-    // Order by surgery_date
-    query += ` ORDER BY surgery_date DESC`;
+    // Order by sale_date
+    query += ` ORDER BY s.sale_date::date ASC`;
 
     // Execute query
     const client = await pool.connect();
@@ -76,18 +95,8 @@ export async function GET(request: NextRequest) {
       const result = await client.query(query, params);
 
       console.log(
-        `✅ Successfully fetched ${result.rows.length} revenue records from database (bjh_all_leads - from TODAY onwards)`
+        `✅ Successfully fetched ${result.rows.length} n_clinic records from database`
       );
-      console.log("📊 Sample data:", {
-        sampleRows: result.rows.slice(0, 5),
-        uniqueContactStaff: [
-          ...new Set(result.rows.map((r: any) => r.contact_staff)),
-        ],
-        filters: {
-          contactPerson,
-          fromDate: new Date().toISOString().split("T")[0],
-        },
-      });
 
       // Transform data to match expected format
       const transformedData = {
@@ -95,10 +104,12 @@ export async function GET(request: NextRequest) {
         data: result.rows,
         total: result.rows.length,
         timestamp: new Date().toISOString(),
-        source: "PostgreSQL Database (bjh_all_leads - from TODAY onwards)",
+        source:
+          "PostgreSQL Database (n_saleIncentive + n_staff + bjh_all_leads - sale_date <= today)",
         debug: {
           filters: {
-            from_date: new Date().toISOString().split("T")[0],
+            month: month || "all",
+            year: year || "all",
             contact_person: contactPerson || "all",
           },
         },
@@ -130,10 +141,10 @@ export async function GET(request: NextRequest) {
       client.release();
     }
   } catch (error: any) {
-    console.error("Error fetching revenue combined from database:", error);
+    console.error("Error fetching n_clinic data from database:", error);
 
     // Return cached data if available even if expired
-    const cached = cache.get("revenue-combined-db");
+    const cached = cache.get("n-clinic-db");
     if (cached) {
       console.log("⚠️ Using expired cache due to database error");
       return NextResponse.json(cached.data, {
@@ -152,7 +163,7 @@ export async function GET(request: NextRequest) {
         details: {
           type: error.name,
           message: error.message,
-          hint: "ตรวจสอบว่า database มีตาราง n_saleIncentive และ n_staff",
+          hint: "ตรวจสอบว่า database มีตาราง n_saleIncentive, n_staff และ bjh_all_leads",
         },
         data: [],
       },

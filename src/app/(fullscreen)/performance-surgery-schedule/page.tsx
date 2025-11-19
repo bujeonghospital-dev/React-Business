@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import "./styles.css";
 import SurgeryDetailsModal from "./SurgeryDetailsModal";
+import RevenueDetailsModal from "./RevenueDetailsModal";
 import {
   SurgeryScheduleData,
   CONTACT_PERSON_MAPPING,
@@ -18,16 +19,21 @@ import {
   countDatabaseActualSurgeriesByDate,
   calculateDatabaseActualRevenue,
 } from "@/utils/databaseActualSurgery";
+// import {
+//   fetchSaleIncentiveFromDatabase,
+//   calculateDailyRevenueByPerson,
+//   SaleIncentiveData,
+// } from "@/utils/databaseSaleIncentive";
 import {
-  fetchSaleIncentiveFromDatabase,
-  calculateDailyRevenueByPerson,
-  SaleIncentiveData,
-} from "@/utils/databaseSaleIncentive";
+  fetchRevenueFutureFromDatabase,
+  calculateDailyRevenueByPersonFuture,
+  RevenueFutureData,
+} from "@/utils/databaseRevenueFuture";
 import {
-  fetchRevenueCombinedFromDatabase,
-  calculateDailyRevenueByPersonCombined,
-  RevenueCombinedData,
-} from "@/utils/databaseRevenueCombined";
+  fetchNClinicFromDatabase,
+  calculateDailyRevenueByPersonNClinic,
+  NClinicData,
+} from "@/utils/databaseNClinic";
 
 export default function PerformanceSurgerySchedule() {
   // State for selected month and year
@@ -48,18 +54,22 @@ export default function PerformanceSurgerySchedule() {
   const [countMapL, setCountMapL] = useState<
     Map<string, Map<number, SurgeryScheduleData[]>>
   >(new Map());
-  const [revenueMap, setRevenueMap] = useState<
-    Map<string, Map<number, number>>
-  >(new Map());
+  // const [revenueMap, setRevenueMap] = useState<
+  //   Map<string, Map<number, number>>
+  // >(new Map());
   const [filmRevenueMap, setFilmRevenueMap] = useState<
     Map<string, Map<number, number>>
   >(new Map());
-  const [saleIncentiveData, setSaleIncentiveData] = useState<
-    SaleIncentiveData[]
+  const [filmRevenueMapNClinic, setFilmRevenueMapNClinic] = useState<
+    Map<string, Map<number, number>>
+  >(new Map());
+  // const [saleIncentiveData, setSaleIncentiveData] = useState<
+  //   SaleIncentiveData[]
+  // >([]);
+  const [revenueFutureData, setRevenueFutureData] = useState<
+    RevenueFutureData[]
   >([]);
-  const [revenueCombinedData, setRevenueCombinedData] = useState<
-    RevenueCombinedData[]
-  >([]);
+  const [nClinicData, setNClinicData] = useState<NClinicData[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -86,6 +96,11 @@ export default function PerformanceSurgerySchedule() {
   const [selectedDate, setSelectedDate] = useState(1);
   const [selectedContactPerson, setSelectedContactPerson] = useState("");
   const [selectedTableType, setSelectedTableType] = useState<"P" | "L">("P");
+  
+  // Revenue Modal state
+  const [revenueModalOpen, setRevenueModalOpen] = useState(false);
+  const [selectedNClinicData, setSelectedNClinicData] = useState<NClinicData[]>([]);
+  const [selectedFutureData, setSelectedFutureData] = useState<RevenueFutureData[]>([]);
 
   // Function to load surgery schedule data from Database
   const loadData = async (isManualRefresh = false) => {
@@ -113,43 +128,76 @@ export default function PerformanceSurgerySchedule() {
     }
   };
 
-  // Function to load N_SaleIncentive data separately from Database
-  const loadSaleIncentiveData = async () => {
+  // Function to load N_SaleIncentive data separately from Database (DISABLED - ใช้ bjh_all_leads แทน)
+  // const loadSaleIncentiveData = async () => {
+  //   try {
+  //     const saleData = await fetchSaleIncentiveFromDatabase();
+  //     console.log("📊 Sale Incentive Data Loaded:", {
+  //       totalRecords: saleData.length,
+  //       sampleRecords: saleData.slice(0, 3),
+  //       uniquePersons: [...new Set(saleData.map((d) => d.sale_person))],
+  //       monthYearCounts: saleData.reduce((acc: any, d) => {
+  //         const key = `${d.year}-${d.month}`;
+  //         acc[key] = (acc[key] || 0) + 1;
+  //         return acc;
+  //       }, {}),
+  //     });
+  //     setSaleIncentiveData(saleData);
+  //     console.log("✅ Loaded N_SaleIncentive data from Database");
+  //   } catch (error: any) {
+  //     console.error("❌ Error loading N_SaleIncentive data:", error);
+  //     // Don't set error state - let revenue table just be empty
+  //     setSaleIncentiveData([]);
+  //   }
+  // };
+
+  // Function to load N_Clinic Revenue data (sale_date <= today)
+  const loadNClinicData = async () => {
     try {
-      const saleData = await fetchSaleIncentiveFromDatabase();
-      console.log("📊 Sale Incentive Data Loaded:", {
-        totalRecords: saleData.length,
-        sampleRecords: saleData.slice(0, 3),
-        uniquePersons: [...new Set(saleData.map((d) => d.sale_person))],
-        monthYearCounts: saleData.reduce((acc: any, d) => {
-          const key = `${d.year}-${d.month}`;
-          acc[key] = (acc[key] || 0) + 1;
-          return acc;
-        }, {}),
+      console.log(
+        "🔄 Starting to load N_Clinic data (n_saleIncentive + n_staff + bjh_all_leads - sale_date <= today)..."
+      );
+      const clinicData = await fetchNClinicFromDatabase();
+      console.log("💰 N_Clinic Data Loaded:", {
+        totalRecords: clinicData.length,
+        sampleRecords: clinicData.slice(0, 5),
+        uniqueContactStaff: [
+          ...new Set(clinicData.map((d) => d.contact_staff || "ไม่ระบุ")),
+        ],
+        sampleData: clinicData.slice(0, 5).map((d) => ({
+          contact_staff: d.contact_staff,
+          sale_date: d.sale_date,
+          proposed_amount: d.proposed_amount,
+          item_name: d.item_name,
+        })),
       });
-      setSaleIncentiveData(saleData);
-      console.log("✅ Loaded N_SaleIncentive data from Database");
+      setNClinicData(clinicData);
+      console.log("✅ Loaded N_Clinic data (sale_date <= today)");
     } catch (error: any) {
-      console.error("❌ Error loading N_SaleIncentive data:", error);
+      console.error("❌ Error loading N_Clinic data:", error);
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+      });
       // Don't set error state - let revenue table just be empty
-      setSaleIncentiveData([]);
+      setNClinicData([]);
     }
   };
 
-  // Function to load Combined Revenue data (DISTINCT ON with max_amount <= today)
-  const loadRevenueCombinedData = async () => {
+  // Function to load Future Revenue data (surgery_date >= today)
+  const loadRevenueFutureData = async () => {
     try {
       console.log(
-        "🔄 Starting to load Revenue data (n_saleIncentive + n_staff + bjh_all_leads)..."
+        "🔄 Starting to load Revenue data (bjh_all_leads - surgery_date >= today)..."
       );
-      const combinedData = await fetchRevenueCombinedFromDatabase();
-      console.log("💰 Revenue Data Loaded (bjh_all_leads - TODAY only):", {
-        totalRecords: combinedData.length,
-        sampleRecords: combinedData.slice(0, 5),
+      const futureData = await fetchRevenueFutureFromDatabase();
+      console.log("💰 Revenue Data Loaded (bjh_all_leads - Future only):", {
+        totalRecords: futureData.length,
+        sampleRecords: futureData.slice(0, 5),
         uniqueContactStaff: [
-          ...new Set(combinedData.map((d) => d.contact_staff || "ไม่ระบุ")),
+          ...new Set(futureData.map((d) => d.contact_staff || "ไม่ระบุ")),
         ],
-        sampleData: combinedData.slice(0, 5).map((d) => ({
+        sampleData: futureData.slice(0, 5).map((d) => ({
           contact_staff: d.contact_staff,
           surgery_date: d.surgery_date,
           doctor: d.doctor,
@@ -159,9 +207,9 @@ export default function PerformanceSurgerySchedule() {
           appointment_time: d.appointment_time,
         })),
       });
-      setRevenueCombinedData(combinedData);
+      setRevenueFutureData(futureData);
       console.log(
-        "✅ Loaded Revenue data (bjh_all_leads - surgery_date = TODAY)"
+        "✅ Loaded Revenue data (bjh_all_leads - surgery_date >= today)"
       );
     } catch (error: any) {
       console.error("❌ Error loading Revenue data:", error);
@@ -170,7 +218,7 @@ export default function PerformanceSurgerySchedule() {
         stack: error.stack,
       });
       // Don't set error state - let revenue table just be empty
-      setRevenueCombinedData([]);
+      setRevenueFutureData([]);
     }
   };
 
@@ -181,17 +229,24 @@ export default function PerformanceSurgerySchedule() {
     })();
   }, []);
 
-  // Fetch N_SaleIncentive data when component mounts or when month/year changes
+  // Fetch N_SaleIncentive data when component mounts or when month/year changes (DISABLED)
+  // useEffect(() => {
+  //   (async () => {
+  //     await loadSaleIncentiveData();
+  //   })();
+  // }, [selectedMonth, selectedYear]);
+
+  // Fetch N_Clinic data when component mounts or when month/year changes
   useEffect(() => {
     (async () => {
-      await loadSaleIncentiveData();
+      await loadNClinicData();
     })();
   }, [selectedMonth, selectedYear]);
 
-  // Fetch Combined Revenue data when component mounts or when month/year changes
+  // Fetch Future Revenue data when component mounts or when month/year changes
   useEffect(() => {
     (async () => {
-      await loadRevenueCombinedData();
+      await loadRevenueFutureData();
     })();
   }, [selectedMonth, selectedYear]);
 
@@ -204,19 +259,28 @@ export default function PerformanceSurgerySchedule() {
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-refresh N_SaleIncentive data every 30 seconds
+  // Auto-refresh N_SaleIncentive data every 30 seconds (DISABLED)
+  // useEffect(() => {
+  //   const interval = setInterval(async () => {
+  //     await loadSaleIncentiveData();
+  //   }, 30000); // 30 seconds
+
+  //   return () => clearInterval(interval);
+  // }, []);
+
+  // Auto-refresh N_Clinic data every 30 seconds
   useEffect(() => {
     const interval = setInterval(async () => {
-      await loadSaleIncentiveData();
+      await loadNClinicData();
     }, 30000); // 30 seconds
 
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-refresh Combined Revenue data every 30 seconds
+  // Auto-refresh Future Revenue data every 30 seconds
   useEffect(() => {
     const interval = setInterval(async () => {
-      await loadRevenueCombinedData();
+      await loadRevenueFutureData();
     }, 30000); // 30 seconds
 
     return () => clearInterval(interval);
@@ -291,15 +355,58 @@ export default function PerformanceSurgerySchedule() {
     }
   }, [surgeryData, selectedMonth, selectedYear]);
 
-  // Update film revenue map - ใช้ proposed_amount จาก bjh_all_leads (TODAY only)
+  // Update N_Clinic revenue map - ใช้ proposed_amount จาก n_clinic (sale_date <= today)
+  useEffect(() => {
+    console.log("🔄 Processing N_Clinic RevenueMap (sale_date <= today)...", {
+      nClinicDataLength: nClinicData.length,
+      selectedMonth,
+      selectedYear,
+      firstFewRecords: nClinicData.slice(0, 3).map((d) => ({
+        sale_date: d.sale_date,
+        contact_staff: d.contact_staff,
+        proposed_amount: d.proposed_amount,
+      })),
+    });
+
+    if (nClinicData.length > 0) {
+      const newNClinicRevenueMap = calculateDailyRevenueByPersonNClinic(
+        nClinicData,
+        selectedMonth,
+        selectedYear
+      );
+
+      console.log("🔍 N_Clinic Revenue Map Debug:", {
+        mapSize: newNClinicRevenueMap.size,
+        persons: Array.from(newNClinicRevenueMap.keys()),
+        allData: Array.from(newNClinicRevenueMap.entries()).map(
+          ([person, dayMap]) => ({
+            person,
+            totalDays: dayMap.size,
+            days: Array.from(dayMap.entries()).slice(0, 10),
+            totalRevenue: Array.from(dayMap.values()).reduce(
+              (sum, val) => sum + val,
+              0
+            ),
+          })
+        ),
+      });
+
+      setFilmRevenueMapNClinic(newNClinicRevenueMap);
+    } else {
+      console.log("⚠️ No N_Clinic data to process, clearing map");
+      setFilmRevenueMapNClinic(new Map());
+    }
+  }, [nClinicData, selectedMonth, selectedYear]);
+
+  // Update film revenue map - ใช้ proposed_amount จาก bjh_all_leads (surgery_date >= today)
   useEffect(() => {
     console.log(
-      "🔄 Processing filmRevenueMap (bjh_all_leads - TODAY only)...",
+      "🔄 Processing filmRevenueMap (bjh_all_leads - Future surgeries)...",
       {
-        combinedDataLength: revenueCombinedData.length,
+        futureDataLength: revenueFutureData.length,
         selectedMonth,
         selectedYear,
-        firstFewRecords: revenueCombinedData.slice(0, 3).map((d) => ({
+        firstFewRecords: revenueFutureData.slice(0, 3).map((d) => ({
           surgery_date: d.surgery_date,
           contact_staff: d.contact_staff,
           proposed_amount: d.proposed_amount,
@@ -307,15 +414,15 @@ export default function PerformanceSurgerySchedule() {
       }
     );
 
-    if (revenueCombinedData.length > 0) {
-      // ใช้ proposed_amount และ contact_staff จาก bjh_all_leads โดยตรง
-      const newFilmRevenueMap = calculateDailyRevenueByPersonCombined(
-        revenueCombinedData,
+    if (revenueFutureData.length > 0) {
+      // ใช้ proposed_amount และ contact_staff จาก bjh_all_leads (surgery_date >= today)
+      const newFilmRevenueMap = calculateDailyRevenueByPersonFuture(
+        revenueFutureData,
         selectedMonth,
         selectedYear
       );
 
-      console.log("🔍 Film Revenue Map Debug (bjh_all_leads - TODAY):", {
+      console.log("🔍 Film Revenue Map Debug (bjh_all_leads - Future):", {
         mapSize: newFilmRevenueMap.size,
         persons: Array.from(newFilmRevenueMap.keys()),
         allData: Array.from(newFilmRevenueMap.entries()).map(
@@ -333,10 +440,10 @@ export default function PerformanceSurgerySchedule() {
 
       setFilmRevenueMap(newFilmRevenueMap);
     } else {
-      console.log("⚠️ No revenue data to process, clearing map");
+      console.log("⚠️ No future revenue data to process, clearing map");
       setFilmRevenueMap(new Map());
     }
-  }, [revenueCombinedData, selectedMonth, selectedYear]);
+  }, [revenueFutureData, selectedMonth, selectedYear]);
 
   // Update L table count map when surgery actual data changes
   useEffect(() => {
@@ -352,33 +459,33 @@ export default function PerformanceSurgerySchedule() {
     }
   }, [surgeryActualData, selectedMonth, selectedYear]);
 
-  // Update revenue map when N_SaleIncentive data changes
-  useEffect(() => {
-    if (saleIncentiveData.length > 0) {
-      // Revenue table - ประมาณการรายรับจากข้อมูลจริง (N_SaleIncentive)
-      const newRevenueMap = calculateDailyRevenueByPerson(
-        saleIncentiveData,
-        selectedMonth,
-        selectedYear
-      );
+  // Update revenue map when N_SaleIncentive data changes (DISABLED - ใช้ filmRevenueMap จาก bjh_all_leads แทน)
+  // useEffect(() => {
+  //   if (saleIncentiveData.length > 0) {
+  //     // Revenue table - ประมาณการรายรับจากข้อมูลจริง (N_SaleIncentive)
+  //     const newRevenueMap = calculateDailyRevenueByPerson(
+  //       saleIncentiveData,
+  //       selectedMonth,
+  //       selectedYear
+  //     );
 
-      console.log("🔍 Revenue Map Debug:", {
-        mapSize: newRevenueMap.size,
-        persons: Array.from(newRevenueMap.keys()),
-        sampleData: Array.from(newRevenueMap.entries())
-          .slice(0, 2)
-          .map(([person, dayMap]) => ({
-            person,
-            days: Array.from(dayMap.entries()),
-          })),
-      });
+  //     console.log("🔍 Revenue Map Debug:", {
+  //       mapSize: newRevenueMap.size,
+  //       persons: Array.from(newRevenueMap.keys()),
+  //       sampleData: Array.from(newRevenueMap.entries())
+  //         .slice(0, 2)
+  //         .map(([person, dayMap]) => ({
+  //           person,
+  //           days: Array.from(dayMap.entries()),
+  //         })),
+  //     });
 
-      setRevenueMap(newRevenueMap);
-    } else {
-      // Clear revenue map if no data
-      setRevenueMap(new Map());
-    }
-  }, [saleIncentiveData, selectedMonth, selectedYear]);
+  //     setRevenueMap(newRevenueMap);
+  //   } else {
+  //     // Clear revenue map if no data
+  //     setRevenueMap(new Map());
+  //   }
+  // }, [saleIncentiveData, selectedMonth, selectedYear]);
 
   // Update KPI To Date and Actual based on weekdays passed in current month
   useEffect(() => {
@@ -465,6 +572,76 @@ export default function PerformanceSurgerySchedule() {
     }
   };
 
+  // Handle revenue cell click to open revenue modal
+  const handleRevenueCellClick = (day: number, rowId: string) => {
+    const contactPerson = CONTACT_PERSON_MAPPING[rowId];
+    if (!contactPerson) return;
+
+    // Parse date function
+    const parseDateStr = (dateStr: string | undefined): Date | null => {
+      if (!dateStr) return null;
+      try {
+        return new Date(dateStr);
+      } catch {
+        return null;
+      }
+    };
+
+    // Filter N_Clinic data for this day and person
+    const filteredNClinic = nClinicData.filter((item) => {
+      const date = parseDateStr(item.sale_date);
+      if (!date) return false;
+      
+      const itemDay = date.getDate();
+      const itemMonth = date.getMonth();
+      const itemYear = date.getFullYear();
+      
+      if (itemMonth !== selectedMonth || itemYear !== selectedYear || itemDay !== day) {
+        return false;
+      }
+
+      // For จีน row, include both จีน and มุก
+      if (rowId === "105-จีน") {
+        return item.contact_staff === "จีน" || item.contact_staff === "มุก";
+      }
+      
+      return item.contact_staff === contactPerson;
+    });
+
+    // Filter Future Revenue data for this day and person
+    const filteredFuture = revenueFutureData.filter((item) => {
+      const date = parseDateStr(item.surgery_date);
+      if (!date) return false;
+      
+      const itemDay = date.getDate();
+      const itemMonth = date.getMonth();
+      const itemYear = date.getFullYear();
+      
+      if (itemMonth !== selectedMonth || itemYear !== selectedYear || itemDay !== day) {
+        return false;
+      }
+
+      // For จีน row, include both จีน and มุก
+      if (rowId === "105-จีน") {
+        return item.contact_staff === "จีน" || item.contact_staff === "มุก";
+      }
+      
+      return item.contact_staff === contactPerson;
+    });
+
+    if (filteredNClinic.length === 0 && filteredFuture.length === 0) return;
+
+    // Find the display name from pScheduleRows
+    const rowInfo = pScheduleRows.find((r) => r.id === rowId);
+    const displayName = rowInfo ? rowInfo.name : contactPerson;
+
+    setSelectedNClinicData(filteredNClinic);
+    setSelectedFutureData(filteredFuture);
+    setSelectedDate(day);
+    setSelectedContactPerson(displayName);
+    setRevenueModalOpen(true);
+  };
+
   // Handle cell click to open modal
   const handleCellClick = (
     day: number,
@@ -535,7 +712,7 @@ export default function PerformanceSurgerySchedule() {
     return surgeries ? surgeries.length : 0;
   };
 
-  // Get revenue for a specific cell (ใช้ proposed_amount จาก bjh_all_leads)
+  // Get revenue for a specific cell (รวมข้อมูลจาก 2 API: N_Clinic + Future Revenue)
   const getCellRevenue = (day: number, rowId: string): number => {
     const contactPerson = CONTACT_PERSON_MAPPING[rowId];
     if (!contactPerson) {
@@ -545,56 +722,59 @@ export default function PerformanceSurgerySchedule() {
 
     let totalRevenue = 0;
 
-    // Debug: ตรวจสอบ filmRevenueMap
+    // Debug: ตรวจสอบทั้ง 2 maps
     if (day === 1) {
       console.log(`🔍 Debug getCellRevenue for day ${day}, rowId ${rowId}:`, {
         rowId,
         contactPerson,
-        filmRevenueMapSize: filmRevenueMap.size,
-        filmRevenueMapKeys: Array.from(filmRevenueMap.keys()),
-        allDayData: Array.from(filmRevenueMap.entries()).map(
-          ([person, dayMap]) => ({
-            person,
-            day1Revenue: dayMap.get(1) || 0,
-            allDays: Array.from(dayMap.keys()),
-          })
-        ),
+        nClinicMapSize: filmRevenueMapNClinic.size,
+        futureMapSize: filmRevenueMap.size,
+        nClinicMapKeys: Array.from(filmRevenueMapNClinic.keys()),
+        futureMapKeys: Array.from(filmRevenueMap.keys()),
       });
     }
 
-    // ใช้ข้อมูลจาก filmRevenueMap (proposed_amount จาก bjh_all_leads)
+    // รวมข้อมูลจาก N_Clinic (sale_date <= today)
+    if (filmRevenueMapNClinic.size > 0) {
+      if (rowId === "105-จีน") {
+        const jinRevenue = filmRevenueMapNClinic.get("จีน")?.get(day) || 0;
+        const mukRevenue = filmRevenueMapNClinic.get("มุก")?.get(day) || 0;
+        totalRevenue += jinRevenue + mukRevenue;
+      } else {
+        const revenue = filmRevenueMapNClinic.get(contactPerson)?.get(day) || 0;
+        totalRevenue += revenue;
+      }
+    }
+
+    // รวมข้อมูลจาก Future Revenue (surgery_date >= today)
     if (filmRevenueMap.size > 0) {
-      // For จีน row, combine จีน and มุก revenue
       if (rowId === "105-จีน") {
         const jinRevenue = filmRevenueMap.get("จีน")?.get(day) || 0;
         const mukRevenue = filmRevenueMap.get("มุก")?.get(day) || 0;
-        totalRevenue = jinRevenue + mukRevenue;
-
-        if (day === 1) {
-          console.log(`💰 Revenue for 105-จีน day ${day}:`, {
-            jinRevenue,
-            mukRevenue,
-            totalRevenue,
-          });
-        }
+        totalRevenue += jinRevenue + mukRevenue;
       } else {
-        // For other rows (107-เจ, 108-ว่าน), ใช้ nickname โดยตรง
         const revenue = filmRevenueMap.get(contactPerson)?.get(day) || 0;
-        totalRevenue = revenue;
+        totalRevenue += revenue;
+      }
+    }
 
-        if (day === 1) {
-          console.log(
-            `💰 Revenue for ${rowId} (${contactPerson}) day ${day}:`,
-            {
-              revenue: totalRevenue,
-            }
-          );
+    if (day === 1 && totalRevenue > 0) {
+      console.log(
+        `💰 Total Revenue for ${rowId} (${contactPerson}) day ${day}:`,
+        {
+          nClinic:
+            rowId === "105-จีน"
+              ? (filmRevenueMapNClinic.get("จีน")?.get(day) || 0) +
+                (filmRevenueMapNClinic.get("มุก")?.get(day) || 0)
+              : filmRevenueMapNClinic.get(contactPerson)?.get(day) || 0,
+          future:
+            rowId === "105-จีน"
+              ? (filmRevenueMap.get("จีน")?.get(day) || 0) +
+                (filmRevenueMap.get("มุก")?.get(day) || 0)
+              : filmRevenueMap.get(contactPerson)?.get(day) || 0,
+          totalRevenue,
         }
-      }
-    } else {
-      if (day === 1) {
-        console.warn(`⚠️ filmRevenueMap is empty for day ${day}`);
-      }
+      );
     }
 
     return totalRevenue;
@@ -857,8 +1037,8 @@ export default function PerformanceSurgerySchedule() {
             <button
               onClick={async () => {
                 await loadData();
-                await loadSaleIncentiveData();
-                await loadRevenueCombinedData();
+                await loadNClinicData();
+                await loadRevenueFutureData();
               }}
               className="retry-button"
             >
@@ -1013,7 +1193,6 @@ export default function PerformanceSurgerySchedule() {
                   <td className="name-cell">{row.name}</td>
                   {days.map((day) => {
                     const revenue = getCellRevenue(day, row.id);
-                    const lCount = getCellCount(day, row.id, "L"); // ใช้ L table สำหรับประมาณการรายรับ
                     return (
                       <td
                         key={`revenue-cell-${row.id}-${day}`}
@@ -1021,13 +1200,13 @@ export default function PerformanceSurgerySchedule() {
                           revenue > 0 ? "has-data revenue-cell" : ""
                         }`}
                         onClick={() =>
-                          lCount > 0 && handleCellClick(day, row.id, "L")
+                          revenue > 0 && handleRevenueCellClick(day, row.id)
                         }
                         title={
                           revenue > 0
                             ? `คลิกเพื่อดูรายละเอียด\nยอดรวม: ${formatCurrency(
                                 revenue
-                              )} บาท\nจำนวนผ่าตัด: ${lCount} รายการ`
+                              )} บาท`
                             : ""
                         }
                       >
@@ -1055,6 +1234,18 @@ export default function PerformanceSurgerySchedule() {
         year={selectedYear}
         contactPerson={selectedContactPerson}
         tableType={selectedTableType}
+      />
+      
+      {/* Revenue Details Modal */}
+      <RevenueDetailsModal
+        isOpen={revenueModalOpen}
+        onClose={() => setRevenueModalOpen(false)}
+        nClinicData={selectedNClinicData}
+        futureData={selectedFutureData}
+        date={selectedDate}
+        month={selectedMonth}
+        year={selectedYear}
+        contactPerson={selectedContactPerson}
       />
     </div>
   );

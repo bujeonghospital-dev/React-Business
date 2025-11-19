@@ -287,6 +287,33 @@
   transform: translateY(0);
 }
 
+/* Data Section for Revenue Modal */
+.data-section {
+  margin-bottom: 32px;
+}
+
+.data-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-title {
+  color: #495057;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 3px solid #667eea;
+  display: inline-block;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: #6c757d;
+  font-size: 18px;
+  font-weight: 500;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .modal-content {
@@ -320,5 +347,9 @@
 
   .detail-value.amount {
     font-size: 16px;
+  }
+
+  .section-title {
+    font-size: 18px;
   }
 }

@@ -776,7 +776,7 @@ const CustomerContactDashboard = () => {
 
       if (response.ok) {
         const result = await response.json();
-        let contactsData: FilmContactRecord[] = Array.isArray(result)
+        const contactsData: FilmContactRecord[] = Array.isArray(result)
           ? result
           : result.data || [];
 

@@ -96,11 +96,15 @@ export default function PerformanceSurgerySchedule() {
   const [selectedDate, setSelectedDate] = useState(1);
   const [selectedContactPerson, setSelectedContactPerson] = useState("");
   const [selectedTableType, setSelectedTableType] = useState<"P" | "L">("P");
-  
+
   // Revenue Modal state
   const [revenueModalOpen, setRevenueModalOpen] = useState(false);
-  const [selectedNClinicData, setSelectedNClinicData] = useState<NClinicData[]>([]);
-  const [selectedFutureData, setSelectedFutureData] = useState<RevenueFutureData[]>([]);
+  const [selectedNClinicData, setSelectedNClinicData] = useState<NClinicData[]>(
+    []
+  );
+  const [selectedFutureData, setSelectedFutureData] = useState<
+    RevenueFutureData[]
+  >([]);
 
   // Function to load surgery schedule data from Database
   const loadData = async (isManualRefresh = false) => {
@@ -522,6 +526,7 @@ export default function PerformanceSurgerySchedule() {
       });
       return updatedData;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMonth, selectedYear, days.length, countMap]);
 
   // Month names in Thai
@@ -591,12 +596,16 @@ export default function PerformanceSurgerySchedule() {
     const filteredNClinic = nClinicData.filter((item) => {
       const date = parseDateStr(item.sale_date);
       if (!date) return false;
-      
+
       const itemDay = date.getDate();
       const itemMonth = date.getMonth();
       const itemYear = date.getFullYear();
-      
-      if (itemMonth !== selectedMonth || itemYear !== selectedYear || itemDay !== day) {
+
+      if (
+        itemMonth !== selectedMonth ||
+        itemYear !== selectedYear ||
+        itemDay !== day
+      ) {
         return false;
       }
 
@@ -604,7 +613,7 @@ export default function PerformanceSurgerySchedule() {
       if (rowId === "105-จีน") {
         return item.contact_staff === "จีน" || item.contact_staff === "มุก";
       }
-      
+
       return item.contact_staff === contactPerson;
     });
 
@@ -612,12 +621,16 @@ export default function PerformanceSurgerySchedule() {
     const filteredFuture = revenueFutureData.filter((item) => {
       const date = parseDateStr(item.surgery_date);
       if (!date) return false;
-      
+
       const itemDay = date.getDate();
       const itemMonth = date.getMonth();
       const itemYear = date.getFullYear();
-      
-      if (itemMonth !== selectedMonth || itemYear !== selectedYear || itemDay !== day) {
+
+      if (
+        itemMonth !== selectedMonth ||
+        itemYear !== selectedYear ||
+        itemDay !== day
+      ) {
         return false;
       }
 
@@ -625,7 +638,7 @@ export default function PerformanceSurgerySchedule() {
       if (rowId === "105-จีน") {
         return item.contact_staff === "จีน" || item.contact_staff === "มุก";
       }
-      
+
       return item.contact_staff === contactPerson;
     });
 
@@ -1235,7 +1248,7 @@ export default function PerformanceSurgerySchedule() {
         contactPerson={selectedContactPerson}
         tableType={selectedTableType}
       />
-      
+
       {/* Revenue Details Modal */}
       <RevenueDetailsModal
         isOpen={revenueModalOpen}

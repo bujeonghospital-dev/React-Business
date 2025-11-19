@@ -583,6 +583,7 @@ const CustomerAllDataPage = () => {
     productFilter,
     contactFilter,
     followUpLastStart,
+    currentUser,
     followUpLastEnd,
     followUpNextStart,
     followUpNextEnd,
@@ -1556,7 +1557,7 @@ const CustomerAllDataPage = () => {
                       <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-teal-300 rounded-full text-xs font-medium text-teal-700 shadow-sm">
                         <span className="font-semibold">ค้นหา:</span>
                         <span className="max-w-[200px] truncate">
-                          "{searchTerm}"
+                          &quot;{searchTerm}&quot;
                         </span>
                         <button
                           onClick={() => setSearchTerm("")}

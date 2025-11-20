@@ -1884,7 +1884,9 @@ export default function FacebookAdsManagerPage() {
                                               // เล่น 3 วินาทีแรก แล้ววนลูป
                                               video.addEventListener(
                                                 "timeupdate",
-                                                function () {
+                                                function (
+                                                  this: HTMLVideoElement
+                                                ) {
                                                   if (this.currentTime >= 3) {
                                                     this.currentTime = 0;
                                                   }

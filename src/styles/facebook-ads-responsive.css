@@ -1,0 +1,322 @@
+/* Facebook Ads Manager - Mobile Responsive Styles */
+
+/* Base Responsive Utilities */
+.mobile-hide {
+  display: block;
+}
+
+.mobile-show {
+  display: none;
+}
+
+/* Touch-friendly interactions */
+@media (hover: none) and (pointer: coarse) {
+  button,
+  a,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Mobile Devices (Portrait & Landscape) */
+@media (max-width: 768px) {
+  /* Hide/Show Elements */
+  .mobile-hide {
+    display: none !important;
+  }
+
+  .mobile-show {
+    display: block !important;
+  }
+
+  /* Container Adjustments */
+  .px-6 {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  .py-6 {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+  }
+
+  .px-8 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  .py-8 {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+
+  /* Typography */
+  .text-4xl {
+    font-size: 1.5rem !important;
+    line-height: 2rem !important;
+  }
+
+  .text-3xl {
+    font-size: 1.25rem !important;
+    line-height: 1.75rem !important;
+  }
+
+  .text-2xl {
+    font-size: 1.125rem !important;
+    line-height: 1.5rem !important;
+  }
+
+  .text-xl {
+    font-size: 1rem !important;
+    line-height: 1.5rem !important;
+  }
+
+  /* Grid Layouts */
+  .grid-cols-12 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+
+  .grid-cols-6 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+
+  .grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .grid-cols-2 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+
+  .col-span-6,
+  .col-span-12 {
+    grid-column: span 1 / span 1 !important;
+  }
+
+  /* Gap Adjustments */
+  .gap-6 {
+    gap: 0.75rem !important;
+  }
+
+  .gap-4 {
+    gap: 0.5rem !important;
+  }
+
+  /* Button Sizes */
+  .px-6.py-2 {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.875rem !important;
+  }
+
+  .px-4.py-2 {
+    padding: 0.5rem 0.625rem !important;
+    font-size: 0.8125rem !important;
+  }
+
+  /* Navigation Bar */
+  .flex.items-center.space-x-2 {
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+
+  .flex.items-center.space-x-2 > * {
+    margin: 0 !important;
+  }
+
+  /* Cards */
+  .rounded-3xl {
+    border-radius: 1rem !important;
+  }
+
+  .rounded-2xl {
+    border-radius: 0.75rem !important;
+  }
+
+  /* Tables */
+  .overflow-x-auto {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  table {
+    min-width: 800px !important;
+    font-size: 0.875rem !important;
+  }
+
+  table th,
+  table td {
+    padding: 0.5rem 0.25rem !important;
+    font-size: 0.8125rem !important;
+  }
+
+  /* Modal Adjustments */
+  .modal-overlay {
+    padding: 0.5rem !important;
+  }
+
+  .date-picker-container,
+  .video-modal-container {
+    max-width: 100% !important;
+    margin: 0.5rem !important;
+  }
+
+  /* Image Previews */
+  .w-16.h-16 {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+  }
+
+  .w-12.h-12 {
+    width: 2rem !important;
+    height: 2rem !important;
+  }
+
+  /* Flex Direction Changes */
+  .flex.justify-between {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+  }
+
+  .flex.items-center.justify-between > * {
+    width: 100% !important;
+  }
+
+  /* Date Range Selector */
+  select {
+    width: 100% !important;
+    font-size: 0.875rem !important;
+  }
+}
+
+/* Small Mobile Devices */
+@media (max-width: 375px) {
+  .text-4xl {
+    font-size: 1.25rem !important;
+  }
+
+  .text-3xl {
+    font-size: 1.125rem !important;
+  }
+
+  .text-2xl {
+    font-size: 1rem !important;
+  }
+
+  .px-6 {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  .px-8 {
+    padding-left: 0.625rem !important;
+    padding-right: 0.625rem !important;
+  }
+
+  table th,
+  table td {
+    padding: 0.375rem 0.25rem !important;
+    font-size: 0.75rem !important;
+  }
+}
+
+/* Tablet Devices */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .tablet-mode {
+    width: 100% !important;
+  }
+
+  /* Adjust Grid for Tablet */
+  .grid-cols-12 {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  }
+
+  .col-span-6 {
+    grid-column: span 6 / span 6 !important;
+  }
+
+  .grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* Typography */
+  .text-4xl {
+    font-size: 2rem !important;
+  }
+
+  .text-3xl {
+    font-size: 1.5rem !important;
+  }
+
+  /* Tables */
+  table {
+    font-size: 0.9375rem !important;
+  }
+
+  table th,
+  table td {
+    padding: 0.625rem 0.5rem !important;
+  }
+}
+
+/* Landscape Mode Optimizations */
+@media (max-width: 768px) and (orientation: landscape) {
+  .min-h-screen {
+    min-height: 100vh !important;
+  }
+
+  .py-6,
+  .py-8 {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  /* Compact modal for landscape */
+  .modal-overlay {
+    padding: 0.25rem !important;
+  }
+
+  .date-picker-container,
+  .video-modal-container {
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
+}
+
+/* High DPI Displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  img {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  /* Add dark mode styles if needed */
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .mobile-hide,
+  .desktop-only,
+  button,
+  .bg-gradient-to-br,
+  .shadow-2xl {
+    display: none !important;
+  }
+
+  * {
+    background: white !important;
+    color: black !important;
+  }
+}

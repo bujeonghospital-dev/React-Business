@@ -220,6 +220,14 @@ const CustomerContactDashboard = () => {
   const [callMatrixYaleTotals, setCallMatrixYaleTotals] = useState<
     Record<string, number>
   >({});
+
+  // User Log Robocall States - ตารางบันทึกการโทรตามช่วงเวลา
+  const [userLogRobocallData, setUserLogRobocallData] = useState<
+    Record<string, Record<string, number>>
+  >({});
+  const [userLogRobocallTotals, setUserLogRobocallTotals] = useState<
+    Record<string, number>
+  >({});
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
@@ -276,7 +284,13 @@ const CustomerContactDashboard = () => {
     metric: "yale" | "outgoing" | "passed"
   ) => {
     if (metric === "yale") {
-      const slotData = callMatrixYaleCounts[hourSlot];
+      // ใช้ข้อมูลจาก API user_log_robocall
+      // Format: "09:00-10:00", "10:00-11:00" เป็นต้น
+      const hour = parseInt(hourSlot);
+      const timeSlotKey = `${hour.toString().padStart(2, "0")}:00-${(hour + 1)
+        .toString()
+        .padStart(2, "0")}:00`;
+      const slotData = userLogRobocallData[timeSlotKey];
       if (!slotData) {
         return 0;
       }
@@ -317,7 +331,8 @@ const CustomerContactDashboard = () => {
     completed: filmContactsArray.filter((c) => c.status === "completed").length,
   };
 
-  const totalYaleCalls = Object.values(callMatrixYaleTotals).reduce(
+  // คำนวณยอดรวมจากข้อมูล user_log_robocall
+  const totalYaleCalls = Object.values(userLogRobocallTotals).reduce(
     (sum, value) => sum + value,
     0
   );
@@ -328,6 +343,7 @@ const CustomerContactDashboard = () => {
     fetchGoogleSheetsData();
     fetchRobocallData();
     fetchLogCallAiData();
+    fetchUserLogRobocallData(); // โหลดข้อมูลตารางบันทึกการโทร
     fetchCallMatrixYaleSummary();
     fetchFilmData();
 
@@ -341,7 +357,8 @@ const CustomerContactDashboard = () => {
 
     // Auto refresh ทุก 30 วินาที - ตารางบันทึกการโทรและ Google Sheets
     const slowInterval = setInterval(() => {
-      fetchCallMatrixYaleSummary(); // ตารางบันทึกการโทรตามช่วงเวลา
+      fetchUserLogRobocallData(); // ตารางบันทึกการโทรตามช่วงเวลาจาก API ใหม่
+      fetchCallMatrixYaleSummary(); // ตารางบันทึกการโทรตามช่วงเวลา (fallback)
       fetchFilmData(); // Film data
       fetchGoogleSheetsData(); // ตารางสรุป call_AI
     }, 30000); // 30 วินาที
@@ -881,6 +898,70 @@ const CustomerContactDashboard = () => {
     }
   };
 
+  // Fetch User Log Robocall data from API
+  const fetchUserLogRobocallData = async () => {
+    try {
+      console.log("🔄 Fetching user_log_robocall data for date:", selectedDate);
+
+      const params = new URLSearchParams();
+      params.append("report_date", selectedDate); // ใช้ report_date แทน
+      params.append("limit", "1000");
+
+      const response = await fetch(
+        `/api/user-log-robocall?${params.toString()}`
+      );
+      const result = await response.json();
+
+      if (result.success && Array.isArray(result.data)) {
+        // จัดกลุ่มข้อมูลตาม caller_id_name และ time slot
+        const counts: Record<string, Record<string, number>> = {};
+        const totals: Record<string, number> = {};
+
+        result.data.forEach((log: any) => {
+          const callerId = log.caller_id_name || log.user_id || "Unknown";
+
+          // วนลูปทุก time slot (09:00-10:00 ถึง 19:00-20:00)
+          for (let hour = 9; hour <= 19; hour++) {
+            // Key สำหรับเก็บข้อมูลและแสดงผล
+            const timeSlotKey = `${hour.toString().padStart(2, "0")}:00-${(
+              hour + 1
+            )
+              .toString()
+              .padStart(2, "0")}:00`;
+
+            // Key ของคอลัมน์ในตาราง (ตรงกับ API response: "09:00-10:00", "10:00-11:00")
+            const columnKey = timeSlotKey;
+
+            // ดึงค่าจากคอลัมน์ในตาราง
+            const value = parseInt(log[columnKey]) || 0;
+
+            if (value > 0) {
+              if (!counts[timeSlotKey]) {
+                counts[timeSlotKey] = {};
+              }
+              counts[timeSlotKey][callerId] = value;
+            }
+          }
+
+          // ใช้ total_day สำหรับยอดรวม
+          if (log.total_day) {
+            totals[callerId] = parseInt(log.total_day) || 0;
+          }
+        });
+
+        setUserLogRobocallData(counts);
+        setUserLogRobocallTotals(totals);
+        console.log("✅ User log robocall data loaded:", counts);
+        console.log("📊 Totals:", totals);
+        console.log("📋 Sample data:", result.data[0]);
+      } else {
+        console.error("❌ Failed to load user_log_robocall:", result.error);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching user_log_robocall data:", error);
+    }
+  };
+
   // Fetch Yale call summary from Python API
   const fetchCallMatrixYaleSummary = async () => {
     try {
@@ -1216,6 +1297,7 @@ const CustomerContactDashboard = () => {
   const handleRefresh = async () => {
     await fetchContacts();
     await fetchGoogleSheetsData();
+    await fetchUserLogRobocallData();
     await fetchCallMatrixYaleSummary();
     await fetchFilmData();
     await fetchFilmContacts();
@@ -1661,7 +1743,7 @@ const CustomerContactDashboard = () => {
                     จำนวนโทร
                   </th>
                   {agentDisplayList.map((agent) => {
-                    const value = callMatrixYaleTotals[agent.id] ?? 0;
+                    const value = userLogRobocallTotals[agent.id] ?? 0;
                     return (
                       <td
                         key={`total-${agent.id}`}

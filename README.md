@@ -1,5 +1,30 @@
 # React Business - Facebook Ads Manager
 
+## 📱 Mobile Responsive Update (v2.0.0)
+
+✅ **รองรับมือถือทุกรุ่น!** เว็บไซต์ได้รับการปรับปรุงด้วย ScaledCanvas และ Responsive Web Design
+
+👉 **คู่มือสำหรับมือถือ:** [FACEBOOK_ADS_MOBILE_RESPONSIVE_GUIDE.md](./FACEBOOK_ADS_MOBILE_RESPONSIVE_GUIDE.md)  
+👉 **การทดสอบมือถือ:** [MOBILE_TESTING_CHECKLIST.md](./MOBILE_TESTING_CHECKLIST.md)
+
+### 🎯 Features
+
+- ✅ รองรับ iPhone, iPad, Android ทุกรุ่น
+- ✅ Responsive Design ด้วย ScaledCanvas
+- ✅ Touch-friendly Interface (44x44px buttons)
+- ✅ Horizontal Scroll Tables
+- ✅ Portrait & Landscape Support
+- ✅ Auto-refresh ทุก 1 นาที
+
+### 📱 Quick Mobile Testing
+
+```bash
+# Windows PowerShell
+.\test-mobile.ps1
+```
+
+---
+
 ## 🚀 Quick Start for Production
 
 **มีปัญหาเรื่อง "ไม่พบ Access Token" บน Production?**

@@ -45,6 +45,11 @@ export default function PerformanceSurgerySchedule() {
   >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Refs for table wrappers to restore scroll position
+  const pTableRef = React.useRef<HTMLDivElement>(null);
+  const lTableRef = React.useRef<HTMLDivElement>(null);
+  const revenueTableRef = React.useRef<HTMLDivElement>(null);
   const [countMap, setCountMap] = useState<
     Map<string, Map<number, SurgeryScheduleData[]>>
   >(new Map());
@@ -82,6 +87,7 @@ export default function PerformanceSurgerySchedule() {
     "107-เจ": { kpiMonth: 40, kpiToDate: 0, actual: 0 },
     "108-ว่าน": { kpiMonth: 40, kpiToDate: 0, actual: 0 },
     "109-ไม่ระบุ": { kpiMonth: 0, kpiToDate: 0, actual: 0 },
+    "110-ส่วนกลาง": { kpiMonth: 0, kpiToDate: 0, actual: 0 },
   });
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -101,10 +107,6 @@ export default function PerformanceSurgerySchedule() {
   >([]);
   // Function to load surgery schedule data from Database
   const loadData = async (isManualRefresh = false) => {
-    // บันทึกตำแหน่ง scroll ปัจจุบัน
-    const scrollX = window.scrollX;
-    const scrollY = window.scrollY;
-
     if (isManualRefresh) {
       setIsRefreshing(true);
     } else {
@@ -119,11 +121,6 @@ export default function PerformanceSurgerySchedule() {
       const actualData = await fetchSurgeryActualFromDatabase();
       setSurgeryActualData(actualData);
       setLastUpdated(new Date());
-
-      // กลับไปที่ตำแหน่ง scroll เดิมหลังจากโหลดข้อมูลเสร็จ
-      setTimeout(() => {
-        window.scrollTo(scrollX, scrollY);
-      }, 0);
     } catch (error: any) {
       setError(error.message || "เกิดข้อผิดพลาดในการโหลดข้อมูล");
     } finally {
@@ -155,10 +152,6 @@ export default function PerformanceSurgerySchedule() {
   // };
   // Function to load N_Clinic Revenue data (sale_date <= today)
   const loadNClinicData = async () => {
-    // บันทึกตำแหน่ง scroll ปัจจุบัน
-    const scrollX = window.scrollX;
-    const scrollY = window.scrollY;
-
     try {
       console.log(
         "🔄 Starting to load N_Clinic data (n_income + n_customer + n_staff)..."
@@ -179,11 +172,6 @@ export default function PerformanceSurgerySchedule() {
       });
       setNClinicData(clinicData);
       console.log("✅ Loaded N_Clinic data from n_income");
-
-      // กลับไปที่ตำแหน่ง scroll เดิมหลังจากโหลดข้อมูลเสร็จ
-      setTimeout(() => {
-        window.scrollTo(scrollX, scrollY);
-      }, 0);
     } catch (error: any) {
       console.error("❌ Error loading N_Clinic data:", error);
       console.error("Error details:", {
@@ -196,10 +184,6 @@ export default function PerformanceSurgerySchedule() {
   };
   // Function to load Future Revenue data (surgery_date >= today)
   const loadRevenueFutureData = async () => {
-    // บันทึกตำแหน่ง scroll ปัจจุบัน
-    const scrollX = window.scrollX;
-    const scrollY = window.scrollY;
-
     try {
       console.log(
         "🔄 Starting to load Revenue data (bjh_all_leads - surgery_date >= today)..."
@@ -225,11 +209,6 @@ export default function PerformanceSurgerySchedule() {
       console.log(
         "✅ Loaded Revenue data (bjh_all_leads - surgery_date >= today)"
       );
-
-      // กลับไปที่ตำแหน่ง scroll เดิมหลังจากโหลดข้อมูลเสร็จ
-      setTimeout(() => {
-        window.scrollTo(scrollX, scrollY);
-      }, 0);
     } catch (error: any) {
       console.error("❌ Error loading Revenue data:", error);
       console.error("Error details:", {
@@ -240,6 +219,84 @@ export default function PerformanceSurgerySchedule() {
       setRevenueFutureData([]);
     }
   };
+  // Save scroll positions to sessionStorage
+  const saveScrollPositions = () => {
+    if (pTableRef.current) {
+      sessionStorage.setItem(
+        "pTableScrollLeft",
+        pTableRef.current.scrollLeft.toString()
+      );
+    }
+    if (lTableRef.current) {
+      sessionStorage.setItem(
+        "lTableScrollLeft",
+        lTableRef.current.scrollLeft.toString()
+      );
+    }
+    if (revenueTableRef.current) {
+      sessionStorage.setItem(
+        "revenueTableScrollLeft",
+        revenueTableRef.current.scrollLeft.toString()
+      );
+    }
+  };
+
+  // Restore scroll positions from sessionStorage
+  const restoreScrollPositions = () => {
+    const pScroll = sessionStorage.getItem("pTableScrollLeft");
+    const lScroll = sessionStorage.getItem("lTableScrollLeft");
+    const revenueScroll = sessionStorage.getItem("revenueTableScrollLeft");
+
+    if (pScroll && pTableRef.current) {
+      pTableRef.current.scrollLeft = parseInt(pScroll);
+    }
+    if (lScroll && lTableRef.current) {
+      lTableRef.current.scrollLeft = parseInt(lScroll);
+    }
+    if (revenueScroll && revenueTableRef.current) {
+      revenueTableRef.current.scrollLeft = parseInt(revenueScroll);
+    }
+  };
+
+  // Add scroll event listeners to save positions
+  useEffect(() => {
+    const pTable = pTableRef.current;
+    const lTable = lTableRef.current;
+    const revenueTable = revenueTableRef.current;
+
+    if (pTable) {
+      pTable.addEventListener("scroll", saveScrollPositions);
+    }
+    if (lTable) {
+      lTable.addEventListener("scroll", saveScrollPositions);
+    }
+    if (revenueTable) {
+      revenueTable.addEventListener("scroll", saveScrollPositions);
+    }
+
+    return () => {
+      if (pTable) {
+        pTable.removeEventListener("scroll", saveScrollPositions);
+      }
+      if (lTable) {
+        lTable.removeEventListener("scroll", saveScrollPositions);
+      }
+      if (revenueTable) {
+        revenueTable.removeEventListener("scroll", saveScrollPositions);
+      }
+    };
+  }, []);
+
+  // Restore scroll positions after data loads
+  useEffect(() => {
+    if (!isLoading) {
+      // Use setTimeout to ensure DOM is fully rendered
+      setTimeout(() => {
+        restoreScrollPositions();
+      }, 100);
+    }
+  }, [isLoading, selectedMonth, selectedYear]);
+
   // Fetch surgery data when component mounts
   useEffect(() => {
     (async () => {
@@ -748,6 +805,14 @@ export default function PerformanceSurgerySchedule() {
     { id: "107-เจ", name: "107-เจ" },
     { id: "108-ว่าน", name: "108-ว่าน" },
   ];
+
+  // Data for revenue table only (ประมาณการรายรับ)
+  const revenueScheduleRows = [
+    { id: "105-จีน", name: "105-จีน & มุก" },
+    { id: "107-เจ", name: "107-เจ" },
+    { id: "108-ว่าน", name: "108-ว่าน" },
+    { id: "110-ส่วนกลาง", name: "ส่วนกลาง" },
+  ];
   return (
     <div className="surgery-schedule-container">
       <div className="schedule-header">
@@ -923,6 +988,85 @@ export default function PerformanceSurgerySchedule() {
               </div>
             );
           })}
+          {/* ส่วนกลาง Summary Card */}
+          {(() => {
+            const row = { id: "110-ส่วนกลาง", name: "ส่วนกลาง" };
+            const pActual = kpiData[row.id]?.actual || 0;
+            const pDiff = calculateDiff(row.id);
+            const pKpiToDate = kpiData[row.id]?.kpiToDate || 0;
+            
+            // Calculate revenue actual
+            let revenueActual = 0;
+            days.forEach((day) => {
+              revenueActual += getCellRevenue(day, row.id);
+            });
+            
+            // Calculate revenue diff
+            const revenueKpiToDate = pKpiToDate * 25000;
+            const revenueDiff = revenueActual - revenueKpiToDate;
+            
+            return (
+              <div key={row.id} className="team-summary-card team-color-4">
+                <div className="team-summary-header">
+                  <h3>{row.name}</h3>
+                </div>
+                <div className="team-summary-body">
+                  <div className="summary-metric">
+                    <div className="metric-label">รายรับ</div>
+                    <div className="metric-row">
+                      <div className="metric-item">
+                        <div className="metric-title">KPI to date</div>
+                        <div className="metric-value">
+                          {formatCurrency(revenueKpiToDate)}
+                        </div>
+                      </div>
+                      <div className="metric-item">
+                        <div className="metric-title">Actual</div>
+                        <div className="metric-value">
+                          {formatCurrency(revenueActual)}
+                        </div>
+                      </div>
+                      <div className="metric-item">
+                        <div className="metric-title">Diff</div>
+                        <div
+                          className={`metric-value ${
+                            revenueDiff >= 0 ? "positive" : "negative"
+                          }`}
+                        >
+                          {revenueDiff >= 0 ? "+" : "−"}
+                          {formatCurrency(Math.abs(revenueDiff))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="summary-metric">
+                    <div className="metric-label">จำนวนผ่าตัด</div>
+                    <div className="metric-row">
+                      <div className="metric-item">
+                        <div className="metric-title">KPI to date</div>
+                        <div className="metric-value">{pKpiToDate}</div>
+                      </div>
+                      <div className="metric-item">
+                        <div className="metric-title">Actual</div>
+                        <div className="metric-value">{pActual}</div>
+                      </div>
+                      <div className="metric-item">
+                        <div className="metric-title">Diff</div>
+                        <div
+                          className={`metric-value ${
+                            pDiff >= 0 ? "positive" : "negative"
+                          }`}
+                        >
+                          {pDiff >= 0 ? "+" : "−"}
+                          {Math.abs(pDiff)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
       {/* Loading Indicator */}
@@ -977,7 +1121,7 @@ export default function PerformanceSurgerySchedule() {
       )}
       {/* Table - วันที่ได้นัดผ่า P */}
       <div className="table-section ">
-        <div className="table-wrapper">
+        <div className="table-wrapper" ref={pTableRef}>
           <table className="schedule-table">
             <thead>
               <tr>
@@ -1033,7 +1177,7 @@ export default function PerformanceSurgerySchedule() {
       </div>
       {/* Table - วันที่ผ่าตัด L */}
       <div className="table-section">
-        <div className="table-wrapper">
+        <div className="table-wrapper" ref={lTableRef}>
           <table className="schedule-table">
             <thead>
               <tr>
@@ -1089,7 +1233,7 @@ export default function PerformanceSurgerySchedule() {
       </div>
       {/* Table - ประมาณการรายรับ */}
       <div className="table-section">
-        <div className="table-wrapper">
+        <div className="table-wrapper" ref={revenueTableRef}>
           <table className="schedule-table">
             <thead>
               <tr>
@@ -1110,7 +1254,7 @@ export default function PerformanceSurgerySchedule() {
               </tr>
             </thead>
             <tbody>
-              {pScheduleRows.map((row, rowIndex) => (
+              {revenueScheduleRows.map((row, rowIndex) => (
                 <tr
                   key={`revenue-row-${row.id}`}
                   className={rowIndex % 2 === 0 ? "even-row" : "odd-row"}

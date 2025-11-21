@@ -29,6 +29,7 @@ export const CONTACT_PERSON_MAPPING: { [key: string]: string } = {
   "107-เจ": "เจ",
   "108-ว่าน": "ว่าน",
   "109-ไม่ระบุ": "ไม่ระบุ", // For empty contact person
+  "110-ส่วนกลาง": "ส่วนกลาง",
 };
 // Fetch data from Google Sheets via API Route (using Service Account)
 export async function fetchSurgeryScheduleData(): Promise<
@@ -195,4 +196,4 @@ export function getRowIdFromContactPerson(contactPerson: string): string {
     }
   }
   return contactPerson;
-}
+}

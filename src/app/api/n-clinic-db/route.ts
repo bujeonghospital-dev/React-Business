@@ -39,18 +39,18 @@ export async function GET(request: NextRequest) {
     );
     // SQL query - ใช้ n_income table
     let query = `
-      SELECT 
-        TO_CHAR(ni.sale_date::date, 'YYYY-MM-DD') AS income_date,
-        ni.income,
-        ni.payment AS payment_type,
-        ni.display_name AS income_display_name,
-        ns.nickname AS staff_display_name
+      SELECT
+        ni.sale_date       AS income_date,
+        ni.income,          
+        ni.payment         AS payment_type,
+        ni.display_name    AS income_display_name,
+        ns.nickname        AS staff_display_name
       FROM postgres."BJH-Server".n_income ni
       LEFT JOIN postgres."BJH-Server".n_customer nc
-        ON ni.code = nc.code
+             ON ni.code = nc.code
       LEFT JOIN postgres."BJH-Server".n_staff ns
-        ON nc.ownercode = ns.code
-      WHERE DATE(ni.sale_date) <= DATE(NOW())
+             ON nc.ownercode = ns.code
+      WHERE ni.sale_date <= CURRENT_DATE
     `;
     const params: any[] = [];
     let paramIndex = 1;

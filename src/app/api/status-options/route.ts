@@ -1,27 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Pool } from "pg";
-// Create PostgreSQL connection pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl:
-    process.env.NODE_ENV === "production"
-      ? { rejectUnauthorized: false }
-      : false,
-});
+import pool from "@/lib/db";
+
 export async function GET(request: NextRequest) {
   try {
-    // Check if DATABASE_URL is configured
-    if (!process.env.DATABASE_URL) {
-      console.error("❌ DATABASE_URL is not configured");
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Database configuration missing",
-          details: "DATABASE_URL environment variable is not set",
-        },
-        { status: 500 }
-      );
-    }
     // Test connection first
     const testResult = await pool.query("SELECT 1 as test");
     console.log("✅ Database connection successful");
@@ -199,4 +180,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+}

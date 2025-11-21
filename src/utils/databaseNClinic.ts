@@ -1,15 +1,14 @@
 // Database API Integration for N_Clinic Revenue Data (sale_date <= today)
 import { SurgeryScheduleData } from "./googleSheets";
 export interface NClinicData {
-  sale_code?: string;
-  sale_date?: string;
-  item_name?: string;
-  proposed_amount?: number;
-  contact_staff?: string;
-  full_name?: string;
+  income_date?: string; // วันที่ (was sale_date)
+  income?: number; // เงิน (was proposed_amount)
+  payment_type?: string; // ประเภทการชำระเงิน (was payment)
+  income_display_name?: string; // ชื่อลูกค้า (was display_name)
+  staff_display_name?: string; // ชื่อพนักงาน (was contact_staff/nickname)
 }
 /**
- * Fetch n_clinic revenue data from n_saleIncentive + n_staff + bjh_all_leads (sale_date <= วันนี้)
+ * Fetch n_clinic revenue data from n_income + n_customer + n_staff
  */
 export async function fetchNClinicFromDatabase(): Promise<NClinicData[]> {
   try {
@@ -36,7 +35,7 @@ export async function fetchNClinicFromDatabase(): Promise<NClinicData[]> {
         `ไม่สามารถโหลดข้อมูลได้: ${response.statusText}\n\n` +
           "กรุณาตรวจสอบ:\n" +
           "1. Database connection ทำงานปกติ\n" +
-          "2. ตาราง n_saleIncentive, n_staff และ bjh_all_leads มีอยู่ในฐานข้อมูล\n" +
+          "2. ตาราง n_income, n_customer และ n_staff มีอยู่ในฐานข้อมูล\n" +
           "3. Environment variables ถูกต้อง"
       );
     }
@@ -49,13 +48,13 @@ export async function fetchNClinicFromDatabase(): Promise<NClinicData[]> {
     console.log(
       `✅ Successfully fetched ${
         result.total || 0
-      } n_clinic records from Database (sale_date <= today)`
+      } n_clinic records from Database (n_income)`
     );
-    // Transform data to ensure proposed_amount is a number
+    // Transform data to ensure income is a number
     const transformedData = (result.data || []).map((item: any) => ({
       ...item,
-      proposed_amount: item.proposed_amount
-        ? parseFloat(item.proposed_amount.toString().replace(/,/g, ""))
+      income: item.income
+        ? parseFloat(item.income.toString().replace(/,/g, ""))
         : 0,
     }));
     console.log("🔍 Transformed n_clinic data sample:", {
@@ -109,8 +108,8 @@ export function parseDatabaseDate(dateStr: string): Date | null {
   }
 }
 /**
- * Calculate daily revenue by person from n_clinic data (sale_date <= today)
- * ใช้ proposed_amount จาก bjh_all_leads ที่ match กับ n_saleIncentive
+ * Calculate daily revenue by person from n_clinic data
+ * ใช้ income จาก n_income และ staff_display_name จาก n_staff
  */
 export function calculateDailyRevenueByPersonNClinic(
   data: NClinicData[],
@@ -131,12 +130,12 @@ export function calculateDailyRevenueByPersonNClinic(
     targetYear: year,
   });
   data.forEach((item, index) => {
-    // ใช้ sale_date
-    const dateStr = item.sale_date || "";
+    // ใช้ income_date
+    const dateStr = item.income_date || "";
     if (!dateStr) {
       skippedNoDate++;
       if (index < 3) {
-        console.log(`⚠️ Record ${index} has no sale_date:`, item);
+        console.log(`⚠️ Record ${index} has no income_date:`, item);
       }
       return;
     }
@@ -146,7 +145,7 @@ export function calculateDailyRevenueByPersonNClinic(
       skippedInvalidDate++;
       if (index < 3) {
         console.log(`⚠️ Record ${index} has invalid date format:`, {
-          sale_date: dateStr,
+          income_date: dateStr,
           item,
         });
       }
@@ -155,23 +154,23 @@ export function calculateDailyRevenueByPersonNClinic(
     if (date.getUTCMonth() === month && date.getUTCFullYear() === year) {
       matchedCount++;
       const day = date.getUTCDate();
-      // ใช้ contact_staff (nickname จาก n_staff)
-      const person = (item.contact_staff || "").trim() || "ไม่ระบุ";
-      // ใช้ proposed_amount จาก bjh_all_leads
+      // ใช้ staff_display_name (nickname จาก n_staff)
+      const person = (item.staff_display_name || "").trim() || "ไม่ระบุ";
+      // ใช้ income จาก n_income
       const amount =
-        typeof item.proposed_amount === "number"
-          ? item.proposed_amount
-          : item.proposed_amount
-          ? parseFloat(String(item.proposed_amount).replace(/,/g, ""))
+        typeof item.income === "number"
+          ? item.income
+          : item.income
+          ? parseFloat(String(item.income).replace(/,/g, ""))
           : 0;
       if (matchedCount <= 3) {
         console.log(`🔢 N_Clinic amount parsing for record ${index}:`, {
-          raw: item.proposed_amount,
-          type: typeof item.proposed_amount,
+          raw: item.income,
+          type: typeof item.income,
           parsed: amount,
           person,
           day,
-          sale_date: item.sale_date,
+          income_date: item.income_date,
         });
       }
       if (amount > 0) {
@@ -186,9 +185,9 @@ export function calculateDailyRevenueByPersonNClinic(
           console.log(
             `✅ Added n_clinic revenue: ${person} on day ${day}: ${amount}`,
             {
-              contact_staff: item.contact_staff,
-              sale_date: item.sale_date,
-              proposed_amount: item.proposed_amount,
+              staff_display_name: item.staff_display_name,
+              income_date: item.income_date,
+              income: item.income,
               parsedDate: date.toISOString(),
             }
           );
@@ -222,4 +221,4 @@ export function calculateDailyRevenueByPersonNClinic(
     }
   );
   return revenueMap;
-}
+}

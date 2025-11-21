@@ -58,7 +58,7 @@ export default function RevenueDetailsModal({
   };
   // Calculate total revenue
   const totalRevenue =
-    nClinicData.reduce((sum, item) => sum + (item.proposed_amount || 0), 0) +
+    nClinicData.reduce((sum, item) => sum + (item.income || 0), 0) +
     futureData.reduce((sum, item) => sum + (item.proposed_amount || 0), 0);
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -105,36 +105,36 @@ export default function RevenueDetailsModal({
                   <div className="card-header">
                     <span className="card-number">#{index + 1}</span>
                     <span className="card-name">
-                      {item.contact_staff || "ไม่ระบุ"}
+                      {item.income_display_name || "ไม่ระบุ"}
                     </span>
                   </div>
                   <div className="card-body">
                     <div className="detail-row">
                       <span className="detail-icon">👤</span>
-                      <span className="detail-label">ชื่อผู้ติดต่อ:</span>
+                      <span className="detail-label">ชื่อลูกค้า:</span>
                       <span className="detail-value">
-                        {item.contact_staff || "-"}
+                        {item.income_display_name || "-"}
                       </span>
                     </div>
                     <div className="detail-row">
-                      <span className="detail-icon">🛍️</span>
-                      <span className="detail-label">ผลิตภัณฑ์ที่สนใจ:</span>
+                      <span className="detail-icon">👥</span>
+                      <span className="detail-label">ผู้ติดต่อ:</span>
                       <span className="detail-value">
-                        {item.item_name || "-"}
+                        {item.staff_display_name || "-"}
                       </span>
                     </div>
                     <div className="detail-row">
                       <span className="detail-icon">📅</span>
-                      <span className="detail-label">ทำเสร็จวันที่:</span>
+                      <span className="detail-label">วันที่นัดผ่าตัด:</span>
                       <span className="detail-value">
-                        {formatDate(item.sale_date)}
+                        {formatDate(item.income_date)}
                       </span>
                     </div>
                     <div className="detail-row highlight-row">
                       <span className="detail-icon">💰</span>
-                      <span className="detail-label">ราคารวม:</span>
+                      <span className="detail-label">ราคาที่เสนอ:</span>
                       <span className="detail-value amount">
-                        {formatCurrency(item.proposed_amount)} บาท
+                        {formatCurrency(item.income)} บาท
                       </span>
                     </div>
                   </div>
@@ -224,4 +224,4 @@ export default function RevenueDetailsModal({
       </div>
     </div>
   );
-}
+}

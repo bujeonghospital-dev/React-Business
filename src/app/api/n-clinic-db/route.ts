@@ -8,7 +8,7 @@ const cache = new Map<
 const CACHE_DURATION = 30000; // 30 seconds
 /**
  * GET /api/n-clinic-db
- * ดึงข้อมูลรายรับจาก n_saleIncentive + n_staff + bjh_all_leads (sale_date <= วันนี้)
+ * ดึงข้อมูลรายรับจาก n_income + n_customer + n_staff (sale_date <= วันนี้)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -35,49 +35,42 @@ export async function GET(request: NextRequest) {
       });
     }
     console.log(
-      `📡 Fetching n_clinic data from n_saleIncentive + n_staff + bjh_all_leads (sale_date <= today)...`
+      `📡 Fetching n_clinic data from n_income + n_customer + n_staff...`
     );
-    // SQL query - ใช้ sale_date แทน surgery_date
+    // SQL query - ใช้ n_income table
     let query = `
       SELECT 
-        s.sale_code,
-        TO_CHAR(s.sale_date::date, 'YYYY-MM-DD') as sale_date,
-        s.item_name,
-        CASE 
-          WHEN bl.proposed_amount::text ~ '^[0-9,]+$' 
-          THEN ROUND(CAST(REPLACE(bl.proposed_amount::text, ',', '') AS NUMERIC))::INTEGER
-          ELSE NULL
-        END AS proposed_amount,
-        n.nickname as contact_staff,
-        CONCAT(n.name, ' ', n.surname) AS full_name
-      FROM postgres."BJH-Server"."n_saleIncentive" AS s
-      LEFT JOIN postgres."BJH-Server".n_staff AS n
-        ON s.emp_code = n.code
-      LEFT JOIN postgres."BJH-Server".bjh_all_leads AS bl
-        ON s.emp_name = bl.contact_staff
-        AND s.sale_date::date = bl.surgery_date::date
-      WHERE DATE(s.sale_date) <= DATE(NOW())
-        AND bl.proposed_amount IS NOT NULL
+        TO_CHAR(ni.sale_date::date, 'YYYY-MM-DD') AS income_date,
+        ni.income,
+        ni.payment AS payment_type,
+        ni.display_name AS income_display_name,
+        ns.nickname AS staff_display_name
+      FROM postgres."BJH-Server".n_income ni
+      LEFT JOIN postgres."BJH-Server".n_customer nc
+        ON ni.code = nc.code
+      LEFT JOIN postgres."BJH-Server".n_staff ns
+        ON nc.ownercode = ns.code
+      WHERE DATE(ni.sale_date) <= DATE(NOW())
     `;
     const params: any[] = [];
     let paramIndex = 1;
-    // Filter by month and year if provided (ใช้ sale_date)
+    // Filter by month and year if provided
     if (month && year) {
-      query += ` AND EXTRACT(MONTH FROM s.sale_date::date) = $${paramIndex++}`;
+      query += ` AND EXTRACT(MONTH FROM ni.sale_date::date) = $${paramIndex++}`;
       params.push(parseInt(month));
-      query += ` AND EXTRACT(YEAR FROM s.sale_date::date) = $${paramIndex++}`;
+      query += ` AND EXTRACT(YEAR FROM ni.sale_date::date) = $${paramIndex++}`;
       params.push(parseInt(year));
     } else if (year) {
-      query += ` AND EXTRACT(YEAR FROM s.sale_date::date) = $${paramIndex++}`;
+      query += ` AND EXTRACT(YEAR FROM ni.sale_date::date) = $${paramIndex++}`;
       params.push(parseInt(year));
     }
-    // Filter by contact person if provided (ใช้ nickname)
+    // Filter by contact person if provided
     if (contactPerson && contactPerson !== "all") {
-      query += ` AND n.nickname = $${paramIndex++}`;
+      query += ` AND ns.nickname = $${paramIndex++}`;
       params.push(contactPerson);
     }
-    // Order by sale_date
-    query += ` ORDER BY s.sale_date::date ASC`;
+    // Order by sale_date DESC
+    query += ` ORDER BY ni.sale_date DESC`;
     // Execute query
     const client = await pool.connect();
     try {
@@ -91,8 +84,7 @@ export async function GET(request: NextRequest) {
         data: result.rows,
         total: result.rows.length,
         timestamp: new Date().toISOString(),
-        source:
-          "PostgreSQL Database (n_saleIncentive + n_staff + bjh_all_leads - sale_date <= today)",
+        source: "PostgreSQL Database (n_income + n_customer + n_staff)",
         debug: {
           filters: {
             month: month || "all",
@@ -145,7 +137,7 @@ export async function GET(request: NextRequest) {
         details: {
           type: error.name,
           message: error.message,
-          hint: "ตรวจสอบว่า database มีตาราง n_saleIncentive, n_staff และ bjh_all_leads",
+          hint: "ตรวจสอบว่า database มีตาราง n_income, n_customer และ n_staff",
         },
         data: [],
       },
@@ -163,4 +155,4 @@ export async function OPTIONS(request: NextRequest) {
       "Access-Control-Allow-Headers": "Content-Type",
     },
   });
-}
+}

@@ -29,11 +29,19 @@ class _FacebookAdsWebViewState extends State<FacebookAdsWebView> {
     clearCache: false,
     thirdPartyCookiesEnabled: true,
     mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+    // Performance optimizations
+    cacheMode: CacheMode.LOAD_CACHE_ELSE_NETWORK,
+    disableDefaultErrorPage: true,
+    minimumFontSize: 10,
+    useHybridComposition: true,
+    // User Agent to appear as normal browser
+    userAgent:
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
   );
 
   PullToRefreshController? pullToRefreshController;
   String url = "";
-  final String initialUrl = "https://tpp-thanakon.store/facebook-ads-manager";
+  final String initialUrl = "https://tpp-thanakon.store";
   double progress = 0;
   bool isLoading = true;
   bool hasError = false;
@@ -56,14 +64,14 @@ class _FacebookAdsWebViewState extends State<FacebookAdsWebView> {
       );
     }
 
-    // Set longer timeout for loading (60 seconds)
-    Future.delayed(const Duration(seconds: 60), () {
+    // Set timeout for loading (45 seconds - allow time for API retry)
+    Future.delayed(const Duration(seconds: 45), () {
       if (mounted && isLoading) {
         setState(() {
           isLoading = false;
           hasError = true;
           errorMessage =
-              'ไม่สามารถเชื่อมต่อได้\n\nกรุณาตรวจสอบ:\n• การเชื่อมต่ออินเทอร์เน็ต\n• เว็บไซต์อาจมีปัญหาชั่วคราว';
+              'การโหลดใช้เวลานานเกินไป\n\nกรุณา:\n• ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต\n• ลองกดปุ่ม "ลองอีกครั้ง"\n• หรือรีเฟรชหน้าเว็บ';
         });
       }
     });
@@ -203,10 +211,37 @@ class _FacebookAdsWebViewState extends State<FacebookAdsWebView> {
                     },
                     onLoadStop: (controller, url) async {
                       pullToRefreshController?.endRefreshing();
+
                       setState(() {
                         this.url = url.toString();
                         isLoading = false;
                         hasError = false;
+                      });
+
+                      // Auto-click retry button if error page is shown
+                      Future.delayed(const Duration(milliseconds: 1000),
+                          () async {
+                        try {
+                          final result =
+                              await controller.evaluateJavascript(source: """
+                            (function() {
+                              const retryBtn = document.querySelector('button');
+                              if (retryBtn && retryBtn.textContent.includes('ลองอีกครั้ง')) {
+                                retryBtn.click();
+                                return true;
+                              }
+                              return false;
+                            })();
+                          """);
+
+                          // If retry button was clicked, reload after delay
+                          if (result == true) {
+                            await Future.delayed(const Duration(seconds: 2));
+                            await controller.reload();
+                          }
+                        } catch (e) {
+                          print('Auto-retry error: $e');
+                        }
                       });
                     },
                     onProgressChanged: (controller, progress) {
@@ -223,20 +258,27 @@ class _FacebookAdsWebViewState extends State<FacebookAdsWebView> {
                     },
                     onReceivedError: (controller, request, error) {
                       pullToRefreshController?.endRefreshing();
-                      setState(() {
-                        isLoading = false;
-                        hasError = true;
-                        errorMessage =
-                            'ไม่สามารถโหลดหน้าเว็บได้: ${error.description}';
-                      });
+                      // Only show error for main page, not for resources
+                      if (request.url == WebUri(initialUrl)) {
+                        setState(() {
+                          isLoading = false;
+                          hasError = true;
+                          errorMessage =
+                              'ไม่สามารถโหลดหน้าเว็บได้: ${error.description}';
+                        });
+                      }
                     },
                     onReceivedHttpError: (controller, request, errorResponse) {
-                      setState(() {
-                        isLoading = false;
-                        hasError = true;
-                        errorMessage =
-                            'HTTP Error: ${errorResponse.statusCode}';
-                      });
+                      // Don't show error for non-critical HTTP errors (like 404 on resources)
+                      if (request.url == WebUri(initialUrl) &&
+                          (errorResponse.statusCode ?? 0) >= 500) {
+                        setState(() {
+                          isLoading = false;
+                          hasError = true;
+                          errorMessage =
+                              'HTTP Error: ${errorResponse.statusCode}';
+                        });
+                      }
                     },
                     onConsoleMessage: (controller, consoleMessage) {
                       print("Console: ${consoleMessage.message}");

@@ -346,28 +346,40 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 10px;
+  padding: 6px 10px;
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   color: white;
-  border-radius: 16px;
+  border-radius: 12px;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 11px;
   box-shadow: 0 2px 6px rgba(245, 158, 11, 0.4);
   animation: fadeIn 0.3s ease;
   white-space: nowrap;
-  min-width: 70px;
+  min-width: 60px;
   max-width: 100%;
 }
 
+/* Revenue Badge - N_Clinic (สีฟ้า) */
+.revenue-badge-blue {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+}
+
+/* Revenue Badge - Future Revenue (สีเขียว) */
+.revenue-badge-green {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
+}
+
 .data-cell.revenue-cell {
-  background-color: #fff7ed;
-  padding: 6px 2px;
+  background-color: #f0f9ff;
+  padding: 8px 4px;
 }
 
 .data-cell.revenue-cell:hover {
-  background-color: #fed7aa;
+  background-color: #dbeafe;
   transform: scale(1.02);
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
   z-index: 3;
 }
 

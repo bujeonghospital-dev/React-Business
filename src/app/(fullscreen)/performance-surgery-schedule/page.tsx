@@ -148,24 +148,24 @@ export default function PerformanceSurgerySchedule() {
   const loadNClinicData = async () => {
     try {
       console.log(
-        "🔄 Starting to load N_Clinic data (n_saleIncentive + n_staff + bjh_all_leads - sale_date <= today)..."
+        "🔄 Starting to load N_Clinic data (n_income + n_customer + n_staff)..."
       );
       const clinicData = await fetchNClinicFromDatabase();
       console.log("💰 N_Clinic Data Loaded:", {
         totalRecords: clinicData.length,
         sampleRecords: clinicData.slice(0, 5),
-        uniqueContactStaff: [
-          ...new Set(clinicData.map((d) => d.contact_staff || "ไม่ระบุ")),
+        uniqueStaffDisplayName: [
+          ...new Set(clinicData.map((d) => d.staff_display_name || "ไม่ระบุ")),
         ],
         sampleData: clinicData.slice(0, 5).map((d) => ({
-          contact_staff: d.contact_staff,
-          sale_date: d.sale_date,
-          proposed_amount: d.proposed_amount,
-          item_name: d.item_name,
+          staff_display_name: d.staff_display_name,
+          income_date: d.income_date,
+          income: d.income,
+          income_display_name: d.income_display_name,
         })),
       });
       setNClinicData(clinicData);
-      console.log("✅ Loaded N_Clinic data (sale_date <= today)");
+      console.log("✅ Loaded N_Clinic data from n_income");
     } catch (error: any) {
       console.error("❌ Error loading N_Clinic data:", error);
       console.error("Error details:", {
@@ -325,16 +325,16 @@ export default function PerformanceSurgerySchedule() {
       setCountMap(newCountMap);
     }
   }, [surgeryData, selectedMonth, selectedYear]);
-  // Update N_Clinic revenue map - ใช้ proposed_amount จาก n_clinic (sale_date <= today)
+  // Update N_Clinic revenue map - ใช้ income จาก n_income
   useEffect(() => {
-    console.log("🔄 Processing N_Clinic RevenueMap (sale_date <= today)...", {
+    console.log("🔄 Processing N_Clinic RevenueMap (income_date)...", {
       nClinicDataLength: nClinicData.length,
       selectedMonth,
       selectedYear,
       firstFewRecords: nClinicData.slice(0, 3).map((d) => ({
-        sale_date: d.sale_date,
-        contact_staff: d.contact_staff,
-        proposed_amount: d.proposed_amount,
+        income_date: d.income_date,
+        staff_display_name: d.staff_display_name,
+        income: d.income,
       })),
     });
     if (nClinicData.length > 0) {
@@ -536,7 +536,7 @@ export default function PerformanceSurgerySchedule() {
     };
     // Filter N_Clinic data for this day and person
     const filteredNClinic = nClinicData.filter((item) => {
-      const date = parseDateStr(item.sale_date);
+      const date = parseDateStr(item.income_date);
       if (!date) return false;
       const itemDay = date.getDate();
       const itemMonth = date.getMonth();
@@ -550,9 +550,11 @@ export default function PerformanceSurgerySchedule() {
       }
       // For จีน row, include both จีน and มุก
       if (rowId === "105-จีน") {
-        return item.contact_staff === "จีน" || item.contact_staff === "มุก";
+        return (
+          item.staff_display_name === "จีน" || item.staff_display_name === "มุก"
+        );
       }
-      return item.contact_staff === contactPerson;
+      return item.staff_display_name === contactPerson;
     });
     // Filter Future Revenue data for this day and person
     const filteredFuture = revenueFutureData.filter((item) => {
@@ -1088,29 +1090,78 @@ export default function PerformanceSurgerySchedule() {
                 >
                   <td className="name-cell">{row.name}</td>
                   {days.map((day) => {
-                    const revenue = getCellRevenue(day, row.id);
+                    const contactPerson = CONTACT_PERSON_MAPPING[row.id];
+
+                    // คำนวณ N_Clinic revenue (สีฟ้า)
+                    let nClinicRevenue = 0;
+                    if (filmRevenueMapNClinic.size > 0) {
+                      if (row.id === "105-จีน") {
+                        nClinicRevenue =
+                          (filmRevenueMapNClinic.get("จีน")?.get(day) || 0) +
+                          (filmRevenueMapNClinic.get("มุก")?.get(day) || 0);
+                      } else {
+                        nClinicRevenue =
+                          filmRevenueMapNClinic.get(contactPerson)?.get(day) ||
+                          0;
+                      }
+                    }
+
+                    // คำนวณ Future revenue (สีเขียว)
+                    let futureRevenue = 0;
+                    if (filmRevenueMap.size > 0) {
+                      if (row.id === "105-จีน") {
+                        futureRevenue =
+                          (filmRevenueMap.get("จีน")?.get(day) || 0) +
+                          (filmRevenueMap.get("มุก")?.get(day) || 0);
+                      } else {
+                        futureRevenue =
+                          filmRevenueMap.get(contactPerson)?.get(day) || 0;
+                      }
+                    }
+
+                    const totalRevenue = nClinicRevenue + futureRevenue;
+
                     return (
                       <td
                         key={`revenue-cell-${row.id}-${day}`}
                         className={`data-cell ${
-                          revenue > 0 ? "has-data revenue-cell" : ""
+                          totalRevenue > 0 ? "has-data revenue-cell" : ""
                         }`}
                         onClick={() =>
-                          revenue > 0 && handleRevenueCellClick(day, row.id)
+                          totalRevenue > 0 &&
+                          handleRevenueCellClick(day, row.id)
                         }
                         title={
-                          revenue > 0
-                            ? `คลิกเพื่อดูรายละเอียด\nยอดรวม: ${formatCurrency(
-                                revenue
+                          totalRevenue > 0
+                            ? `คลิกเพื่อดูรายละเอียด\nN_Clinic: ${formatCurrency(
+                                nClinicRevenue
+                              )} บาท\nFuture: ${formatCurrency(
+                                futureRevenue
+                              )} บาท\nยอดรวม: ${formatCurrency(
+                                totalRevenue
                               )} บาท`
                             : ""
                         }
                       >
-                        {revenue > 0 && (
-                          <span className="revenue-badge">
-                            {formatCurrency(revenue)}
-                          </span>
-                        )}
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "4px",
+                            alignItems: "center",
+                          }}
+                        >
+                          {nClinicRevenue > 0 && (
+                            <span className="revenue-badge revenue-badge-blue">
+                              {formatCurrency(nClinicRevenue)}
+                            </span>
+                          )}
+                          {futureRevenue > 0 && (
+                            <span className="revenue-badge revenue-badge-green">
+                              {formatCurrency(futureRevenue)}
+                            </span>
+                          )}
+                        </div>
                       </td>
                     );
                   })}
@@ -1144,4 +1195,4 @@ export default function PerformanceSurgerySchedule() {
       />
     </div>
   );
-}
+}

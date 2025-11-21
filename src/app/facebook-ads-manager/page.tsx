@@ -1452,7 +1452,7 @@ export default function FacebookAdsManagerPage() {
             <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 border border-gray-100">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-4 gap-3">
                 <h2 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-2">
-                  🏆 TOP 10 Ads
+                  🏆 TOP 20 Ads
                 </h2>
                 <div className="flex gap-2 w-full sm:w-auto">
                   <button
@@ -1564,7 +1564,7 @@ export default function FacebookAdsManagerPage() {
                           return valueA - valueB;
                         }
                       })
-                      .slice(0, 10)
+                      .slice(0, 20)
                       .map((ad, index) => {
                         const creative = adCreatives.get(ad.ad_id);
                         console.log(

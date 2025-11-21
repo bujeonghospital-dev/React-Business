@@ -101,6 +101,10 @@ export default function PerformanceSurgerySchedule() {
   >([]);
   // Function to load surgery schedule data from Database
   const loadData = async (isManualRefresh = false) => {
+    // บันทึกตำแหน่ง scroll ปัจจุบัน
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+
     if (isManualRefresh) {
       setIsRefreshing(true);
     } else {
@@ -115,6 +119,11 @@ export default function PerformanceSurgerySchedule() {
       const actualData = await fetchSurgeryActualFromDatabase();
       setSurgeryActualData(actualData);
       setLastUpdated(new Date());
+
+      // กลับไปที่ตำแหน่ง scroll เดิมหลังจากโหลดข้อมูลเสร็จ
+      setTimeout(() => {
+        window.scrollTo(scrollX, scrollY);
+      }, 0);
     } catch (error: any) {
       setError(error.message || "เกิดข้อผิดพลาดในการโหลดข้อมูล");
     } finally {
@@ -146,6 +155,10 @@ export default function PerformanceSurgerySchedule() {
   // };
   // Function to load N_Clinic Revenue data (sale_date <= today)
   const loadNClinicData = async () => {
+    // บันทึกตำแหน่ง scroll ปัจจุบัน
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+
     try {
       console.log(
         "🔄 Starting to load N_Clinic data (n_income + n_customer + n_staff)..."
@@ -166,6 +179,11 @@ export default function PerformanceSurgerySchedule() {
       });
       setNClinicData(clinicData);
       console.log("✅ Loaded N_Clinic data from n_income");
+
+      // กลับไปที่ตำแหน่ง scroll เดิมหลังจากโหลดข้อมูลเสร็จ
+      setTimeout(() => {
+        window.scrollTo(scrollX, scrollY);
+      }, 0);
     } catch (error: any) {
       console.error("❌ Error loading N_Clinic data:", error);
       console.error("Error details:", {
@@ -178,6 +196,10 @@ export default function PerformanceSurgerySchedule() {
   };
   // Function to load Future Revenue data (surgery_date >= today)
   const loadRevenueFutureData = async () => {
+    // บันทึกตำแหน่ง scroll ปัจจุบัน
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+
     try {
       console.log(
         "🔄 Starting to load Revenue data (bjh_all_leads - surgery_date >= today)..."
@@ -203,6 +225,11 @@ export default function PerformanceSurgerySchedule() {
       console.log(
         "✅ Loaded Revenue data (bjh_all_leads - surgery_date >= today)"
       );
+
+      // กลับไปที่ตำแหน่ง scroll เดิมหลังจากโหลดข้อมูลเสร็จ
+      setTimeout(() => {
+        window.scrollTo(scrollX, scrollY);
+      }, 0);
     } catch (error: any) {
       console.error("❌ Error loading Revenue data:", error);
       console.error("Error details:", {

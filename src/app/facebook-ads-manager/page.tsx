@@ -277,7 +277,7 @@ export default function FacebookAdsManagerPage() {
   }, []);
 
   const fetchInsights = useCallback(
-    async (isBackgroundRefresh = false) => {
+    async (isBackgroundRefresh = false, retryCount = 0) => {
       try {
         if (!isBackgroundRefresh) {
           setLoading(true);
@@ -313,6 +313,35 @@ export default function FacebookAdsManagerPage() {
         }
         const response = await fetch(url);
         const result: ApiResponse = await response.json();
+
+        // ตรวจสอบ Rate Limit Error (403)
+        if (
+          response.status === 403 &&
+          result.error?.includes("Application request limit reached")
+        ) {
+          const retryDelay = Math.min(30000 * Math.pow(2, retryCount), 120000); // Exponential backoff: 30s, 60s, 120s
+          setError(
+            `⏳ API Rate Limit - จะรีเฟรชอัตโนมัติในอีก ${
+              retryDelay / 1000
+            } วินาที... (ครั้งที่ ${retryCount + 1})`
+          );
+
+          // รีเฟรชอัตโนมัติหลังจาก delay
+          setTimeout(() => {
+            if (retryCount < 3) {
+              // จำกัดไม่เกิน 3 ครั้ง
+              fetchInsights(isBackgroundRefresh, retryCount + 1);
+            } else {
+              setError(
+                "❌ API Rate Limit - เกินจำนวนครั้งที่กำหนด กรุณารอสักครู่แล้วลองใหม่อีกครั้ง"
+              );
+              setLoading(false);
+            }
+          }, retryDelay);
+
+          return; // หยุดการทำงานของฟังก์ชันชั่วคราว
+        }
+
         if (!response.ok || !result.success) {
           throw new Error(result.error || "ไม่สามารถดึงข้อมูลได้");
         }
@@ -598,7 +627,7 @@ export default function FacebookAdsManagerPage() {
       }
     };
     loadAllData();
-    // Auto-refresh every 1 minute (60000ms) in background
+    // Auto-refresh every 2 minutes (120000ms) in background - ลด frequency เพื่อป้องกัน Rate Limit
     const refreshInterval = setInterval(() => {
       Promise.all([
         fetchInsights(true), // true = background refresh (ไม่แสดง loading state)
@@ -608,7 +637,7 @@ export default function FacebookAdsManagerPage() {
         fetchPhoneCount(),
         fetchDailySummaryData(),
       ]);
-    }, 60000); // 60000ms = 1 minute
+    }, 120000); // 120000ms = 2 minutes (เพิ่มจาก 1 นาที เป็น 2 นาที)
     // Cleanup interval on unmount
     return () => {
       clearInterval(refreshInterval);
@@ -957,7 +986,18 @@ export default function FacebookAdsManagerPage() {
       {/* Video Preview Modal */}
       {showVideoModal && selectedAdForPreview && (
         <div
-          className="modal-overlay fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          className="modal-overlay fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: "100vw",
+            height: "100vh",
+            margin: 0,
+            padding: "1rem",
+          }}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setShowVideoModal(false);
@@ -1424,9 +1464,9 @@ export default function FacebookAdsManagerPage() {
                     }`}
                   >
                     <span className="hidden sm:inline">
-                      📞 ชื่อ - เบอร์ (มาก → น้อย)
+                      💬 Total Inbox (มาก → น้อย)
                     </span>
-                    <span className="sm:hidden">📞 Leads</span>
+                    <span className="sm:hidden">💬 Inbox</span>
                   </button>
                   <button
                     onClick={() => setTopAdsSortBy("cost")}
@@ -1493,16 +1533,16 @@ export default function FacebookAdsManagerPage() {
                     {getTopAdsFilteredInsights()
                       .sort((a, b) => {
                         if (topAdsSortBy === "leads") {
-                          // เรียงตาม lead (ชื่อ - เบอร์) จากมากไปน้อย
-                          const leadsA = getResultsByActionType(
+                          // เรียงตาม Total Inbox จากมากไปน้อย
+                          const totalInboxA = getResultsByActionType(
                             a.actions,
-                            "lead"
+                            "onsite_conversion.total_messaging_connection"
                           );
-                          const leadsB = getResultsByActionType(
+                          const totalInboxB = getResultsByActionType(
                             b.actions,
-                            "lead"
+                            "onsite_conversion.total_messaging_connection"
                           );
-                          return leadsB - leadsA;
+                          return totalInboxB - totalInboxA;
                         } else {
                           // เรียงตาม cost per messaging connection จากน้อยไปมาก
                           const costA = a.cost_per_action_type?.find(

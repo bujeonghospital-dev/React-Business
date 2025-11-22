@@ -157,34 +157,92 @@ export async function POST(request: NextRequest) {
       });
     } else if (action === "create") {
       // สร้างลูกค้าใหม่
-      // แปลงชื่อคอลัมน์จากภาษาไทยเป็นภาษาอังกฤษ
-      const englishData: Record<string, any> = {};
-      Object.entries(data).forEach(([thaiKey, value]) => {
-        const englishKey = reverseColumnMapping[thaiKey] || thaiKey;
-        // กรอง id, created_at, updated_at ออก เพื่อให้ database สร้างให้เอง
-        if (
-          englishKey !== "id" &&
-          englishKey !== "created_at" &&
-          englishKey !== "updated_at" &&
-          value !== "" &&
-          value !== null &&
-          value !== undefined
-        ) {
-          englishData[englishKey] = value;
+      try {
+        // แปลงชื่อคอลัมน์จากภาษาไทยเป็นภาษาอังกฤษ
+        const englishData: Record<string, any> = {};
+        Object.entries(data).forEach(([thaiKey, value]) => {
+          const englishKey = reverseColumnMapping[thaiKey] || thaiKey;
+          // กรอง id, created_at, updated_at ออก เพื่อให้ database สร้างให้เอง
+          if (
+            englishKey !== "id" &&
+            englishKey !== "created_at" &&
+            englishKey !== "updated_at" &&
+            value !== "" &&
+            value !== null &&
+            value !== undefined
+          ) {
+            englishData[englishKey] = value;
+          }
+        });
+
+        // If no fields to insert, return error
+        if (Object.keys(englishData).length === 0) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: "ไม่มีข้อมูลที่จะเพิ่ม กรุณากรอกข้อมูลอย่างน้อย 1 ฟิลด์",
+            },
+            { status: 400 }
+          );
         }
-      });
-      const fields = Object.keys(englishData);
-      const values = Object.values(englishData);
-      const placeholders = fields.map((_, index) => `$${index + 1}`).join(", ");
-      const query = `INSERT INTO "BJH-Server".bjh_all_leads (${fields.join(
-        ", "
-      )}) VALUES (${placeholders}) RETURNING *`;
-      const result = await pool.query(query, values);
-      return NextResponse.json({
-        success: true,
-        message: "Customer created successfully",
-        data: result.rows[0],
-      });
+
+        const fields = Object.keys(englishData);
+        const values = Object.values(englishData);
+        const placeholders = fields
+          .map((_, index) => `$${index + 1}`)
+          .join(", ");
+        const query = `INSERT INTO "BJH-Server".bjh_all_leads (${fields.join(
+          ", "
+        )}) VALUES (${placeholders}) RETURNING *`;
+
+        console.log("Inserting with fields:", fields);
+        console.log("Values:", values);
+
+        const result = await pool.query(query, values);
+        return NextResponse.json({
+          success: true,
+          message: "Customer created successfully",
+          data: result.rows[0],
+        });
+      } catch (insertError: any) {
+        console.error("Insert error:", insertError);
+
+        // Check if it's a duplicate key error
+        if (insertError.code === "23505") {
+          // Try to reset sequence
+          try {
+            await pool.query(`
+              SELECT setval(
+                pg_get_serial_sequence('"BJH-Server".bjh_all_leads', 'id'),
+                (SELECT COALESCE(MAX(id), 0) + 1 FROM "BJH-Server".bjh_all_leads),
+                false
+              )
+            `);
+            return NextResponse.json(
+              {
+                success: false,
+                error:
+                  "ID sequence ไม่ถูกต้อง ระบบได้แก้ไขแล้ว กรุณาลองเพิ่มข้อมูลอีกครั้ง",
+                code: "SEQUENCE_RESET",
+              },
+              { status: 409 }
+            );
+          } catch (seqError) {
+            console.error("Sequence reset error:", seqError);
+            return NextResponse.json(
+              {
+                success: false,
+                error:
+                  "ไม่สามารถเพิ่มข้อมูลได้ กรุณาติดต่อผู้ดูแลระบบเพื่อแก้ไข ID sequence",
+                details: insertError.message,
+              },
+              { status: 500 }
+            );
+          }
+        }
+
+        throw insertError;
+      }
     } else if (action === "delete") {
       // ลบข้อมูลลูกค้า
       const { id } = data;

@@ -994,17 +994,17 @@ export default function PerformanceSurgerySchedule() {
             const pActual = kpiData[row.id]?.actual || 0;
             const pDiff = calculateDiff(row.id);
             const pKpiToDate = kpiData[row.id]?.kpiToDate || 0;
-            
+
             // Calculate revenue actual
             let revenueActual = 0;
             days.forEach((day) => {
               revenueActual += getCellRevenue(day, row.id);
             });
-            
+
             // Calculate revenue diff
             const revenueKpiToDate = pKpiToDate * 25000;
             const revenueDiff = revenueActual - revenueKpiToDate;
-            
+
             return (
               <div key={row.id} className="team-summary-card team-color-4">
                 <div className="team-summary-header">
@@ -1338,6 +1338,69 @@ export default function PerformanceSurgerySchedule() {
                   })}
                 </tr>
               ))}
+              {/* แถวยอดรวม */}
+              <tr className="total-row">
+                <td className="name-cell" style={{ fontWeight: "bold" }}>
+                  ยอดรวม
+                </td>
+                {days.map((day) => {
+                  // คำนวณยอดรวมของแต่ละวันจากทุกแถว
+                  let dailyTotal = 0;
+                  revenueScheduleRows.forEach((row) => {
+                    const contactPerson = CONTACT_PERSON_MAPPING[row.id];
+
+                    // คำนวณ N_Clinic revenue
+                    let nClinicRevenue = 0;
+                    if (filmRevenueMapNClinic.size > 0) {
+                      if (row.id === "105-จีน") {
+                        nClinicRevenue =
+                          (filmRevenueMapNClinic.get("จีน")?.get(day) || 0) +
+                          (filmRevenueMapNClinic.get("มุก")?.get(day) || 0);
+                      } else {
+                        nClinicRevenue =
+                          filmRevenueMapNClinic.get(contactPerson)?.get(day) ||
+                          0;
+                      }
+                    }
+
+                    // คำนวณ Future revenue
+                    let futureRevenue = 0;
+                    if (filmRevenueMap.size > 0) {
+                      if (row.id === "105-จีน") {
+                        futureRevenue =
+                          (filmRevenueMap.get("จีน")?.get(day) || 0) +
+                          (filmRevenueMap.get("มุก")?.get(day) || 0);
+                      } else {
+                        futureRevenue =
+                          filmRevenueMap.get(contactPerson)?.get(day) || 0;
+                      }
+                    }
+
+                    dailyTotal += nClinicRevenue + futureRevenue;
+                  });
+
+                  return (
+                    <td
+                      key={`total-cell-${day}`}
+                      className={`data-cell ${
+                        dailyTotal > 0 ? "has-data revenue-cell" : ""
+                      }`}
+                      style={{ fontWeight: "bold" }}
+                      title={
+                        dailyTotal > 0
+                          ? `ยอดรวมทั้งหมด: ${formatCurrency(dailyTotal)} บาท`
+                          : ""
+                      }
+                    >
+                      {dailyTotal > 0 && (
+                        <span className="revenue-badge">
+                          {formatCurrency(dailyTotal)}
+                        </span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
             </tbody>
           </table>
         </div>

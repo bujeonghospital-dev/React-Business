@@ -8,8 +8,10 @@ import {
   ChevronDown,
   Filter,
   X,
+  Plus,
 } from "lucide-react";
 import { EditCustomerModal } from "@/components/EditCustomerModal";
+import { AddCustomerModal } from "@/components/AddCustomerModal";
 import UserMenu from "@/components/UserMenu";
 // Add custom styles for scrollbar (horizontal and vertical)
 const customScrollbarStyle = `
@@ -114,6 +116,7 @@ const CustomerAllDataPage = () => {
     string,
     any
   > | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [statusOptions, setStatusOptions] = useState<
     Array<{ value: string; label: string; color: string }>
   >([]);
@@ -421,6 +424,31 @@ const CustomerAllDataPage = () => {
       }
     } catch (error) {
       console.error("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+    }
+  };
+
+  const handleAddCustomer = async (newData: Record<string, any>) => {
+    try {
+      const response = await fetch("/api/customer-data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "create",
+          data: newData,
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        setIsAddModalOpen(false);
+        // รีโหลดข้อมูลใหม่
+        await fetchData();
+      } else {
+        console.error(`เกิดข้อผิดพลาด: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("เกิดข้อผิดพลาดในการเพิ่มข้อมูล");
     }
   };
   const filteredAndSortedData = useMemo(() => {
@@ -1502,6 +1530,14 @@ const CustomerAllDataPage = () => {
             </div>
 
             <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              เพิ่มข้อมูล
+            </button>
+
+            <button
               onClick={fetchData}
               disabled={isLoading}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
@@ -1931,9 +1967,39 @@ const CustomerAllDataPage = () => {
         </div>
         {tableData.length > 0 && (
           <div className="bg-white rounded-lg shadow-md overflow-hidden mb-4">
+            {/* Horizontal scrollbar on top */}
             <div
-              className="overflow-x-auto overflow-y-auto custom-scrollbar custom-scrollbar-horizontal"
+              className="overflow-x-auto custom-scrollbar-horizontal"
+              style={{
+                overflowY: "hidden",
+                height: "12px",
+              }}
+              onScroll={(e) => {
+                const target = e.currentTarget;
+                const tableContainer = target.nextElementSibling as HTMLElement;
+                if (tableContainer) {
+                  tableContainer.scrollLeft = target.scrollLeft;
+                }
+              }}
+            >
+              <div
+                style={{
+                  width: tableData[0].headers.length * 150 + "px",
+                  height: "1px",
+                }}
+              />
+            </div>
+            <div
+              className="overflow-x-auto overflow-y-auto custom-scrollbar"
               style={{ maxHeight: `calc(100vh + ${tableSize}px)` }}
+              onScroll={(e) => {
+                const target = e.currentTarget;
+                const topScroller =
+                  target.previousElementSibling as HTMLElement;
+                if (topScroller) {
+                  topScroller.scrollLeft = target.scrollLeft;
+                }
+              }}
             >
               <table className="w-full border-collapse text-sm table-auto">
                 <thead className="sticky top-0 z-30 bg-yellow-300">
@@ -2037,6 +2103,11 @@ const CustomerAllDataPage = () => {
         onClose={() => setIsEditModalOpen(false)}
         customerData={editingCustomer || {}}
         onSave={handleSaveCustomer}
+      />
+      <AddCustomerModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSave={handleAddCustomer}
       />
     </>
   );

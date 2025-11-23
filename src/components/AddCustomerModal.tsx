@@ -29,6 +29,16 @@ export const AddCustomerModal = ({
   const [countryOptions, setCountryOptions] = useState<
     Array<{ value: string; label: string }>
   >([]);
+  const [contactPersonOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([
+    { value: "ว่าน", label: "ว่าน" },
+    { value: "จีน", label: "จีน" },
+    { value: "สา", label: "สา" },
+    { value: "เจ", label: "เจ" },
+    { value: "พิดยา", label: "พิดยา" },
+    { value: "มุข", label: "มุข" },
+  ]);
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<{
     isOpen: boolean;
@@ -560,17 +570,22 @@ export const AddCustomerModal = ({
                     return (
                       <div key={field.value} className="group">
                         <label className="block text-sm font-semibold text-gray-700 mb-2 transition-colors group-focus-within:text-cyan-600">
-                          {field.label}
+                          {field.label} ⭐
                         </label>
-                        <input
-                          type="text"
+                        <select
                           value={customerData[field.value] || ""}
                           onChange={(e) =>
                             handleFieldChange(field.value, e.target.value)
                           }
-                          className="w-full px-4 py-3 border-2 border-cyan-200 bg-white rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none text-gray-900 font-medium placeholder:text-gray-400 transition-all duration-200 hover:border-cyan-300 shadow-sm hover:shadow-md"
-                          placeholder={`กรอก${field.label}`}
-                        />
+                          className="w-full px-4 py-3 border-2 border-cyan-200 bg-gradient-to-r from-white to-cyan-50 rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none font-semibold text-gray-900 transition-all duration-200 hover:border-cyan-300 shadow-sm hover:shadow-md cursor-pointer"
+                        >
+                          <option value="">เลือกผู้ติดต่อ</option>
+                          {contactPersonOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     );
                   }

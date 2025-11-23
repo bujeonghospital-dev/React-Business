@@ -117,6 +117,8 @@ const CustomerAllDataPage = () => {
     any
   > | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [statusOptions, setStatusOptions] = useState<
     Array<{ value: string; label: string; color: string }>
   >([]);
@@ -400,6 +402,7 @@ const CustomerAllDataPage = () => {
     document.body.removeChild(link);
   };
   const handleEditCustomer = (row: Record<string, any>) => {
+    console.log("🔧 Opening edit modal for:", row);
     setEditingCustomer(row);
     setIsEditModalOpen(true);
   };
@@ -451,6 +454,73 @@ const CustomerAllDataPage = () => {
     } catch (error) {
       console.error("เกิดข้อผิดพลาดในการเพิ่มข้อมูล");
     }
+  };
+
+  const handleDeleteMultiple = async () => {
+    if (selectedIds.length === 0) {
+      alert("กรุณาเลือกรายการที่ต้องการลบ");
+      return;
+    }
+
+    const confirmMessage = `คุณต้องการลบข้อมูล ${
+      selectedIds.length
+    } รายการใช่หรือไม่?\n\nID ที่จะลบ: ${selectedIds.join(
+      ", "
+    )}\n\nการดำเนินการนี้ไม่สามารถย้อนกลับได้`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      const response = await fetch("/api/customer-data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "deleteMultiple",
+          data: { ids: selectedIds },
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert(`ลบข้อมูลสำเร็จ ${result.deletedCount} รายการ`);
+        setSelectedIds([]);
+        await fetchData();
+      } else {
+        alert(`เกิดข้อผิดพลาด: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("เกิดข้อผิดพลาดในการลบข้อมูล:", error);
+      alert("เกิดข้อผิดพลาดในการลบข้อมูล");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedIds.length === filteredAndSortedData.length) {
+      setSelectedIds([]);
+    } else {
+      const allIds = filteredAndSortedData
+        .map((row) => row["id"])
+        .filter((id) => id != null);
+      setSelectedIds(allIds);
+    }
+  };
+
+  const handleToggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((selectedId) => selectedId !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
   };
   const filteredAndSortedData = useMemo(() => {
     if (tableData.length === 0) return [];
@@ -1538,6 +1608,31 @@ const CustomerAllDataPage = () => {
               เพิ่มข้อมูล
             </button>
 
+            {selectedIds.length > 0 && (
+              <button
+                onClick={handleDeleteMultiple}
+                disabled={isDeleting}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg font-medium disabled:opacity-50"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+                {isDeleting
+                  ? "กำลังลบ..."
+                  : `ลบที่เลือก (${selectedIds.length})`}
+              </button>
+            )}
+
             <button
               onClick={fetchData}
               disabled={isLoading}
@@ -1992,7 +2087,10 @@ const CustomerAllDataPage = () => {
             </div>
             <div
               className="overflow-x-auto overflow-y-auto custom-scrollbar"
-              style={{ maxHeight: `calc(100vh + ${tableSize}px)` }}
+              style={{
+                maxHeight: `calc(100vh + ${tableSize}px)`,
+                position: "relative",
+              }}
               onScroll={(e) => {
                 const target = e.currentTarget;
                 const topScroller =
@@ -2002,9 +2100,24 @@ const CustomerAllDataPage = () => {
                 }
               }}
             >
-              <table className="w-full border-collapse text-sm table-auto">
+              <table
+                className="w-full border-collapse text-sm table-auto"
+                style={{ position: "relative", zIndex: 1 }}
+              >
                 <thead className="sticky top-0 z-30 bg-yellow-300">
                   <tr className="bg-yellow-300 border border-gray-400">
+                    <th className="px-3 py-2 text-center font-bold text-gray-900 border-r border-gray-400">
+                      <input
+                        type="checkbox"
+                        checked={
+                          selectedIds.length === filteredAndSortedData.length &&
+                          filteredAndSortedData.length > 0
+                        }
+                        onChange={handleToggleSelectAll}
+                        className="w-4 h-4 cursor-pointer"
+                        title="เลือกทั้งหมด"
+                      />
+                    </th>
                     {tableData[0].headers.map((header, idx) => (
                       <th
                         key={idx}
@@ -2023,14 +2136,29 @@ const CustomerAllDataPage = () => {
                         </div>
                       </th>
                     ))}
+                    <th
+                      className="px-3 py-2 text-center font-bold text-gray-900 border-l-4 border-l-blue-500 bg-yellow-300 sticky right-0 z-40"
+                      style={{ minWidth: "120px" }}
+                    >
+                      🔧 จัดการ
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
+                  {(() => {
+                    console.log(
+                      "📊 Rendering tbody with",
+                      paginatedData.length,
+                      "rows"
+                    );
+                    return null;
+                  })()}
                   {paginatedData.map((row, rowIndex) => {
                     const absoluteIndex =
                       (currentPage - 1) * itemsPerPage + rowIndex;
                     const patternIndex = absoluteIndex % 4;
-                    const isSelected = selectedRow === row;
+                    const rowId = row["id"];
+                    const isChecked = selectedIds.includes(rowId);
                     // Pattern: white (0) → pink (1) → white (2) → purple-light (3)
                     let bgColor = "bg-white";
                     if (patternIndex === 1) {
@@ -2038,38 +2166,27 @@ const CustomerAllDataPage = () => {
                     } else if (patternIndex === 3) {
                       bgColor = "bg-purple-200";
                     }
+
+                    if (isChecked) {
+                      bgColor = "bg-blue-100";
+                    }
+
                     return (
                       <tr
                         key={rowIndex}
-                        onClick={() => handleEditCustomer(row)}
-                        className={`border border-gray-300 transition-all duration-200 cursor-pointer group ${
-                          isSelected
-                            ? "ring-4 ring-indigo-500 shadow-lg"
-                            : bgColor
-                        }`}
-                        style={{
-                          background: isSelected
-                            ? "linear-gradient(to right, #dbeafe, #e0e7ff)"
-                            : undefined,
-                          boxShadow: isSelected
-                            ? "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)"
-                            : undefined,
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isSelected) {
-                            e.currentTarget.style.background =
-                              "linear-gradient(to right, #dbeafe, #e0e7ff)";
-                            e.currentTarget.style.boxShadow =
-                              "0 4px 6px -1px rgba(0, 0, 0, 0.1)";
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isSelected) {
-                            e.currentTarget.style.background = "";
-                            e.currentTarget.style.boxShadow = "";
-                          }
-                        }}
+                        className={`border border-gray-300 transition-all duration-200 group ${bgColor} hover:bg-blue-50`}
                       >
+                        <td
+                          className="px-3 py-2 border-r border-gray-300 text-center"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleSelect(rowId)}
+                            className="w-4 h-4 cursor-pointer"
+                          />
+                        </td>
                         {tableData[0].headers.map((header, colIdx) => {
                           const value = row[header];
                           const hasValue =
@@ -2090,6 +2207,50 @@ const CustomerAllDataPage = () => {
                             </td>
                           );
                         })}
+                        <td
+                          className="px-3 py-2 border-l-4 border-l-blue-500 text-center align-middle sticky right-0 z-20"
+                          style={{
+                            backgroundColor: isChecked
+                              ? "#DBEAFE"
+                              : patternIndex === 1
+                              ? "#FBD5D5"
+                              : patternIndex === 3
+                              ? "#E9D5FF"
+                              : "#FFFFFF",
+                            minWidth: "120px",
+                          }}
+                        >
+                          <div className="flex gap-2 justify-center items-center">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                console.log(
+                                  "🔧 Edit clicked:",
+                                  row.id || row["id"]
+                                );
+                                setEditingCustomer(row);
+                                setIsEditModalOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-bold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 transition-all duration-200"
+                              title="แก้ไขข้อมูล"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
+                              </svg>
+                              แก้ไข
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}

@@ -1067,6 +1067,113 @@ export default function PerformanceSurgerySchedule() {
               </div>
             );
           })()}
+          {/* รวมทั้งหมด Summary Card */}
+          {(() => {
+            const allRows = [
+              ...pScheduleRows,
+              { id: "110-ส่วนกลาง", name: "ส่วนกลาง" },
+            ];
+
+            // Calculate total revenue actual
+            let totalRevenueActual = 0;
+            allRows.forEach((row) => {
+              days.forEach((day) => {
+                totalRevenueActual += getCellRevenue(day, row.id);
+              });
+            });
+
+            // Calculate total revenue KPI to date
+            let totalRevenueKpiToDate = 0;
+            allRows.forEach((row) => {
+              const pKpiToDate = kpiData[row.id]?.kpiToDate || 0;
+              const multiplier = row.id === "105-จีน" ? 2 : 1;
+              totalRevenueKpiToDate += pKpiToDate * multiplier * 25000;
+            });
+
+            // Calculate total revenue diff
+            const totalRevenueDiff = totalRevenueActual - totalRevenueKpiToDate;
+
+            // Calculate total surgery actual
+            let totalSurgeryActual = 0;
+            allRows.forEach((row) => {
+              totalSurgeryActual += kpiData[row.id]?.actual || 0;
+            });
+
+            // Calculate total surgery KPI to date
+            let totalSurgeryKpiToDate = 0;
+            allRows.forEach((row) => {
+              const pKpiToDate = kpiData[row.id]?.kpiToDate || 0;
+              const multiplier = row.id === "105-จีน" ? 2 : 1;
+              totalSurgeryKpiToDate += pKpiToDate * multiplier;
+            });
+
+            // Calculate total surgery diff
+            const totalSurgeryDiff = totalSurgeryActual - totalSurgeryKpiToDate;
+
+            return (
+              <div key="total" className="team-summary-card team-color-pink">
+                <div className="team-summary-header">
+                  <h3>รวมทั้งหมด</h3>
+                </div>
+                <div className="team-summary-body">
+                  <div className="summary-metric">
+                    <div className="metric-label">รายรับ</div>
+                    <div className="metric-row">
+                      <div className="metric-item">
+                        <div className="metric-title">KPI to date</div>
+                        <div className="metric-value">
+                          {formatCurrency(totalRevenueKpiToDate)}
+                        </div>
+                      </div>
+                      <div className="metric-item">
+                        <div className="metric-title">Actual</div>
+                        <div className="metric-value">
+                          {formatCurrency(totalRevenueActual)}
+                        </div>
+                      </div>
+                      <div className="metric-item">
+                        <div className="metric-title">Diff</div>
+                        <div
+                          className={`metric-value ${
+                            totalRevenueDiff >= 0 ? "positive" : "negative"
+                          }`}
+                        >
+                          {totalRevenueDiff >= 0 ? "+" : "−"}
+                          {formatCurrency(Math.abs(totalRevenueDiff))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="summary-metric">
+                    <div className="metric-label">จำนวนผ่าตัด</div>
+                    <div className="metric-row">
+                      <div className="metric-item">
+                        <div className="metric-title">KPI to date</div>
+                        <div className="metric-value">
+                          {totalSurgeryKpiToDate}
+                        </div>
+                      </div>
+                      <div className="metric-item">
+                        <div className="metric-title">Actual</div>
+                        <div className="metric-value">{totalSurgeryActual}</div>
+                      </div>
+                      <div className="metric-item">
+                        <div className="metric-title">Diff</div>
+                        <div
+                          className={`metric-value ${
+                            totalSurgeryDiff >= 0 ? "positive" : "negative"
+                          }`}
+                        >
+                          {totalSurgeryDiff >= 0 ? "+" : "−"}
+                          {Math.abs(totalSurgeryDiff)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
       {/* Loading Indicator */}
@@ -1198,35 +1305,220 @@ export default function PerformanceSurgerySchedule() {
               </tr>
             </thead>
             <tbody>
-              {pScheduleRows.map((row, rowIndex) => (
+              {revenueScheduleRows.map((row, rowIndex) => (
                 <tr
                   key={`l-row-${row.id}`}
                   className={rowIndex % 2 === 0 ? "even-row" : "odd-row"}
                 >
                   <td className="name-cell">{row.name}</td>
                   {days.map((day) => {
-                    const count = getCellCount(day, row.id, "L");
+                    const contactPerson = CONTACT_PERSON_MAPPING[row.id];
+
+                    // Parse date function
+                    const parseDateStr = (
+                      dateStr: string | undefined
+                    ): Date | null => {
+                      if (!dateStr) return null;
+                      try {
+                        return new Date(dateStr);
+                      } catch {
+                        return null;
+                      }
+                    };
+
+                    // คำนวณจำนวนจาก N_Clinic (n_income - สีฟ้า)
+                    let nClinicCount = 0;
+                    nClinicData.forEach((item) => {
+                      const date = parseDateStr(item.income_date);
+                      if (!date) return;
+                      const itemDay = date.getDate();
+                      const itemMonth = date.getMonth();
+                      const itemYear = date.getFullYear();
+                      if (
+                        itemMonth !== selectedMonth ||
+                        itemYear !== selectedYear ||
+                        itemDay !== day
+                      ) {
+                        return;
+                      }
+                      // For จีน row, include both จีน and มุก
+                      if (row.id === "105-จีน") {
+                        if (
+                          item.staff_display_name === "จีน" ||
+                          item.staff_display_name === "มุก"
+                        ) {
+                          nClinicCount++;
+                        }
+                      } else if (item.staff_display_name === contactPerson) {
+                        nClinicCount++;
+                      }
+                    });
+
+                    // คำนวณจำนวนจาก Future (bjh_all_leads - surgery_date >= today - สีเขียว)
+                    let futureCount = 0;
+                    revenueFutureData.forEach((item) => {
+                      const date = parseDateStr(item.surgery_date);
+                      if (!date) return;
+                      const itemDay = date.getDate();
+                      const itemMonth = date.getMonth();
+                      const itemYear = date.getFullYear();
+                      if (
+                        itemMonth !== selectedMonth ||
+                        itemYear !== selectedYear ||
+                        itemDay !== day
+                      ) {
+                        return;
+                      }
+                      // For จีน row, include both จีน and มุก
+                      if (row.id === "105-จีน") {
+                        if (
+                          item.contact_staff === "จีน" ||
+                          item.contact_staff === "มุก"
+                        ) {
+                          futureCount++;
+                        }
+                      } else if (item.contact_staff === contactPerson) {
+                        futureCount++;
+                      }
+                    });
+
+                    const totalCount = nClinicCount + futureCount;
+
                     return (
                       <td
                         key={`l-cell-${row.id}-${day}`}
-                        className={`data-cell ${count > 0 ? "has-data" : ""}`}
+                        className={`data-cell ${
+                          totalCount > 0 ? "has-data revenue-cell" : ""
+                        }`}
                         onClick={() =>
-                          count > 0 && handleCellClick(day, row.id, "L")
+                          totalCount > 0 && handleCellClick(day, row.id, "L")
                         }
                         title={
-                          count > 0
-                            ? `คลิกเพื่อดูรายละเอียด (${count} รายการ)`
+                          totalCount > 0
+                            ? `คลิกเพื่อดูรายละเอียด\nN_Clinic: ${nClinicCount} รายการ\nFuture: ${futureCount} รายการ\nยอดรวม: ${totalCount} รายการ`
                             : ""
                         }
                       >
-                        {count > 0 && (
-                          <span className="count-badge">{count}</span>
-                        )}
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "4px",
+                            alignItems: "center",
+                          }}
+                        >
+                          {nClinicCount > 0 && (
+                            <span className="count-badge revenue-badge-blue">
+                              {nClinicCount}
+                            </span>
+                          )}
+                          {futureCount > 0 && (
+                            <span className="count-badge revenue-badge-green">
+                              {futureCount}
+                            </span>
+                          )}
+                        </div>
                       </td>
                     );
                   })}
                 </tr>
               ))}
+              {/* แถวยอดรวม */}
+              <tr className="total-row">
+                <td className="name-cell" style={{ fontWeight: "bold" }}>
+                  ยอดรวม
+                </td>
+                {days.map((day) => {
+                  // Parse date function
+                  const parseDateStr = (
+                    dateStr: string | undefined
+                  ): Date | null => {
+                    if (!dateStr) return null;
+                    try {
+                      return new Date(dateStr);
+                    } catch {
+                      return null;
+                    }
+                  };
+
+                  // คำนวณยอดรวมของแต่ละวันจากทุกแถว
+                  let dailyTotal = 0;
+                  revenueScheduleRows.forEach((row) => {
+                    const contactPerson = CONTACT_PERSON_MAPPING[row.id];
+
+                    // นับจาก N_Clinic
+                    nClinicData.forEach((item) => {
+                      const date = parseDateStr(item.income_date);
+                      if (!date) return;
+                      const itemDay = date.getDate();
+                      const itemMonth = date.getMonth();
+                      const itemYear = date.getFullYear();
+                      if (
+                        itemMonth !== selectedMonth ||
+                        itemYear !== selectedYear ||
+                        itemDay !== day
+                      ) {
+                        return;
+                      }
+                      if (row.id === "105-จีน") {
+                        if (
+                          item.staff_display_name === "จีน" ||
+                          item.staff_display_name === "มุก"
+                        ) {
+                          dailyTotal++;
+                        }
+                      } else if (item.staff_display_name === contactPerson) {
+                        dailyTotal++;
+                      }
+                    });
+
+                    // นับจาก Future
+                    revenueFutureData.forEach((item) => {
+                      const date = parseDateStr(item.surgery_date);
+                      if (!date) return;
+                      const itemDay = date.getDate();
+                      const itemMonth = date.getMonth();
+                      const itemYear = date.getFullYear();
+                      if (
+                        itemMonth !== selectedMonth ||
+                        itemYear !== selectedYear ||
+                        itemDay !== day
+                      ) {
+                        return;
+                      }
+                      if (row.id === "105-จีน") {
+                        if (
+                          item.contact_staff === "จีน" ||
+                          item.contact_staff === "มุก"
+                        ) {
+                          dailyTotal++;
+                        }
+                      } else if (item.contact_staff === contactPerson) {
+                        dailyTotal++;
+                      }
+                    });
+                  });
+
+                  return (
+                    <td
+                      key={`total-l-cell-${day}`}
+                      className={`data-cell ${
+                        dailyTotal > 0 ? "has-data" : ""
+                      }`}
+                      style={{ fontWeight: "bold" }}
+                      title={
+                        dailyTotal > 0
+                          ? `ยอดรวมทั้งหมด: ${dailyTotal} รายการ`
+                          : ""
+                      }
+                    >
+                      {dailyTotal > 0 && (
+                        <span className="count-badge">{dailyTotal}</span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
             </tbody>
           </table>
         </div>

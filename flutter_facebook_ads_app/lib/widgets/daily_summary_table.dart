@@ -94,16 +94,21 @@ class DailySummaryTable extends StatelessWidget {
             ),
             padding: const EdgeInsets.all(20),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  '📅 สรุปรายวัน (ย้อนหลัง 30 วัน)',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                const Expanded(
+                  child: Text(
+                    '📅 สรุปรายวัน (ย้อนหลัง 30 วัน)',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: true,
                   ),
                 ),
+                const SizedBox(width: 12),
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

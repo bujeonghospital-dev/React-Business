@@ -103,6 +103,7 @@ class _FacebookAdsDashboardNewState extends State<FacebookAdsDashboardNew>
         timeUntil: _dateRange == 'custom' ? _formatDate(_customDateEnd!) : null,
       );
 
+      print('🚀 Starting to fetch all data...');
       final results = await Future.wait([
         _service.fetchFacebookBalance(),
         _service.fetchPhoneCount(),
@@ -122,6 +123,13 @@ class _FacebookAdsDashboardNewState extends State<FacebookAdsDashboardNew>
         _service.fetchDailySummaryData(),
       ]);
 
+      print('📦 All data fetched!');
+      print('💵 Facebook Balance: ${results[0]}');
+      print('📞 Phone Count: ${results[1]}');
+      print('📊 Google Sheets: ${results[2]}');
+      print('📈 Google Ads: ${results[3]}');
+      print('📅 Daily Summaries: ${(results[4] as List).length} items');
+
       setState(() {
         _insights = insights;
         _facebookBalance = results[0] as double;
@@ -131,6 +139,8 @@ class _FacebookAdsDashboardNewState extends State<FacebookAdsDashboardNew>
         _dailySummaries = results[4] as List<DailySummary>;
         _isLoading = false;
       });
+
+      print('✅ State updated with new data');
 
       if (_viewMode == 'ads' && _insights.isNotEmpty) {
         _fetchAdCreatives();
@@ -334,349 +344,468 @@ class _FacebookAdsDashboardNewState extends State<FacebookAdsDashboardNew>
     }
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Colors.grey[50]!, Colors.blue[50]!],
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.grey[800],
+        title: const Text(
+          'Facebook Ads Manager',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: SafeArea(
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.grey[50]!, Colors.blue[50]!],
+            ),
+          ),
+          child: SmartRefresher(
+            controller: _refreshController,
+            onRefresh: _onRefresh,
+            header: WaterDropMaterialHeader(
+              backgroundColor: Colors.blue[600],
+              color: Colors.white,
+            ),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildDateFilterBar(),
+                    const SizedBox(height: 16),
+                    _buildPerformanceCardsSection(),
+                    const SizedBox(height: 16),
+                    _buildDailySummarySection(),
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: TopAdsSection(
+                        insights: _insights,
+                        adCreatives: _adCreatives,
+                        phoneLeads: _phoneLeads,
+                        sortBy: _topAdsSortBy,
+                        isCreativesLoading: _isCreativesLoading,
+                        onSortChanged: (sortBy) {
+                          setState(() {
+                            _topAdsSortBy = sortBy;
+                          });
+                        },
+                        onAdTap: _showAdPreview,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _buildReportSection(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
-        child: SmartRefresher(
-          controller: _refreshController,
-          onRefresh: _onRefresh,
-          header: WaterDropMaterialHeader(
-            backgroundColor: Colors.blue[600],
-            color: Colors.white,
-          ),
-          child: CustomScrollView(
-            slivers: [
-              SliverAppBar(
-                floating: true,
-                pinned: true,
-                elevation: 0,
-                backgroundColor: Colors.white,
-                title: Text(
-                  'Facebook Ads Manager',
-                  style: TextStyle(
-                    color: Colors.grey[800],
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
+      ),
+    );
+  }
+
+  Widget _buildDateFilterBar() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _buildDateRangeChip('วันนี้', 'today'),
+            _buildDateRangeChip('เมื่อวาน', 'yesterday'),
+            _buildDateRangeChip('7 วัน', 'last_7d'),
+            _buildDateRangeChip('14 วัน', 'last_14d'),
+            _buildDateRangeChip('30 วัน', 'last_30d'),
+            _buildDateRangeChip('เดือนนี้', 'this_month'),
+            _buildCustomDateChip(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPerformanceCardsSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 140,
+                  child: PerformanceCard(
+                    title: '💰 ใช้จ่ายรวม',
+                    value: _formatCurrency(_getTotalSpend()),
+                    gradient: LinearGradient(
+                      colors: [Colors.blue[500]!, Colors.blue[700]!],
+                    ),
                   ),
                 ),
-                bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(60),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 140,
+                  child: PerformanceCard(
+                    title: '💬 New/Total Inbox',
+                    value:
+                        '${_formatNumber(_getTotalNewInbox())}\n${_formatNumber(_getTotalInbox())}',
+                    gradient: LinearGradient(
+                      colors: [Colors.teal[500]!, Colors.cyan[600]!],
+                    ),
+                    isSmallText: true,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 140,
+                  child: PerformanceCard(
+                    title: '💵 เงินคงเหลือ FB',
+                    value: _formatCurrency(_facebookBalance),
+                    subtitle: 'Facebook Balance',
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        const Color(0xFF00C853),
+                        const Color(0xFF00E676),
+                        Colors.green[700]!,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 140,
+                  child: PerformanceCard(
+                    title: '📞 ชื่อ - เบอร์',
+                    value: _formatNumber(_phoneCount),
+                    subtitle: 'Phone Leads วันนี้',
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.purple[600]!,
+                        Colors.deepPurple[500]!,
+                        Colors.indigo[700]!,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDailySummarySection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF8E24AA), Color(0xFF5E35B1)],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.purple.withOpacity(0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: const SizedBox.shrink(),
+          ),
+          const SizedBox(height: 12),
+          DailySummaryTable(
+            summaries: _dailySummaries,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.blue[600]!,
+                  Colors.indigo[600]!,
+                  Colors.purple[600]!,
+                ],
+              ),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    '📋 Report ย้อนหลัง 30 วัน',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: true,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${_insights.length} รายการ',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.grey[50],
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildViewModeTab('แคมเปญ', 'campaigns'),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildViewModeTab('ชุดโฆษณา', 'adsets'),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildViewModeTab('โฆษณา', 'ads'),
+                ),
+              ],
+            ),
+          ),
+          if (_insights.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(32),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.inbox, size: 64, color: Colors.grey[400]),
+                    const SizedBox(height: 16),
+                    Text(
+                      'ไม่มีข้อมูล',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              itemCount: _insights.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final ad = _insights[index];
+                final creative = _adCreatives[ad.adId];
+                final thumbnailUrl =
+                    creative?.thumbnailUrl ?? creative?.imageUrl;
+                final costPerConnection = ad.getCostPerAction(
+                  'onsite_conversion.total_messaging_connection',
+                );
+                final phoneLeadCount = _phoneLeads[ad.adId] ??
+                    ad.phoneLeads ??
+                    ad.totalMessagingConnection;
+
+                return Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _showAdPreview(ad),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey[200]!),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildDateRangeChip('วันนี้', 'today'),
-                          _buildDateRangeChip('เมื่อวาน', 'yesterday'),
-                          _buildDateRangeChip('7 วัน', 'last_7d'),
-                          _buildDateRangeChip('14 วัน', 'last_14d'),
-                          _buildDateRangeChip('30 วัน', 'last_30d'),
-                          _buildDateRangeChip('เดือนนี้', 'this_month'),
-                          _buildCustomDateChip(),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (_viewMode == 'ads' && thumbnailUrl != null)
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.network(
+                                    thumbnailUrl,
+                                    width: 64,
+                                    height: 64,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        width: 64,
+                                        height: 64,
+                                        color: Colors.grey[200],
+                                        child: Icon(
+                                          Icons.image,
+                                          color: Colors.grey[400],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              if (_viewMode == 'ads' && thumbnailUrl != null)
+                                const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      ad.adName,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 15,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      ad.campaignName,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey[600],
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(
+                                Icons.chevron_right,
+                                color: Colors.grey[400],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _buildInsightStatChip(
+                                icon: Icons.monetization_on_outlined,
+                                label: 'ใช้ไป ${_formatCurrency(ad.spend)}',
+                                background: Colors.blue[50]!,
+                                iconColor: Colors.blue[700],
+                              ),
+                              _buildInsightStatChip(
+                                icon: Icons.mail_outline,
+                                label:
+                                    'ตอบแล้ว ${_formatNumber(ad.messagingFirstReply)}',
+                                background: Colors.green[50]!,
+                                iconColor: Colors.green[700],
+                              ),
+                              _buildInsightStatChip(
+                                icon: Icons.record_voice_over_outlined,
+                                label:
+                                    'Inbox ${_formatNumber(ad.totalMessagingConnection)}',
+                                background: Colors.orange[50]!,
+                                iconColor: Colors.orange[700],
+                              ),
+                              _buildInsightStatChip(
+                                icon: Icons.call_outlined,
+                                label: 'โทร ${_formatNumber(phoneLeadCount)}',
+                                background: Colors.purple[50]!,
+                                iconColor: Colors.purple[700],
+                              ),
+                              _buildInsightStatChip(
+                                icon: Icons.price_change_outlined,
+                                label:
+                                    '฿/Lead ${_formatCurrency(costPerConnection)}',
+                                background: Colors.indigo[50]!,
+                                iconColor: Colors.indigo[700],
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
                   ),
-                ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.all(16),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 1.3,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                  ),
-                  delegate: SliverChildListDelegate([
-                    PerformanceCard(
-                      title: '💰 ใช้จ่ายรวม',
-                      value: _formatCurrency(_getTotalSpend()),
-                      gradient: LinearGradient(
-                        colors: [Colors.blue[500]!, Colors.blue[700]!],
-                      ),
-                    ),
-                    PerformanceCard(
-                      title: '💬 New/Total Inbox',
-                      value: '${_formatNumber(_getTotalNewInbox())}\n'
-                          '${_formatNumber(_getTotalInbox())}',
-                      gradient: LinearGradient(
-                        colors: [Colors.teal[500]!, Colors.cyan[600]!],
-                      ),
-                      isSmallText: true,
-                    ),
-                    PerformanceCard(
-                      title: '💵 เงินคงเหลือ',
-                      value: _formatCurrency(_facebookBalance),
-                      gradient: LinearGradient(
-                        colors: [Colors.green[500]!, Colors.green[700]!],
-                      ),
-                    ),
-                    PerformanceCard(
-                      title: '📞 ชื่อ - เบอร์',
-                      value: _formatNumber(_phoneCount),
-                      subtitle: 'วันนี้เท่านั้น',
-                      gradient: LinearGradient(
-                        colors: [Colors.purple[500]!, Colors.indigo[600]!],
-                      ),
-                    ),
-                  ]),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: DailySummaryTable(
-                    summaries: _dailySummaries,
-                  ),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 16)),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: TopAdsSection(
-                    insights: _insights,
-                    adCreatives: _adCreatives,
-                    phoneLeads: _phoneLeads,
-                    sortBy: _topAdsSortBy,
-                    isCreativesLoading: _isCreativesLoading,
-                    onSortChanged: (sortBy) {
-                      setState(() {
-                        _topAdsSortBy = sortBy;
-                      });
-                    },
-                    onAdTap: _showAdPreview,
-                  ),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 16)),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.blue[600]!,
-                                Colors.indigo[600]!,
-                                Colors.purple[600]!,
-                              ],
-                            ),
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(20),
-                              topRight: Radius.circular(20),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                '📋 Report ย้อนหลัง 30 วัน',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  '${_insights.length} รายการ',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          color: Colors.grey[50],
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: _buildViewModeTab('แคมเปญ', 'campaigns'),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: _buildViewModeTab('ชุดโฆษณา', 'adsets'),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: _buildViewModeTab('โฆษณา', 'ads'),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (_insights.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.all(32),
-                            child: Center(
-                              child: Column(
-                                children: [
-                                  Icon(Icons.inbox,
-                                      size: 64, color: Colors.grey[400]),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'ไม่มีข้อมูล',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      color: Colors.grey[600],
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                        else
-                          ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _insights.length,
-                            separatorBuilder: (context, index) =>
-                                const Divider(),
-                            itemBuilder: (context, index) {
-                              final ad = _insights[index];
-                              final creative = _adCreatives[ad.adId];
-                              final thumbnailUrl =
-                                  creative?.thumbnailUrl ?? creative?.imageUrl;
-                              final costPerConnection = ad.getCostPerAction(
-                                  'onsite_conversion.total_messaging_connection');
-
-                              return InkWell(
-                                onTap: () => _showAdPreview(ad),
-                                child: Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 8),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      if (_viewMode == 'ads' &&
-                                          thumbnailUrl != null)
-                                        ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          child: Image.network(
-                                            thumbnailUrl,
-                                            width: 60,
-                                            height: 60,
-                                            fit: BoxFit.cover,
-                                            errorBuilder:
-                                                (context, error, stackTrace) =>
-                                                    Container(
-                                              width: 60,
-                                              height: 60,
-                                              color: Colors.grey[200],
-                                              child: Icon(
-                                                Icons.image,
-                                                color: Colors.grey[400],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      if (_viewMode == 'ads' &&
-                                          thumbnailUrl != null)
-                                        const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              ad.adName,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 14,
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              ad.campaignName,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey[600],
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Wrap(
-                                              spacing: 8,
-                                              runSpacing: 4,
-                                              children: [
-                                                _buildMetricChip(
-                                                  '💰 ${_formatCurrency(ad.spend)}',
-                                                  Colors.blue,
-                                                ),
-                                                _buildMetricChip(
-                                                  '💬 ${_formatNumber(ad.messagingFirstReply)}',
-                                                  Colors.green,
-                                                ),
-                                                _buildMetricChip(
-                                                  '📞 ${_formatNumber(ad.totalMessagingConnection)}',
-                                                  Colors.orange,
-                                                ),
-                                                _buildMetricChip(
-                                                  '฿/Lead ${_formatCurrency(costPerConnection)}',
-                                                  Colors.purple,
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 32)),
-            ],
-          ),
-        ),
+                );
+              },
+            ),
+        ],
       ),
     );
   }
@@ -765,21 +894,36 @@ class _FacebookAdsDashboardNewState extends State<FacebookAdsDashboardNew>
     );
   }
 
-  Widget _buildMetricChip(String text, Color color) {
+  Widget _buildInsightStatChip({
+    required IconData icon,
+    required String label,
+    required Color background,
+    Color? iconColor,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.3)),
+        color: background,
+        borderRadius: BorderRadius.circular(14),
       ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: color,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: iconColor ?? Colors.black87),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

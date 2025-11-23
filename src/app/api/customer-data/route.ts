@@ -253,6 +253,29 @@ export async function POST(request: NextRequest) {
         success: true,
         message: "Customer deleted successfully",
       });
+    } else if (action === "deleteMultiple") {
+      // ลบข้อมูลลูกค้าหลายรายการพร้อมกัน
+      const { ids } = data;
+
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return NextResponse.json(
+          { success: false, error: "กรุณาระบุ ID ที่ต้องการลบ" },
+          { status: 400 }
+        );
+      }
+
+      // สร้าง placeholders สำหรับ SQL query ($1, $2, $3, ...)
+      const placeholders = ids.map((_, index) => `$${index + 1}`).join(", ");
+      const query = `DELETE FROM "BJH-Server".bjh_all_leads WHERE id IN (${placeholders}) RETURNING id`;
+
+      const result = await pool.query(query, ids);
+
+      return NextResponse.json({
+        success: true,
+        message: `ลบข้อมูลสำเร็จ ${result.rowCount} รายการ`,
+        deletedCount: result.rowCount,
+        deletedIds: result.rows.map((row) => row.id),
+      });
     }
     return NextResponse.json(
       { success: false, error: "Invalid action" },

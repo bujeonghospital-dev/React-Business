@@ -117,16 +117,21 @@ class TopAdsSection extends StatelessWidget {
             child: Column(
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      '🏆 TOP 20 Ads',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                    const Expanded(
+                      child: Text(
+                        '🏆 TOP 20 Ads',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: true,
                       ),
                     ),
+                    const SizedBox(width: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -288,85 +293,24 @@ class TopAdsSection extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Rank Badge
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: rank == 1
-                        ? [Colors.amber[400]!, Colors.amber[600]!]
-                        : rank == 2
-                            ? [Colors.grey[300]!, Colors.grey[400]!]
-                            : rank == 3
-                                ? [Colors.orange[300]!, Colors.orange[400]!]
-                                : [Colors.blue[300]!, Colors.blue[400]!],
-                  ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
+              SizedBox(
+                width: 78,
+                height: 78,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned.fill(
+                      child: _buildThumbnail(thumbnailUrl),
+                    ),
+                    Positioned(
+                      top: -6,
+                      left: -6,
+                      child: _buildRankBadge(rank),
                     ),
                   ],
                 ),
-                child: Center(
-                  child: Text(
-                    '#$rank',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
               ),
               const SizedBox(width: 12),
-
-              // Thumbnail
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: thumbnailUrl != null
-                    ? CachedNetworkImage(
-                        imageUrl: thumbnailUrl,
-                        width: 80,
-                        height: 80,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Shimmer.fromColors(
-                          baseColor: Colors.grey[300]!,
-                          highlightColor: Colors.grey[100]!,
-                          child: Container(
-                            width: 80,
-                            height: 80,
-                            color: Colors.white,
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          width: 80,
-                          height: 80,
-                          color: Colors.grey[200],
-                          child: Icon(
-                            Icons.image,
-                            size: 32,
-                            color: Colors.grey[400],
-                          ),
-                        ),
-                      )
-                    : Container(
-                        width: 80,
-                        height: 80,
-                        color: Colors.grey[200],
-                        child: Icon(
-                          Icons.photo,
-                          size: 32,
-                          color: Colors.grey[400],
-                        ),
-                      ),
-              ),
-              const SizedBox(width: 12),
-
-              // Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -374,36 +318,50 @@ class TopAdsSection extends StatelessWidget {
                     Text(
                       ad.adName,
                       style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      ad.campaignName,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
-                        _buildMetricChip(
-                          '💰',
-                          _formatCurrency(ad.spend),
-                          Colors.blue,
+                        _buildStatChip(
+                          icon: Icons.monetization_on_outlined,
+                          label: _formatCurrency(ad.spend),
+                          background: Colors.blue[50]!,
+                          iconColor: Colors.blue[700],
                         ),
-                        _buildMetricChip(
-                          '💬',
-                          _formatNumber(ad.totalMessagingConnection),
-                          Colors.green,
+                        _buildStatChip(
+                          icon: Icons.chat_bubble_outline,
+                          label: _formatNumber(ad.messagingFirstReply),
+                          background: Colors.green[50]!,
+                          iconColor: Colors.green[700],
                         ),
-                        _buildMetricChip(
-                          '📞',
-                          _formatNumber(phoneLeadCount),
-                          Colors.purple,
+                        _buildStatChip(
+                          icon: Icons.call_outlined,
+                          label: _formatNumber(phoneLeadCount),
+                          background: Colors.purple[50]!,
+                          iconColor: Colors.purple[700],
                         ),
-                        _buildMetricChip(
-                          '฿/Lead',
-                          _formatCurrency(costPerConnection),
-                          Colors.orange,
+                        _buildStatChip(
+                          icon: Icons.price_change_outlined,
+                          label: '฿/Lead ${_formatCurrency(costPerConnection)}',
+                          background: Colors.orange[50]!,
+                          iconColor: Colors.orange[700],
                         ),
                       ],
                     ),
@@ -417,28 +375,111 @@ class TopAdsSection extends StatelessWidget {
     );
   }
 
-  Widget _buildMetricChip(String icon, String value, Color color) {
+  Widget _buildRankBadge(int rank) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        gradient: LinearGradient(
+          colors: rank == 1
+              ? [Colors.amber[400]!, Colors.amber[600]!]
+              : rank == 2
+                  ? [Colors.grey[300]!, Colors.grey[400]!]
+                  : rank == 3
+                      ? [Colors.orange[300]!, Colors.orange[400]!]
+                      : [Colors.blue[300]!, Colors.blue[400]!],
+        ),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Text(
+          '#$rank',
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThumbnail(String? thumbnailUrl) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: thumbnailUrl != null
+          ? CachedNetworkImage(
+              imageUrl: thumbnailUrl,
+              width: 72,
+              height: 72,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Shimmer.fromColors(
+                baseColor: Colors.grey[300]!,
+                highlightColor: Colors.grey[100]!,
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  color: Colors.white,
+                ),
+              ),
+              errorWidget: (context, url, error) => Container(
+                width: 72,
+                height: 72,
+                color: Colors.grey[200],
+                child: Icon(
+                  Icons.image,
+                  size: 28,
+                  color: Colors.grey[400],
+                ),
+              ),
+            )
+          : Container(
+              width: 72,
+              height: 72,
+              color: const Color(0xffF2F2F2),
+              child: const Icon(
+                Icons.image_outlined,
+                size: 30,
+                color: Colors.grey,
+              ),
+            ),
+    );
+  }
+
+  Widget _buildStatChip({
+    required IconData icon,
+    required String label,
+    required Color background,
+    Color? iconColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            icon,
-            style: const TextStyle(fontSize: 11),
-          ),
+          Icon(icon, size: 16, color: iconColor ?? Colors.black87),
           const SizedBox(width: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: color,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

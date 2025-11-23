@@ -27,9 +27,8 @@ export async function GET(request: NextRequest) {
   let client;
   try {
     const { searchParams } = new URL(request.url);
-    const dateParam = searchParams.get("date"); // Format: YYYY-MM-DD
-    const adIds = searchParams.get("ad_ids"); // Comma-separated ad_ids
-    console.log("📞 [Phone Leads API] Request params:", { dateParam, adIds });
+    const dateParam = searchParams.get("date"); // Format: YYYY-MM-DD (optional)
+    console.log("📞 [Phone Leads API] Request params:", { dateParam });
     // Check database configuration
     const hasDbConfig =
       process.env.DATABASE_URL ||
@@ -49,48 +48,25 @@ export async function GET(request: NextRequest) {
       });
     }
     console.log("✅ [Phone Leads API] Database configuration found");
-    // Parse ad_ids if provided
-    let adIdList: string[] = [];
-    if (adIds) {
-      adIdList = adIds.split(",").map((id) => id.trim());
-    }
-    // Build SQL query
+    // Build SQL query - Group by date only
     let query = `
       SELECT
-        ads.fb_ad_id,
-        ads.ad_name,
+        ct.assigned_at::date AS date,
         COUNT(DISTINCT ct.customer_id) AS customers_with_phone
-      FROM "BJH-Server".fb_customer_tags AS ct
-      JOIN "BJH-Server".fb_tags AS t
+      FROM "BJH-Server".fb_customer_tags ct
+      JOIN "BJH-Server".fb_tags t
         ON t.id = ct.tag_id
-      JOIN "BJH-Server".fb_conversations AS conv
-        ON conv.customer_id = ct.customer_id
-      JOIN "BJH-Server".fb_conversation_sources AS src
-        ON src.conversation_id = conv.id
-      JOIN "BJH-Server".fb_ads AS ads
-        ON ads.id = src.ad_id
       WHERE t.name = 'phone'
     `;
     const queryParams: any[] = [];
-    // Add date filter if provided
+    // Add date filter if provided (for single date)
     if (dateParam) {
       queryParams.push(dateParam);
       query += ` AND ct.assigned_at::date = $${queryParams.length}`;
-    } else {
-      // If no date param, use CURRENT_DATE by default
-      query += ` AND ct.assigned_at::date = CURRENT_DATE`;
-    }
-    // Add ad_id filter if provided
-    if (adIdList.length > 0) {
-      queryParams.push(adIdList);
-      query += ` AND ads.fb_ad_id = ANY($${queryParams.length}::text[])`;
     }
     query += `
-      GROUP BY
-        ads.fb_ad_id,
-        ads.ad_name
-      ORDER BY
-        customers_with_phone DESC
+      GROUP BY ct.assigned_at::date
+      ORDER BY date DESC
     `;
     console.log("📞 [Phone Leads API] Executing query:", query);
     console.log("📞 [Phone Leads API] Query params:", queryParams);
@@ -104,12 +80,18 @@ export async function GET(request: NextRequest) {
       "rows"
     );
     console.log("📊 [Phone Leads API] Sample data:", result.rows.slice(0, 3));
-    // Convert to map for easy lookup by fb_ad_id
+    // Convert to map for easy lookup by date (format: YYYY-MM-DD)
     const phoneLeadsMap: { [key: string]: number } = {};
     result.rows.forEach((row) => {
-      phoneLeadsMap[row.fb_ad_id] = parseInt(row.customers_with_phone) || 0;
+      // Format date manually to avoid timezone issues
+      const date = new Date(row.date);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const dateStr = `${year}-${month}-${day}`;
+      phoneLeadsMap[dateStr] = parseInt(row.customers_with_phone) || 0;
       console.log(
-        `  📍 Ad ${row.fb_ad_id}: ${row.customers_with_phone} phone leads`
+        `  📍 Date ${dateStr}: ${row.customers_with_phone} phone leads`
       );
     });
     return NextResponse.json({

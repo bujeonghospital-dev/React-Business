@@ -188,7 +188,10 @@ export default function FacebookAdsManagerPage() {
   const [googleAdsLoading, setGoogleAdsLoading] = useState(false);
   const [facebookBalance, setFacebookBalance] = useState<number>(0);
   const [facebookBalanceLoading, setFacebookBalanceLoading] = useState(false);
-  const [phoneCount, setPhoneCount] = useState<number>(0);
+  const [phoneCountData, setPhoneCountData] = useState<{
+    total: number;
+    datesWithData: number;
+  }>({ total: 0, datesWithData: 0 });
   const [phoneCountLoading, setPhoneCountLoading] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<
     "facebook" | "tiktok" | "googlead"
@@ -203,9 +206,9 @@ export default function FacebookAdsManagerPage() {
   const [topAdsSortBy, setTopAdsSortBy] = useState<"leads" | "cost">("leads");
   const [dailySummaryData, setDailySummaryData] = useState<AdInsight[]>([]);
   const [dailySummaryLoading, setDailySummaryLoading] = useState(false);
-  const [phoneLeadsData, setPhoneLeadsData] = useState<
-    Map<string, { [date: string]: number }>
-  >(new Map());
+  const [phoneLeadsData, setPhoneLeadsData] = useState<{
+    [date: string]: number;
+  }>({});
   const [phoneLeadsLoading, setPhoneLeadsLoading] = useState(false);
   const [topAdsPhoneLeads, setTopAdsPhoneLeads] = useState<Map<string, number>>(
     new Map()
@@ -528,54 +531,110 @@ export default function FacebookAdsManagerPage() {
   const fetchPhoneCount = useCallback(async () => {
     try {
       setPhoneCountLoading(true);
-      const response = await fetch("/api/phone-count");
-      const result = await response.json();
-      if (!response.ok || !result.success) {
-        setPhoneCount(0);
+
+      // Calculate date range
+      const today = new Date();
+      let startDate: string;
+      let endDate: string = today.toISOString().split("T")[0];
+
+      if (dateRange === "custom" && customDateStart && customDateEnd) {
+        startDate = customDateStart;
+        endDate = customDateEnd;
       } else {
-        setPhoneCount(result.count || 0);
+        let start: Date;
+        switch (dateRange) {
+          case "today":
+            startDate = endDate;
+            break;
+          case "yesterday":
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            startDate = endDate = yesterday.toISOString().split("T")[0];
+            break;
+          case "last_7d":
+            start = new Date(today);
+            start.setDate(start.getDate() - 7);
+            startDate = start.toISOString().split("T")[0];
+            break;
+          case "last_14d":
+            start = new Date(today);
+            start.setDate(start.getDate() - 14);
+            startDate = start.toISOString().split("T")[0];
+            break;
+          case "last_30d":
+            start = new Date(today);
+            start.setDate(start.getDate() - 30);
+            startDate = start.toISOString().split("T")[0];
+            break;
+          case "this_month":
+            start = new Date(today.getFullYear(), today.getMonth(), 1);
+            startDate = start.toISOString().split("T")[0];
+            break;
+          case "last_month":
+            start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const lastMonthEnd = new Date(
+              today.getFullYear(),
+              today.getMonth(),
+              0
+            );
+            startDate = start.toISOString().split("T")[0];
+            endDate = lastMonthEnd.toISOString().split("T")[0];
+            break;
+          default:
+            startDate = endDate;
+        }
+      }
+
+      // Fetch phone count with date range from Next.js API
+      const response = await fetch(`/api/phone-count`);
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        setPhoneCountData({ total: 0, datesWithData: 0 });
+      } else {
+        // Calculate total for date range from result.data { "2025-11-23": 3, ... }
+        let total = 0;
+        let datesCount = 0;
+
+        // Compare dates as strings (YYYY-MM-DD format)
+        Object.keys(result.data || {}).forEach((dateStr) => {
+          // dateStr is already in YYYY-MM-DD format
+          if (dateStr >= startDate && dateStr <= endDate) {
+            total += result.data[dateStr];
+            datesCount++;
+          }
+        });
+
+        setPhoneCountData({
+          total: total,
+          datesWithData: datesCount,
+        });
       }
     } catch (err) {
-      setPhoneCount(0);
+      setPhoneCountData({ total: 0, datesWithData: 0 });
     } finally {
       setPhoneCountLoading(false);
     }
-  }, []);
-  const fetchPhoneLeadsData = useCallback(
-    async (dates: string[], adIds: string[]) => {
-      try {
-        setPhoneLeadsLoading(true);
-        const phoneLeadsMap = new Map<string, { [date: string]: number }>();
-        // Fetch phone leads for each date
-        for (const date of dates) {
-          try {
-            const adIdsParam = adIds.join(",");
-            const response = await fetch(
-              `/api/facebook-ads-phone-leads?date=${date}&ad_ids=${adIdsParam}`
-            );
-            const result = await response.json();
-            if (result.success && result.data) {
-              // Store phone leads count for each ad_id on this date
-              Object.keys(result.data).forEach((adId) => {
-                if (!phoneLeadsMap.has(adId)) {
-                  phoneLeadsMap.set(adId, {});
-                }
-                phoneLeadsMap.get(adId)![date] = result.data[adId];
-              });
-            }
-          } catch (error) {
-            // Error fetching phone leads
-          }
-        }
-        setPhoneLeadsData(new Map(phoneLeadsMap));
-      } catch (err) {
-        setPhoneLeadsData(new Map());
-      } finally {
-        setPhoneLeadsLoading(false);
+  }, [dateRange, customDateStart, customDateEnd]);
+  const fetchPhoneLeadsData = useCallback(async () => {
+    try {
+      setPhoneLeadsLoading(true);
+      // Fetch all phone leads data grouped by date (no date filter = get all dates)
+      const response = await fetch(`/api/facebook-ads-phone-leads`);
+      const result = await response.json();
+      if (result.success && result.data) {
+        // Store phone leads count for each date
+        // result.data format: { "2024-11-23": 5, "2024-11-22": 3, ... }
+        setPhoneLeadsData(result.data);
+      } else {
+        setPhoneLeadsData({});
       }
-    },
-    []
-  );
+    } catch (err) {
+      setPhoneLeadsData({});
+    } finally {
+      setPhoneLeadsLoading(false);
+    }
+  }, []);
 
   const fetchDailySummaryData = useCallback(async () => {
     try {
@@ -588,21 +647,8 @@ export default function FacebookAdsManagerPage() {
         setDailySummaryData([]);
       } else {
         setDailySummaryData(result.data || []);
-        // Extract unique dates and ad_ids
-        const uniqueDates = new Set<string>();
-        const uniqueAdIds = new Set<string>();
-        result.data?.forEach((ad) => {
-          if (ad.date_start) uniqueDates.add(ad.date_start);
-          if (ad.ad_id) uniqueAdIds.add(ad.ad_id);
-        });
-        const dates = Array.from(uniqueDates)
-          .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
-          .slice(0, 30);
-        const adIds = Array.from(uniqueAdIds);
-        // Fetch phone leads data
-        if (dates.length > 0 && adIds.length > 0) {
-          fetchPhoneLeadsData(dates, adIds);
-        }
+        // Fetch phone leads data for all dates
+        fetchPhoneLeadsData();
       }
     } catch (err) {
       setDailySummaryData([]);
@@ -1291,11 +1337,13 @@ export default function FacebookAdsManagerPage() {
                   {phoneCountLoading ? (
                     <span className="text-3xl">⏳</span>
                   ) : (
-                    phoneCount
+                    <div>
+                      <div>{phoneCountData.total.toLocaleString()}</div>
+                      <div className="text-[10px] sm:text-xs opacity-80 mt-1 sm:mt-2 font-normal">
+                        {phoneCountData.datesWithData} รายการ
+                      </div>
+                    </div>
                   )}
-                </div>
-                <div className="text-[10px] sm:text-xs opacity-80 mt-1 sm:mt-2">
-                  วันนี้เท่านั้น
                 </div>
               </div>
             </div>
@@ -1397,16 +1445,8 @@ export default function FacebookAdsManagerPage() {
                         }
                         return last30Days.map((date) => {
                           const data = dailyData.get(date)!;
-                          // Calculate total phone leads for this date across all ads
-                          let totalPhoneLeads = 0;
-                          dailySummaryData.forEach((ad) => {
-                            if (ad.date_start === date && ad.ad_id) {
-                              const adPhoneData = phoneLeadsData.get(ad.ad_id);
-                              if (adPhoneData && adPhoneData[date]) {
-                                totalPhoneLeads += adPhoneData[date];
-                              }
-                            }
-                          });
+                          // Get phone leads count for this date
+                          const totalPhoneLeads = phoneLeadsData[date] || 0;
                           return (
                             <tr
                               key={date}

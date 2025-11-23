@@ -6,7 +6,9 @@ class FacebookAdsService {
   static const String baseUrl =
       'https://believable-ambition-production.up.railway.app/api';
 
-  // Fetch Facebook Ads Insights
+  // Next.js API URL (production)
+  static const String nextApiUrl =
+      'https://tpp-thanakon.store/api'; // Fetch Facebook Ads Insights
   Future<List<AdInsight>> fetchInsights({
     required String level, // 'campaign', 'adset', or 'ad'
     String datePreset = 'today',
@@ -25,18 +27,15 @@ class FacebookAdsService {
           'value': [
             'onsite_conversion.messaging_first_reply',
             'onsite_conversion.total_messaging_connection',
-          ]
-        }
+          ],
+        },
       ]);
       url += '&filtering=${Uri.encodeComponent(filtering)}';
       url += '&action_breakdowns=action_type';
 
       // Add date range
       if (timeSince != null && timeUntil != null) {
-        final timeRange = jsonEncode({
-          'since': timeSince,
-          'until': timeUntil,
-        });
+        final timeRange = jsonEncode({'since': timeSince, 'until': timeUntil});
         url += '&time_range=${Uri.encodeComponent(timeRange)}';
       } else {
         url += '&date_preset=$datePreset';
@@ -71,8 +70,9 @@ class FacebookAdsService {
       }
 
       final List<dynamic> insightsData = data['data'] ?? [];
-      final insights =
-          insightsData.map((json) => AdInsight.fromJson(json)).toList();
+      final insights = insightsData
+          .map((json) => AdInsight.fromJson(json))
+          .toList();
 
       return insights;
     } catch (e) {
@@ -127,10 +127,7 @@ class FacebookAdsService {
       String url = '$baseUrl/google-sheets-data';
 
       if (timeSince != null && timeUntil != null) {
-        final timeRange = jsonEncode({
-          'since': timeSince,
-          'until': timeUntil,
-        });
+        final timeRange = jsonEncode({'since': timeSince, 'until': timeUntil});
         url += '?time_range=${Uri.encodeComponent(timeRange)}';
       } else {
         url += '?date_preset=$datePreset';
@@ -190,23 +187,32 @@ class FacebookAdsService {
   // Fetch Facebook Balance
   Future<double> fetchFacebookBalance() async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/facebook-ads-balance'),
-      );
+      // Use Next.js API directly
+      final url = '$nextApiUrl/facebook-ads-balance';
+      print('🔍 Fetching Facebook Balance from: $url');
 
-      if (response.statusCode != 200) {
-        return 0;
+      final response = await http.get(Uri.parse(url));
+
+      print('📊 Balance Response Status: ${response.statusCode}');
+      print('📊 Balance Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          final balance =
+              double.tryParse(
+                data['data']['available_balance']?.toString() ?? '0',
+              ) ??
+              0;
+          print('✅ Facebook Balance: $balance');
+          return balance;
+        }
       }
 
-      final data = jsonDecode(response.body);
-      if (data['success'] != true) {
-        return 0;
-      }
-
-      return double.tryParse(
-              data['data']['available_balance']?.toString() ?? '0') ??
-          0;
+      print('❌ Balance API returned error');
+      return 0;
     } catch (e) {
+      print('❌ Error fetching Facebook Balance: $e');
       return 0;
     }
   }
@@ -214,21 +220,28 @@ class FacebookAdsService {
   // Fetch Phone Count
   Future<int> fetchPhoneCount() async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/phone-count'),
-      );
+      // Use Next.js API directly
+      final url = '$nextApiUrl/phone-count';
+      print('🔍 Fetching Phone Count from: $url');
 
-      if (response.statusCode != 200) {
-        return 0;
+      final response = await http.get(Uri.parse(url));
+
+      print('📞 Phone Count Response Status: ${response.statusCode}');
+      print('📞 Phone Count Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['count'] != null) {
+          final count = data['count'] as int;
+          print('✅ Phone Count: $count');
+          return count;
+        }
       }
 
-      final data = jsonDecode(response.body);
-      if (data['success'] != true) {
-        return 0;
-      }
-
-      return data['count'] ?? 0;
+      print('❌ Phone Count API returned error');
+      return 0;
     } catch (e) {
+      print('❌ Error fetching Phone Count: $e');
       return 0;
     }
   }
@@ -288,8 +301,9 @@ class FacebookAdsService {
       }
 
       final List<dynamic> insightsData = data['data'] ?? [];
-      final insights =
-          insightsData.map((json) => AdInsight.fromJson(json)).toList();
+      final insights = insightsData
+          .map((json) => AdInsight.fromJson(json))
+          .toList();
 
       // Group by date
       final Map<String, DailySummary> dailyMap = {};
@@ -355,10 +369,7 @@ class FacebookAdsService {
         break;
     }
 
-    return {
-      'start': _formatDate(startDate),
-      'end': _formatDate(endDate),
-    };
+    return {'start': _formatDate(startDate), 'end': _formatDate(endDate)};
   }
 
   String _formatDate(DateTime date) {

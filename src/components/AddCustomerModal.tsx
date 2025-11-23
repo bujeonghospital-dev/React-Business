@@ -37,7 +37,7 @@ export const AddCustomerModal = ({
     { value: "สา", label: "สา" },
     { value: "เจ", label: "เจ" },
     { value: "พิดยา", label: "พิดยา" },
-    { value: "มุข", label: "มุข" },
+    { value: "มุก", label: "มุก" },
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<{

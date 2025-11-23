@@ -204,6 +204,9 @@ export const AddCustomerModal = ({
     });
   };
   const handleSave = async () => {
+    // Prevent duplicate submissions
+    if (isLoading) return;
+
     setIsLoading(true);
     try {
       const response = await fetch("/api/customer-data", {
@@ -227,11 +230,13 @@ export const AddCustomerModal = ({
           message: "ข้อมูลลูกค้าใหม่ได้รับการเพิ่มเรียบร้อยแล้ว",
         });
 
+        // Call onSave immediately to update parent state
+        onSave(result.data || customerData);
+
         // Wait for notification to display then close
         setTimeout(() => {
           setNotification((prev) => ({ ...prev, isOpen: false }));
           setTimeout(() => {
-            onSave(customerData);
             onClose();
           }, 300); // Wait for fade out animation
         }, 2000); // Show notification for 2 seconds

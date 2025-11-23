@@ -356,207 +356,47 @@ export const EditCustomerModal = ({
     { value: "Long", label: "Long", color: "bg-cyan-500", isTime: false },
   ];
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto w-full max-w-4xl">
-        {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center z-10">
-          <h1 className="text-2xl font-bold text-gray-800">
-            แก้ไขข้อมูลลูกค้า
-          </h1>
+    <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+      <div className="bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden w-full max-w-4xl animate-slideUp transform transition-all">
+        {/* Header with Gradient */}
+        <div className="sticky top-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 p-6 flex justify-between items-center z-10 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="bg-white bg-opacity-20 p-2 rounded-xl backdrop-blur-sm">
+              <Save className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-white drop-shadow-lg">
+              แก้ไขข้อมูลลูกค้า
+            </h1>
+          </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition"
+            className="p-2 hover:bg-white hover:bg-opacity-20 rounded-xl transition-all duration-200 group"
           >
-            <X className="w-6 h-6 text-gray-500" />
+            <X className="w-6 h-6 text-white group-hover:rotate-90 transition-transform duration-200" />
           </button>
         </div>
-        {/* Main Content */}
-        <div className="p-6 space-y-6">
-          {/* Section 1: ข้อมูลพื้นฐาน */}
-          <div className="bg-gray-50 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              ข้อมูลพื้นฐาน
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {basicInfoFields.map((field) => {
-                const actualFieldName = getActualFieldName(field.value);
-                return (
-                  <div key={field.value}>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {field.label}
-                    </label>
-                    <input
-                      type="text"
-                      value={customerData[actualFieldName] || ""}
-                      onChange={(e) =>
-                        handleFieldChange(actualFieldName, e.target.value)
-                      }
-                      className="w-full px-4 py-2 border border-cyan-300 bg-cyan-50 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none text-gray-900 font-medium placeholder:text-gray-500"
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          {/* Section 2: ข้อมูลเพิ่มเติม */}
-          <div className="bg-gray-50 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              ข้อมูลเพิ่มเติม
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {additionalInfoFields.map((field) => {
-                const actualFieldName = getActualFieldName(field.value);
 
-                // Special handling for สถานะ field - use dropdown with colors
-                if (field.label === "สถานะ") {
-                  const selectedStatus = statusOptions.find(
-                    (opt) => opt.value === customerData[actualFieldName]
-                  );
+        {/* Scrollable Content */}
+        <div
+          className="overflow-y-auto"
+          style={{ maxHeight: "calc(90vh - 180px)" }}
+        >
+          {/* Main Content */}
+          <div className="p-6 space-y-6">
+            {/* Section 1: ข้อมูลพื้นฐาน */}
+            <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl p-6 border border-cyan-100 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-1 h-6 bg-gradient-to-b from-cyan-500 to-blue-500 rounded-full"></div>
+                <h2 className="text-lg font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                  ข้อมูลพื้นฐาน
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {basicInfoFields.map((field) => {
+                  const actualFieldName = getActualFieldName(field.value);
                   return (
-                    <div key={field.value}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {field.label} ⭐
-                      </label>
-                      <select
-                        value={customerData[actualFieldName] || ""}
-                        onChange={(e) =>
-                          handleFieldChange(actualFieldName, e.target.value)
-                        }
-                        className="w-full px-4 py-2 border border-indigo-300 bg-white rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
-                        style={{
-                          backgroundColor: selectedStatus?.color
-                            ? `${selectedStatus.color}15`
-                            : "white",
-                        }}
-                      >
-                        <option value="">เลือกสถานะ</option>
-                        {statusOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      {selectedStatus && (
-                        <div className="mt-2">
-                          <span
-                            className="inline-block px-3 py-1 rounded-full text-xs font-semibold text-black shadow-sm"
-                            style={{ backgroundColor: selectedStatus.color }}
-                          >
-                            {selectedStatus.label}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-
-                // Special handling for แหล่งที่มา field - use dropdown
-                if (field.label === "แหล่งที่มา") {
-                  return (
-                    <div key={field.value}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {field.label} ⭐
-                      </label>
-                      <select
-                        value={customerData[actualFieldName] || ""}
-                        onChange={(e) =>
-                          handleFieldChange(actualFieldName, e.target.value)
-                        }
-                        className="w-full px-4 py-2 border border-cyan-300 bg-cyan-50 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none font-medium text-gray-900"
-                      >
-                        <option value="">เลือกแหล่งที่มา</option>
-                        {sourceOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  );
-                }
-
-                // Special handling for ผลิตภัณฑ์ที่สนใจ field - use dropdown
-                if (field.label === "ผลิตภัณฑ์ที่สนใจ") {
-                  return (
-                    <div key={field.value}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {field.label} ⭐
-                      </label>
-                      <select
-                        value={customerData[actualFieldName] || ""}
-                        onChange={(e) =>
-                          handleFieldChange(actualFieldName, e.target.value)
-                        }
-                        className="w-full px-4 py-2 border border-cyan-300 bg-cyan-50 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none font-medium text-gray-900"
-                      >
-                        <option value="">เลือกผลิตภัณฑ์</option>
-                        {productOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  );
-                }
-
-                // Special handling for ประเทศ field - use dropdown
-                if (field.label === "ประเทศ") {
-                  return (
-                    <div key={field.value}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {field.label} ⭐
-                      </label>
-                      <select
-                        value={customerData[actualFieldName] || ""}
-                        onChange={(e) =>
-                          handleFieldChange(actualFieldName, e.target.value)
-                        }
-                        className="w-full px-4 py-2 border border-cyan-300 bg-cyan-50 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none font-medium text-gray-900"
-                      >
-                        <option value="">เลือกประเทศ</option>
-                        {countryOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div key={field.value}>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {field.label}
-                    </label>
-                    <input
-                      type="text"
-                      value={customerData[actualFieldName] || ""}
-                      onChange={(e) =>
-                        handleFieldChange(actualFieldName, e.target.value)
-                      }
-                      className="w-full px-4 py-2 border border-cyan-300 bg-cyan-50 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none text-gray-900 font-medium placeholder:text-gray-500"
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          {/* Section 3: ติดต่อและติดตาม */}
-          <div className="bg-gray-50 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              ติดต่อและติดตาม
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {contactFollowUpFields.map((field) => {
-                const actualFieldName = getActualFieldName(field.value);
-                const isDateField = field.label.includes("วันที่");
-
-                if (field.label === "ผู้ติดต่อ") {
-                  return (
-                    <div key={field.value}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div key={field.value} className="group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 transition-colors group-focus-within:text-cyan-600">
                         {field.label}
                       </label>
                       <input
@@ -565,237 +405,452 @@ export const EditCustomerModal = ({
                         onChange={(e) =>
                           handleFieldChange(actualFieldName, e.target.value)
                         }
-                        className="w-full px-4 py-2 border border-cyan-300 bg-cyan-50 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none text-gray-900 font-medium placeholder:text-gray-500"
+                        className="w-full px-4 py-3 border-2 border-cyan-200 bg-white rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none text-gray-900 font-medium placeholder:text-gray-400 transition-all duration-200 hover:border-cyan-300 shadow-sm hover:shadow-md"
                       />
                     </div>
                   );
-                }
-
-                // Format date value for input (YYYY-MM-DD)
-                const formatDateForInput = (dateValue: any) => {
-                  if (!dateValue) return "";
-                  const date = new Date(dateValue);
-                  if (isNaN(date.getTime())) return "";
-                  return date.toISOString().split("T")[0];
-                };
-
-                return (
-                  <div key={field.value}>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                      <span>📅</span>
-                      {field.label}
-                    </label>
-                    <input
-                      type="date"
-                      value={formatDateForInput(customerData[actualFieldName])}
-                      onChange={(e) =>
-                        handleFieldChange(actualFieldName, e.target.value)
-                      }
-                      className="w-full px-4 py-2 border border-cyan-300 bg-cyan-50 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none text-gray-900 font-medium hover:border-cyan-400 transition-colors cursor-pointer"
-                      style={{
-                        colorScheme: "light",
-                      }}
-                    />
-                  </div>
-                );
-              })}
+                })}
+              </div>
             </div>
-          </div>
-          {/* Section 4: สถานะ Consult */}
-          <div className="bg-gray-50 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              สถานะ Consult
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {consultFields.map((field) => {
-                const actualFieldName = getActualFieldName(field.value);
-                const isDateField = field.label.includes("วันที่");
-                const isAmountField = field.label === "ยอดนำเสนอ";
+            {/* Section 2: ข้อมูลเพิ่มเติม */}
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-100 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-1 h-6 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
+                <h2 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                  ข้อมูลเพิ่มเติม
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {additionalInfoFields.map((field) => {
+                  const actualFieldName = getActualFieldName(field.value);
 
-                // Format date value for input (YYYY-MM-DD)
-                const formatDateForInput = (dateValue: any) => {
-                  if (!dateValue) return "";
-                  const date = new Date(dateValue);
-                  if (isNaN(date.getTime())) return "";
-                  return date.toISOString().split("T")[0];
-                };
-
-                return (
-                  <div key={field.value}>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                      {isDateField && <span>📅</span>}
-                      {isAmountField && <span>💰</span>}
-                      {field.label}
-                    </label>
-                    <input
-                      type={isDateField ? "date" : "text"}
-                      value={
-                        isDateField
-                          ? formatDateForInput(customerData[actualFieldName])
-                          : customerData[actualFieldName] || ""
-                      }
-                      onChange={(e) =>
-                        handleFieldChange(actualFieldName, e.target.value)
-                      }
-                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 outline-none text-gray-900 font-medium placeholder:text-gray-500 transition-colors ${
-                        field.color === "bg-red-600"
-                          ? "border-red-300 bg-red-50 focus:ring-red-500 hover:border-red-400"
-                          : "border-cyan-300 bg-cyan-50 focus:ring-cyan-500 hover:border-cyan-400"
-                      } ${isDateField ? "cursor-pointer" : ""}`}
-                      style={isDateField ? { colorScheme: "light" } : {}}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          {/* Section 5: สถานะผ่าตัด */}
-          <div className="bg-gray-50 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              สถานะผ่าตัด
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {surgeryFields.map((field) => {
-                const actualFieldName = getActualFieldName(field.value);
-                const isDateField = field.label.includes("วันที่");
-                const isTimeField = field.label.includes("เวลา");
-                const isDoctorField = field.label === "หมอ";
-
-                // Format date value for input (YYYY-MM-DD)
-                const formatDateForInput = (dateValue: any) => {
-                  if (!dateValue) return "";
-                  const date = new Date(dateValue);
-                  if (isNaN(date.getTime())) return "";
-                  return date.toISOString().split("T")[0];
-                };
-
-                // Format time value for input (HH:MM)
-                const formatTimeForInput = (timeValue: any) => {
-                  if (!timeValue) return "";
-                  // If it's already in HH:MM format, return as is
-                  if (
-                    typeof timeValue === "string" &&
-                    timeValue.match(/^\d{2}:\d{2}/)
-                  ) {
-                    return timeValue.substring(0, 5);
+                  // Special handling for สถานะ field - use dropdown with colors
+                  if (field.label === "สถานะ") {
+                    const selectedStatus = statusOptions.find(
+                      (opt) => opt.value === customerData[actualFieldName]
+                    );
+                    return (
+                      <div key={field.value} className="group">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2 transition-colors group-focus-within:text-indigo-600">
+                          {field.label} ⭐
+                        </label>
+                        <select
+                          value={customerData[actualFieldName] || ""}
+                          onChange={(e) =>
+                            handleFieldChange(actualFieldName, e.target.value)
+                          }
+                          className="w-full px-4 py-3 border-2 border-indigo-200 bg-gradient-to-r from-white to-indigo-50 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none font-semibold text-gray-900 transition-all duration-200 hover:border-indigo-300 shadow-sm hover:shadow-md cursor-pointer"
+                          style={{
+                            backgroundColor: selectedStatus?.color
+                              ? `${selectedStatus.color}25`
+                              : "white",
+                          }}
+                        >
+                          <option value="">เลือกสถานะ</option>
+                          {statusOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                        {selectedStatus && (
+                          <div className="mt-2 animate-fadeIn">
+                            <span
+                              className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full text-xs font-bold text-black shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105"
+                              style={{ backgroundColor: selectedStatus.color }}
+                            >
+                              ✓ {selectedStatus.label}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
                   }
-                  return timeValue;
-                };
 
-                return (
-                  <div key={field.value}>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                      {isDateField && <span>📅</span>}
-                      {isTimeField && <span>⏰</span>}
-                      {isDoctorField && <span>👨‍⚕️</span>}
-                      {field.label}
-                    </label>
-                    <input
-                      type={
-                        isDateField ? "date" : isTimeField ? "time" : "text"
-                      }
-                      value={
-                        isDateField
-                          ? formatDateForInput(customerData[actualFieldName])
-                          : isTimeField
-                          ? formatTimeForInput(customerData[actualFieldName])
-                          : customerData[actualFieldName] || ""
-                      }
-                      onChange={(e) =>
-                        handleFieldChange(actualFieldName, e.target.value)
-                      }
-                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 outline-none text-gray-900 font-medium placeholder:text-gray-500 transition-colors ${
-                        field.color === "bg-red-600"
-                          ? "border-red-300 bg-red-50 focus:ring-red-500 hover:border-red-400"
-                          : "border-cyan-300 bg-cyan-50 focus:ring-cyan-500 hover:border-cyan-400"
-                      } ${isDateField || isTimeField ? "cursor-pointer" : ""}`}
-                      style={
-                        isDateField || isTimeField
-                          ? { colorScheme: "light" }
-                          : {}
-                      }
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          {/* Section 6: ข้อมูลเพิ่มเติม (Location) */}
-          <div className="bg-gray-50 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              ข้อมูลเพิ่มเติม
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {extraFields.map((field) => {
-                const actualFieldName = getActualFieldName(field.value);
-
-                // Format time value for input (HH:MM)
-                const formatTimeForInput = (timeValue: any) => {
-                  if (!timeValue) return "";
-                  // If it's already in HH:MM format, return as is
-                  if (
-                    typeof timeValue === "string" &&
-                    timeValue.match(/^\d{2}:\d{2}/)
-                  ) {
-                    return timeValue.substring(0, 5);
+                  // Special handling for แหล่งที่มา field - use dropdown
+                  if (field.label === "แหล่งที่มา") {
+                    return (
+                      <div key={field.value} className="group">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2 transition-colors group-focus-within:text-indigo-600">
+                          {field.label} ⭐
+                        </label>
+                        <select
+                          value={customerData[actualFieldName] || ""}
+                          onChange={(e) =>
+                            handleFieldChange(actualFieldName, e.target.value)
+                          }
+                          className="w-full px-4 py-3 border-2 border-indigo-200 bg-gradient-to-r from-white to-indigo-50 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none font-semibold text-gray-900 transition-all duration-200 hover:border-indigo-300 shadow-sm hover:shadow-md cursor-pointer"
+                        >
+                          <option value="">เลือกแหล่งที่มา</option>
+                          {sourceOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
                   }
-                  return timeValue;
-                };
 
-                return (
-                  <div key={field.value}>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                      {field.isTime && <span>⏰</span>}
-                      {field.label === "Lat" && <span>📍</span>}
-                      {field.label === "Long" && <span>📍</span>}
-                      {field.label}
-                    </label>
-                    <input
-                      type={field.isTime ? "time" : "text"}
-                      value={
-                        field.isTime
-                          ? formatTimeForInput(customerData[actualFieldName])
-                          : customerData[actualFieldName] || ""
-                      }
-                      onChange={(e) =>
-                        handleFieldChange(actualFieldName, e.target.value)
-                      }
-                      className={`w-full px-4 py-2 border border-cyan-300 bg-cyan-50 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none text-gray-900 font-medium placeholder:text-gray-500 hover:border-cyan-400 transition-colors ${
-                        field.isTime ? "cursor-pointer" : ""
-                      }`}
-                      style={field.isTime ? { colorScheme: "light" } : {}}
-                    />
-                  </div>
-                );
-              })}
+                  // Special handling for ผลิตภัณฑ์ที่สนใจ field - use dropdown
+                  if (field.label === "ผลิตภัณฑ์ที่สนใจ") {
+                    return (
+                      <div key={field.value} className="group">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2 transition-colors group-focus-within:text-indigo-600">
+                          {field.label} ⭐
+                        </label>
+                        <select
+                          value={customerData[actualFieldName] || ""}
+                          onChange={(e) =>
+                            handleFieldChange(actualFieldName, e.target.value)
+                          }
+                          className="w-full px-4 py-3 border-2 border-indigo-200 bg-gradient-to-r from-white to-indigo-50 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none font-semibold text-gray-900 transition-all duration-200 hover:border-indigo-300 shadow-sm hover:shadow-md cursor-pointer"
+                        >
+                          <option value="">เลือกผลิตภัณฑ์</option>
+                          {productOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  }
+
+                  // Special handling for ประเทศ field - use dropdown
+                  if (field.label === "ประเทศ") {
+                    return (
+                      <div key={field.value} className="group">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2 transition-colors group-focus-within:text-indigo-600">
+                          {field.label} ⭐
+                        </label>
+                        <select
+                          value={customerData[actualFieldName] || ""}
+                          onChange={(e) =>
+                            handleFieldChange(actualFieldName, e.target.value)
+                          }
+                          className="w-full px-4 py-3 border-2 border-indigo-200 bg-gradient-to-r from-white to-indigo-50 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none font-semibold text-gray-900 transition-all duration-200 hover:border-indigo-300 shadow-sm hover:shadow-md cursor-pointer"
+                        >
+                          <option value="">เลือกประเทศ</option>
+                          {countryOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={field.value} className="group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 transition-colors group-focus-within:text-cyan-600">
+                        {field.label}
+                      </label>
+                      <input
+                        type="text"
+                        value={customerData[actualFieldName] || ""}
+                        onChange={(e) =>
+                          handleFieldChange(actualFieldName, e.target.value)
+                        }
+                        className="w-full px-4 py-3 border-2 border-cyan-200 bg-white rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none text-gray-900 font-medium placeholder:text-gray-400 transition-all duration-200 hover:border-cyan-300 shadow-sm hover:shadow-md"
+                        placeholder={`กรอก${field.label}`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-          {/* Section 7: หมายเหตุ */}
-          <div className="bg-gray-50 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              หมายเหตุ
-            </h2>
-            <textarea
-              value={customerData["หมายเหตุ"] || ""}
-              onChange={(e) => handleFieldChange("หมายเหตุ", e.target.value)}
-              className="w-full px-4 py-2 border border-yellow-400 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none min-h-[150px] bg-yellow-50 text-gray-900 font-medium placeholder:text-gray-500"
-              placeholder="พิมพ์หมายเหตุ..."
-            />
+            {/* Section 3: ติดต่อและติดตาม */}
+            <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl p-6 border border-cyan-100 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-1 h-6 bg-gradient-to-b from-cyan-500 to-blue-500 rounded-full"></div>
+                <h2 className="text-lg font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                  ติดต่อและติดตาม
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {contactFollowUpFields.map((field) => {
+                  const actualFieldName = getActualFieldName(field.value);
+                  const isDateField = field.label.includes("วันที่");
+
+                  if (field.label === "ผู้ติดต่อ") {
+                    return (
+                      <div key={field.value} className="group">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2 transition-colors group-focus-within:text-cyan-600">
+                          {field.label}
+                        </label>
+                        <input
+                          type="text"
+                          value={customerData[actualFieldName] || ""}
+                          onChange={(e) =>
+                            handleFieldChange(actualFieldName, e.target.value)
+                          }
+                          className="w-full px-4 py-3 border-2 border-cyan-200 bg-white rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none text-gray-900 font-medium placeholder:text-gray-400 transition-all duration-200 hover:border-cyan-300 shadow-sm hover:shadow-md"
+                          placeholder={`กรอก${field.label}`}
+                        />
+                      </div>
+                    );
+                  }
+
+                  // Format date value for input (YYYY-MM-DD)
+                  const formatDateForInput = (dateValue: any) => {
+                    if (!dateValue) return "";
+                    const date = new Date(dateValue);
+                    if (isNaN(date.getTime())) return "";
+                    return date.toISOString().split("T")[0];
+                  };
+
+                  return (
+                    <div key={field.value} className="group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2 transition-colors group-focus-within:text-cyan-600">
+                        <span className="text-lg">📅</span>
+                        {field.label}
+                      </label>
+                      <input
+                        type="date"
+                        value={formatDateForInput(
+                          customerData[actualFieldName]
+                        )}
+                        onChange={(e) =>
+                          handleFieldChange(actualFieldName, e.target.value)
+                        }
+                        className="w-full px-4 py-3 border-2 border-cyan-200 bg-gradient-to-r from-white to-cyan-50 rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none text-gray-900 font-semibold hover:border-cyan-300 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md"
+                        style={{
+                          colorScheme: "light",
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Section 4: สถานะ Consult */}
+            <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-xl p-6 border border-red-100 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-1 h-6 bg-gradient-to-b from-red-500 to-pink-500 rounded-full"></div>
+                <h2 className="text-lg font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+                  สถานะ Consult
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {consultFields.map((field) => {
+                  const actualFieldName = getActualFieldName(field.value);
+                  const isDateField = field.label.includes("วันที่");
+                  const isAmountField = field.label === "ยอดนำเสนอ";
+
+                  // Format date value for input (YYYY-MM-DD)
+                  const formatDateForInput = (dateValue: any) => {
+                    if (!dateValue) return "";
+                    const date = new Date(dateValue);
+                    if (isNaN(date.getTime())) return "";
+                    return date.toISOString().split("T")[0];
+                  };
+
+                  return (
+                    <div key={field.value} className="group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2 transition-colors group-focus-within:text-red-600">
+                        {isDateField && <span className="text-lg">📅</span>}
+                        {isAmountField && <span className="text-lg">💰</span>}
+                        {field.label}
+                      </label>
+                      <input
+                        type={isDateField ? "date" : "text"}
+                        value={
+                          isDateField
+                            ? formatDateForInput(customerData[actualFieldName])
+                            : customerData[actualFieldName] || ""
+                        }
+                        onChange={(e) =>
+                          handleFieldChange(actualFieldName, e.target.value)
+                        }
+                        className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:border-transparent outline-none text-gray-900 font-semibold placeholder:text-gray-400 transition-all duration-200 shadow-sm hover:shadow-md ${
+                          field.color === "bg-red-600"
+                            ? "border-red-200 bg-gradient-to-r from-white to-red-50 focus:ring-red-400 hover:border-red-300"
+                            : "border-cyan-200 bg-gradient-to-r from-white to-cyan-50 focus:ring-cyan-400 hover:border-cyan-300"
+                        } ${isDateField ? "cursor-pointer" : ""}`}
+                        style={isDateField ? { colorScheme: "light" } : {}}
+                        placeholder={!isDateField ? `กรอก${field.label}` : ""}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Section 5: สถานะผ่าตัด */}
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-100 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-1 h-6 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full"></div>
+                <h2 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  สถานะผ่าตัด
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {surgeryFields.map((field) => {
+                  const actualFieldName = getActualFieldName(field.value);
+                  const isDateField = field.label.includes("วันที่");
+                  const isTimeField = field.label.includes("เวลา");
+                  const isDoctorField = field.label === "หมอ";
+
+                  // Format date value for input (YYYY-MM-DD)
+                  const formatDateForInput = (dateValue: any) => {
+                    if (!dateValue) return "";
+                    const date = new Date(dateValue);
+                    if (isNaN(date.getTime())) return "";
+                    return date.toISOString().split("T")[0];
+                  };
+
+                  // Format time value for input (HH:MM)
+                  const formatTimeForInput = (timeValue: any) => {
+                    if (!timeValue) return "";
+                    // If it's already in HH:MM format, return as is
+                    if (
+                      typeof timeValue === "string" &&
+                      timeValue.match(/^\d{2}:\d{2}/)
+                    ) {
+                      return timeValue.substring(0, 5);
+                    }
+                    return timeValue;
+                  };
+
+                  return (
+                    <div key={field.value} className="group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2 transition-colors group-focus-within:text-purple-600">
+                        {isDateField && <span className="text-lg">📅</span>}
+                        {isTimeField && <span className="text-lg">⏰</span>}
+                        {isDoctorField && <span className="text-lg">👨‍⚕️</span>}
+                        {field.label}
+                      </label>
+                      <input
+                        type={
+                          isDateField ? "date" : isTimeField ? "time" : "text"
+                        }
+                        value={
+                          isDateField
+                            ? formatDateForInput(customerData[actualFieldName])
+                            : isTimeField
+                            ? formatTimeForInput(customerData[actualFieldName])
+                            : customerData[actualFieldName] || ""
+                        }
+                        onChange={(e) =>
+                          handleFieldChange(actualFieldName, e.target.value)
+                        }
+                        className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:border-transparent outline-none text-gray-900 font-semibold placeholder:text-gray-400 transition-all duration-200 shadow-sm hover:shadow-md ${
+                          field.color === "bg-red-600"
+                            ? "border-purple-200 bg-gradient-to-r from-white to-purple-50 focus:ring-purple-400 hover:border-purple-300"
+                            : "border-cyan-200 bg-gradient-to-r from-white to-cyan-50 focus:ring-cyan-400 hover:border-cyan-300"
+                        } ${
+                          isDateField || isTimeField ? "cursor-pointer" : ""
+                        }`}
+                        style={
+                          isDateField || isTimeField
+                            ? { colorScheme: "light" }
+                            : {}
+                        }
+                        placeholder={
+                          !isDateField && !isTimeField
+                            ? `กรอก${field.label}`
+                            : ""
+                        }
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Section 6: ข้อมูลเพิ่มเติม (Location) */}
+            <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-xl p-6 border border-teal-100 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-1 h-6 bg-gradient-to-b from-teal-500 to-cyan-500 rounded-full"></div>
+                <h2 className="text-lg font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
+                  ข้อมูลเพิ่มเติม
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {extraFields.map((field) => {
+                  const actualFieldName = getActualFieldName(field.value);
+
+                  // Format time value for input (HH:MM)
+                  const formatTimeForInput = (timeValue: any) => {
+                    if (!timeValue) return "";
+                    // If it's already in HH:MM format, return as is
+                    if (
+                      typeof timeValue === "string" &&
+                      timeValue.match(/^\d{2}:\d{2}/)
+                    ) {
+                      return timeValue.substring(0, 5);
+                    }
+                    return timeValue;
+                  };
+
+                  return (
+                    <div key={field.value} className="group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2 transition-colors group-focus-within:text-teal-600">
+                        {field.isTime && <span className="text-lg">⏰</span>}
+                        {field.label === "Lat" && (
+                          <span className="text-lg">📍</span>
+                        )}
+                        {field.label === "Long" && (
+                          <span className="text-lg">📍</span>
+                        )}
+                        {field.label}
+                      </label>
+                      <input
+                        type={field.isTime ? "time" : "text"}
+                        value={
+                          field.isTime
+                            ? formatTimeForInput(customerData[actualFieldName])
+                            : customerData[actualFieldName] || ""
+                        }
+                        onChange={(e) =>
+                          handleFieldChange(actualFieldName, e.target.value)
+                        }
+                        className={`w-full px-4 py-3 border-2 border-teal-200 bg-gradient-to-r from-white to-teal-50 rounded-xl focus:ring-2 focus:ring-teal-400 focus:border-transparent outline-none text-gray-900 font-semibold placeholder:text-gray-400 hover:border-teal-300 transition-all duration-200 shadow-sm hover:shadow-md ${
+                          field.isTime ? "cursor-pointer" : ""
+                        }`}
+                        style={field.isTime ? { colorScheme: "light" } : {}}
+                        placeholder={!field.isTime ? `กรอก${field.label}` : ""}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Section 7: หมายเหตุ */}
+            <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl p-6 border border-amber-100 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-1 h-6 bg-gradient-to-b from-amber-500 to-yellow-500 rounded-full"></div>
+                <h2 className="text-lg font-bold bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent">
+                  หมายเหตุ
+                </h2>
+              </div>
+              <div className="group">
+                <textarea
+                  value={customerData["หมายเหตุ"] || ""}
+                  onChange={(e) =>
+                    handleFieldChange("หมายเหตุ", e.target.value)
+                  }
+                  className="w-full px-4 py-3 border-2 border-amber-200 bg-gradient-to-br from-white to-amber-50 rounded-xl focus:ring-2 focus:ring-amber-400 focus:border-transparent outline-none min-h-[150px] text-gray-900 font-medium placeholder:text-gray-400 hover:border-amber-300 transition-all duration-200 shadow-sm hover:shadow-md resize-none"
+                  placeholder="📝 พิมพ์หมายเหตุ..."
+                />
+              </div>
+            </div>
           </div>
         </div>
-        {/* Footer */}
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 p-6 flex justify-end gap-4">
+
+        {/* Footer with Gradient */}
+        <div className="sticky bottom-0 bg-gradient-to-t from-gray-50 to-white border-t border-gray-200 p-6 flex justify-end gap-4 shadow-lg">
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-8 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95"
           >
             ยกเลิก
           </button>
           <button
             onClick={handleSave}
             disabled={isLoading}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition disabled:opacity-70 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
           >
             {isLoading ? (
               <>

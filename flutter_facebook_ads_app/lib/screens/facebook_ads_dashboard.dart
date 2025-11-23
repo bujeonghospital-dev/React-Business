@@ -446,19 +446,9 @@ class _FacebookAdsDashboardState extends State<FacebookAdsDashboard>
 
   Widget _buildAdTable() {
     return Container(
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      margin: const EdgeInsets.only(left: 16, right: 16, bottom: 24),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(16),
@@ -468,17 +458,21 @@ class _FacebookAdsDashboardState extends State<FacebookAdsDashboard>
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               ),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
-              ),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF1877F2).withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Row(
               children: [
-                const Icon(Icons.assessment, color: Colors.white),
-                const SizedBox(width: 8),
+                const Icon(Icons.assessment, color: Colors.white, size: 24),
+                const SizedBox(width: 12),
                 const Text(
-                  'รายงานโฆษณา',
+                  'รายงานโฆษณาทั้งหมด',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -486,82 +480,306 @@ class _FacebookAdsDashboardState extends State<FacebookAdsDashboard>
                   ),
                 ),
                 const Spacer(),
-                Text(
-                  '${_insights.length} รายการ',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${_insights.length}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _insights.length,
-            itemBuilder: (context, index) {
-              final ad = _insights[index];
-              return _buildAdListItem(ad);
-            },
+          const SizedBox(height: 16),
+          if (_insights.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(48),
+                child: Column(
+                  children: [
+                    Icon(Icons.inbox, size: 64, color: Colors.grey[300]),
+                    const SizedBox(height: 16),
+                    Text(
+                      'ไม่มีข้อมูลโฆษณา',
+                      style: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _insights.length,
+              itemBuilder: (context, index) {
+                final ad = _insights[index];
+                final costPerLead = ad.messagingFirstReply > 0
+                    ? ad.spend / ad.messagingFirstReply
+                    : 0.0;
+                return _buildAdCard(ad, costPerLead, index + 1);
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAdCard(AdInsight ad, double costPerLead, int number) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF1877F2).withOpacity(0.1),
+                  const Color(0xFF5B51D8).withOpacity(0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1877F2), Color(0xFF5B51D8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '#$number',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    ad.adName,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Metrics Grid
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              children: [
+                // Row 1: New Inbox & Total Inbox
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildMetricItem(
+                        icon: '💬',
+                        label: 'New Inbox',
+                        value: ad.messagingFirstReply.toString(),
+                        color: const Color(0xFF1877F2),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildMetricItem(
+                        icon: '📨',
+                        label: 'Total Inbox',
+                        value: ad.totalMessagingConnection.toString(),
+                        color: const Color(0xFF10B981),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Row 2: Impressions & Spend
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildMetricItem(
+                        icon: '👁️',
+                        label: 'Impressions',
+                        value: NumberFormat('#,##0').format(ad.impressions),
+                        color: const Color(0xFF8B5CF6),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildMetricItem(
+                        icon: '💰',
+                        label: 'ใช้จ่าย',
+                        value: '฿${NumberFormat('#,##0').format(ad.spend)}',
+                        color: const Color(0xFFEF4444),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Row 3: Cost per Lead (Full Width)
+                _buildMetricItemFull(
+                  icon: '📊',
+                  label: 'ต้นทุนต่อ Lead',
+                  value: costPerLead > 0
+                      ? '฿${NumberFormat('#,##0.00').format(costPerLead)}'
+                      : 'ไม่มีข้อมูล',
+                  color: const Color(0xFFFF9800),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAdListItem(AdInsight ad) {
+  Widget _buildMetricItem({
+    required String icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Colors.grey[200]!),
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withOpacity(0.2),
+          width: 1.5,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            ad.adName,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-            ),
-          ),
-          const SizedBox(height: 8),
           Row(
             children: [
-              _buildStatChip(
-                  '💬', ad.messagingFirstReply.toString(), Colors.blue),
-              const SizedBox(width: 8),
-              _buildStatChip('📊', ad.impressions.toString(), Colors.orange),
-              const SizedBox(width: 8),
-              _buildStatChip('💰', '฿${NumberFormat('#,##0').format(ad.spend)}',
-                  Colors.green),
+              Text(
+                icon,
+                style: const TextStyle(fontSize: 18),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey[700],
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatChip(String icon, String value, Color color) {
+  Widget _buildMetricItemFull({
+    required String icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(6),
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withOpacity(0.2),
+          width: 1.5,
+        ),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(icon, style: const TextStyle(fontSize: 12)),
-          const SizedBox(width: 4),
+          Row(
+            children: [
+              Text(
+                icon,
+                style: const TextStyle(fontSize: 18),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
           Text(
             value,
             style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
               color: color,
             ),
           ),

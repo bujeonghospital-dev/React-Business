@@ -1,1027 +1,785 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../services/api_service.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
+import 'dart:async';
 import '../models/ad_insight.dart';
+import '../services/facebook_ads_service.dart';
+import '../widgets/performance_card.dart';
+import '../widgets/date_range_picker.dart' as custom_picker;
+import '../widgets/daily_summary_table.dart';
+import '../widgets/top_ads_section.dart';
+import '../widgets/ad_preview_modal.dart';
 
-class FacebookAdsDashboard extends StatefulWidget {
-  const FacebookAdsDashboard({super.key});
+class FacebookAdsDashboardNew extends StatefulWidget {
+  const FacebookAdsDashboardNew({Key? key}) : super(key: key);
 
   @override
-  State<FacebookAdsDashboard> createState() => _FacebookAdsDashboardState();
+  State<FacebookAdsDashboardNew> createState() =>
+      _FacebookAdsDashboardNewState();
 }
 
-class _FacebookAdsDashboardState extends State<FacebookAdsDashboard> {
-  final ApiService _apiService = ApiService();
-  final ScrollController _scrollController = ScrollController();
+class _FacebookAdsDashboardNewState extends State<FacebookAdsDashboardNew>
+    with SingleTickerProviderStateMixin {
+  final FacebookAdsService _service = FacebookAdsService();
+  final RefreshController _refreshController =
+      RefreshController(initialRefresh: false);
 
-  bool _isLoading = true;
-  String _dateRange = 'today';
-  String _topAdsSortBy = 'leads';
-
+  // Data
   List<AdInsight> _insights = [];
-  int _googleSheetsCount = 0;
-  int _googleAdsCount = 0;
+  Map<String, AdCreative> _adCreatives = {};
+  Map<String, int> _phoneLeads = {};
+  List<DailySummary> _dailySummaries = [];
+
+  // Loading states
+  bool _isLoading = true;
+  bool _isCreativesLoading = false;
+  String? _error;
+
+  // Metrics
   double _facebookBalance = 0;
   int _phoneCount = 0;
-  List<AdInsight> _dailySummary = [];
+  int _googleSheetsData = 0;
+  int _googleAdsData = 0;
+
+  // Filters
+  String _viewMode = 'ads';
+  String _dateRange = 'today';
+  DateTime? _customDateStart;
+  DateTime? _customDateEnd;
+  String _topAdsSortBy = 'leads';
+
+  // Auto-refresh timer
+  Timer? _autoRefreshTimer;
+  late AnimationController _animationController;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _loadAllData();
+    _startAutoRefresh();
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    _autoRefreshTimer?.cancel();
+    _refreshController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+  void _startAutoRefresh() {
+    _autoRefreshTimer = Timer.periodic(
+      const Duration(minutes: 2),
+      (timer) {
+        _loadAllData(isBackground: true);
+      },
+    );
+  }
+
+  Future<void> _loadAllData({bool isBackground = false}) async {
+    if (!isBackground) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
 
     try {
-      // Load main data first
+      String level = _viewMode == 'campaigns'
+          ? 'campaign'
+          : _viewMode == 'adsets'
+              ? 'adset'
+              : 'ad';
+
+      final insights = await _service.fetchInsights(
+        level: level,
+        datePreset: _dateRange == 'custom' ? 'last_30d' : _dateRange,
+        timeSince:
+            _dateRange == 'custom' ? _formatDate(_customDateStart!) : null,
+        timeUntil: _dateRange == 'custom' ? _formatDate(_customDateEnd!) : null,
+      );
+
       final results = await Future.wait([
-        _apiService.fetchFacebookAds(level: 'ad', datePreset: _dateRange),
-        _apiService.fetchGoogleSheetsData(datePreset: _dateRange),
-        _apiService.fetchGoogleAdsData(),
-        _apiService.fetchFacebookBalance(),
-        _apiService.fetchPhoneCount(),
+        _service.fetchFacebookBalance(),
+        _service.fetchPhoneCount(),
+        _service.fetchGoogleSheetsData(
+          datePreset: _dateRange == 'custom' ? 'last_30d' : _dateRange,
+          timeSince:
+              _dateRange == 'custom' ? _formatDate(_customDateStart!) : null,
+          timeUntil:
+              _dateRange == 'custom' ? _formatDate(_customDateEnd!) : null,
+        ),
+        _service.fetchGoogleAdsData(
+          datePreset: _dateRange,
+          startDate:
+              _dateRange == 'custom' ? _formatDate(_customDateStart!) : null,
+          endDate: _dateRange == 'custom' ? _formatDate(_customDateEnd!) : null,
+        ),
+        _service.fetchDailySummaryData(),
       ]);
 
-      if (mounted) {
-        setState(() {
-          _insights = results[0] as List<AdInsight>;
-          _googleSheetsCount = results[1] as int;
-          _googleAdsCount = results[2] as int;
-          _facebookBalance = results[3] as double;
-          _phoneCount = results[4] as int;
-          _isLoading = false;
-        });
-      }
+      setState(() {
+        _insights = insights;
+        _facebookBalance = results[0] as double;
+        _phoneCount = results[1] as int;
+        _googleSheetsData = results[2] as int;
+        _googleAdsData = results[3] as int;
+        _dailySummaries = results[4] as List<DailySummary>;
+        _isLoading = false;
+      });
 
-      // Load daily summary separately to avoid memory issues
-      _loadDailySummary();
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('เกิดข้อผิดพลาด: $e'), backgroundColor: Colors.red),
-        );
+      if (_viewMode == 'ads' && _insights.isNotEmpty) {
+        _fetchAdCreatives();
       }
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+
+    if (!isBackground) {
+      _refreshController.refreshCompleted();
     }
   }
 
-  Future<void> _loadDailySummary() async {
+  Future<void> _fetchAdCreatives() async {
+    setState(() {
+      _isCreativesLoading = true;
+    });
+
     try {
-      final summary = await _apiService.fetchDailySummary();
-      if (mounted) {
-        setState(() {
-          _dailySummary = summary;
-        });
-      }
+      final adIds = _insights.map((ad) => ad.adId).toList();
+      final creatives = await _service.fetchAdCreatives(adIds);
+      final phoneLeads = await _service.fetchPhoneLeads(adIds: adIds);
+
+      setState(() {
+        _adCreatives = creatives;
+        _phoneLeads = phoneLeads;
+        _isCreativesLoading = false;
+      });
     } catch (e) {
-      // Silent fail for daily summary
-      debugPrint('Error loading daily summary: $e');
+      setState(() {
+        _isCreativesLoading = false;
+      });
     }
   }
 
-  int get _totalMessagingFirstReply {
+  void _onRefresh() {
+    _loadAllData();
+  }
+
+  String _formatDate(DateTime date) {
+    return DateFormat('yyyy-MM-dd').format(date);
+  }
+
+  String _formatCurrency(double value) {
+    return '฿${NumberFormat('#,##0.00', 'th_TH').format(value)}';
+  }
+
+  String _formatNumber(dynamic value) {
+    if (value is String) {
+      value = double.tryParse(value) ?? 0;
+    }
+    return NumberFormat('#,##0', 'th_TH').format(value);
+  }
+
+  double _getTotalSpend() {
+    return _insights.fold(0, (sum, ad) => sum + ad.spend);
+  }
+
+  int _getTotalNewInbox() {
     return _insights.fold(0, (sum, ad) => sum + ad.messagingFirstReply);
   }
 
-  int get _totalMessagingConnection {
+  int _getTotalInbox() {
     return _insights.fold(0, (sum, ad) => sum + ad.totalMessagingConnection);
   }
 
-  List<AdInsight> get _topAds {
-    final sorted = List<AdInsight>.from(_insights);
-    if (_topAdsSortBy == 'leads') {
-      sorted.sort(
-          (a, b) => b.messagingFirstReply.compareTo(a.messagingFirstReply));
-    } else {
-      sorted.sort((a, b) => b.spend.compareTo(a.spend));
-    }
-    return sorted.take(10).toList();
+  void _showDatePicker() {
+    showDialog(
+      context: context,
+      builder: (context) => custom_picker.DateRangePickerDialog(
+        initialStartDate: _customDateStart,
+        initialEndDate: _customDateEnd,
+        onDateRangeSelected: (start, end) {
+          setState(() {
+            _customDateStart = start;
+            _customDateEnd = end;
+            _dateRange = 'custom';
+          });
+          _loadAllData();
+        },
+      ),
+    );
+  }
+
+  void _showAdPreview(AdInsight ad) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AdPreviewModal(
+        ad: ad,
+        creative: _adCreatives[ad.adId],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      body: _isLoading ? _buildLoadingState() : _buildContent(),
-    );
-  }
-
-  Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 60,
-            height: 60,
-            child: CircularProgressIndicator(
-              strokeWidth: 5,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Color(0xFF1877F2),
-              ),
+    if (_isLoading) {
+      return Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.grey[50]!, Colors.blue[50]!],
             ),
           ),
-          const SizedBox(height: 24),
-          const Text(
-            'กำลังโหลดข้อมูล...',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'โปรดรอสักครู่',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContent() {
-    return RefreshIndicator(
-      onRefresh: _loadData,
-      color: const Color(0xFF1877F2),
-      child: CustomScrollView(
-        controller: _scrollController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          // Date Range Tabs
-          _buildDateRangeTabs(),
-
-          // Performance Cards + TOP Ads Grid
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Left Column: Performance Cards (50%)
-                  Expanded(
-                    flex: 1,
-                    child: _buildPerformanceCards(),
-                  ),
-                  const SizedBox(width: 12),
-                  // Right Column: TOP Ads (50%)
-                  Expanded(
-                    flex: 1,
-                    child: _buildTopAdsSection(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Daily Summary Section
-          _buildDailySummarySection(),
-
-          // Report Ad Table
-          _buildAdTable(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDateRangeTabs() {
-    return SliverAppBar(
-      floating: true,
-      snap: true,
-      elevation: 0,
-      backgroundColor: Colors.white,
-      toolbarHeight: 70,
-      flexibleSpace: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                _buildTabChip('📊', '📊 ช่องควบคุม', 'control', isLabel: true),
-                const SizedBox(width: 8),
-                _buildTabChip('📅', 'วันนี้', 'today'),
-                const SizedBox(width: 8),
-                _buildTabChip('🕐', 'เมื่อวาน', 'yesterday'),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                _buildTabChip('📆', '7 วัน', 'last_7d'),
-                const SizedBox(width: 8),
-                _buildTabChip('📆', '14 วัน', 'last_14d'),
-                const SizedBox(width: 8),
-                _buildTabChip('📆', '30 วัน', 'last_30d'),
-                const SizedBox(width: 8),
-                _buildTabChip('📆', 'เดือนนี้', 'this_month'),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabChip(String icon, String label, String value,
-      {bool isLabel = false}) {
-    final isSelected = _dateRange == value && !isLabel;
-    return GestureDetector(
-      onTap: isLabel
-          ? null
-          : () {
-              setState(() => _dateRange = value);
-              _loadData();
-            },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isLabel
-              ? Colors.grey[100]
-              : isSelected
-                  ? const Color(0xFF3B82F6)
-                  : Colors.grey[100],
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (!isLabel) Text(icon, style: const TextStyle(fontSize: 14)),
-            if (!isLabel) const SizedBox(width: 4),
-            Text(
-              isLabel ? label : label.replaceAll('$icon ', ''),
-              style: TextStyle(
-                color: isLabel
-                    ? Colors.grey[700]
-                    : isSelected
-                        ? Colors.white
-                        : Colors.black87,
-                fontWeight:
-                    isSelected || isLabel ? FontWeight.w600 : FontWeight.normal,
-                fontSize: 13,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPerformanceCards() {
-    return Column(
-      children: [
-        _buildMetricCard(
-          'Facebook Leads',
-          _totalMessagingFirstReply.toString(),
-          '💬',
-          const Color(0xFF3B82F6),
-        ),
-        const SizedBox(height: 12),
-        _buildMetricCard(
-          'Total Connection',
-          _totalMessagingConnection.toString(),
-          '📊',
-          const Color(0xFF10B981),
-        ),
-        const SizedBox(height: 12),
-        _buildMetricCard(
-          'Google Sheets',
-          _googleSheetsCount.toString(),
-          '📄',
-          const Color(0xFFF59E0B),
-        ),
-        const SizedBox(height: 12),
-        _buildMetricCard(
-          'Google Ads',
-          _googleAdsCount.toString(),
-          '📢',
-          const Color(0xFFEF4444),
-        ),
-        const SizedBox(height: 12),
-        _buildMetricCard(
-          'FB Balance',
-          '฿${NumberFormat('#,##0.00').format(_facebookBalance)}',
-          '💰',
-          const Color(0xFF8B5CF6),
-        ),
-        const SizedBox(height: 12),
-        _buildMetricCard(
-          'Phone Leads',
-          _phoneCount.toString(),
-          '📞',
-          const Color(0xFF14B8A6),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMetricCard(
-      String label, String value, String emoji, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(emoji, style: const TextStyle(fontSize: 24)),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
+          child: Center(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[600]!),
+                  strokeWidth: 4,
+                ),
+                const SizedBox(height: 24),
                 Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 22,
+                  'กำลังโหลดข้อมูล...',
+                  style: TextStyle(
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: Colors.grey[700],
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Text(
-                  label,
+                  'โปรดรอสักครู่',
                   style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                    color: Colors.grey[500],
                   ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      );
+    }
 
-  Widget _buildTopAdsSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
+    if (_error != null) {
+      return Scaffold(
+        body: Container(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  '⚠️',
+                  style: TextStyle(fontSize: 64),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'เกิดข้อผิดพลาด',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _error!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: _loadAllData,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue[600],
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'ลองอีกครั้ง',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Text(
-                '🏆 TOP 10 Ads',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+        ),
+      );
+    }
+
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.grey[50]!, Colors.blue[50]!],
+          ),
+        ),
+        child: SmartRefresher(
+          controller: _refreshController,
+          onRefresh: _onRefresh,
+          header: WaterDropMaterialHeader(
+            backgroundColor: Colors.blue[600],
+            color: Colors.white,
+          ),
+          child: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                floating: true,
+                pinned: true,
+                elevation: 0,
+                backgroundColor: Colors.white,
+                title: Text(
+                  'Facebook Ads Manager',
+                  style: TextStyle(
+                    color: Colors.grey[800],
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+                bottom: PreferredSize(
+                  preferredSize: const Size.fromHeight(60),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildDateRangeChip('วันนี้', 'today'),
+                          _buildDateRangeChip('เมื่อวาน', 'yesterday'),
+                          _buildDateRangeChip('7 วัน', 'last_7d'),
+                          _buildDateRangeChip('14 วัน', 'last_14d'),
+                          _buildDateRangeChip('30 วัน', 'last_30d'),
+                          _buildDateRangeChip('เดือนนี้', 'this_month'),
+                          _buildCustomDateChip(),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-              const Spacer(),
-              _buildSortButton(),
+              SliverPadding(
+                padding: const EdgeInsets.all(16),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 1.3,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  delegate: SliverChildListDelegate([
+                    PerformanceCard(
+                      title: '💰 ใช้จ่ายรวม',
+                      value: _formatCurrency(_getTotalSpend()),
+                      gradient: LinearGradient(
+                        colors: [Colors.blue[500]!, Colors.blue[700]!],
+                      ),
+                    ),
+                    PerformanceCard(
+                      title: '💬 New/Total Inbox',
+                      value: '${_formatNumber(_getTotalNewInbox())}\n'
+                          '${_formatNumber(_getTotalInbox())}',
+                      gradient: LinearGradient(
+                        colors: [Colors.teal[500]!, Colors.cyan[600]!],
+                      ),
+                      isSmallText: true,
+                    ),
+                    PerformanceCard(
+                      title: '💵 เงินคงเหลือ',
+                      value: _formatCurrency(_facebookBalance),
+                      gradient: LinearGradient(
+                        colors: [Colors.green[500]!, Colors.green[700]!],
+                      ),
+                    ),
+                    PerformanceCard(
+                      title: '📞 ชื่อ - เบอร์',
+                      value: _formatNumber(_phoneCount),
+                      subtitle: 'วันนี้เท่านั้น',
+                      gradient: LinearGradient(
+                        colors: [Colors.purple[500]!, Colors.indigo[600]!],
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: DailySummaryTable(
+                    summaries: _dailySummaries,
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TopAdsSection(
+                    insights: _insights,
+                    adCreatives: _adCreatives,
+                    phoneLeads: _phoneLeads,
+                    sortBy: _topAdsSortBy,
+                    isCreativesLoading: _isCreativesLoading,
+                    onSortChanged: (sortBy) {
+                      setState(() {
+                        _topAdsSortBy = sortBy;
+                      });
+                    },
+                    onAdTap: _showAdPreview,
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.blue[600]!,
+                                Colors.indigo[600]!,
+                                Colors.purple[600]!,
+                              ],
+                            ),
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              topRight: Radius.circular(20),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                '📋 Report ย้อนหลัง 30 วัน',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '${_insights.length} รายการ',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          color: Colors.grey[50],
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _buildViewModeTab('แคมเปญ', 'campaigns'),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildViewModeTab('ชุดโฆษณา', 'adsets'),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildViewModeTab('โฆษณา', 'ads'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_insights.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Center(
+                              child: Column(
+                                children: [
+                                  Icon(Icons.inbox,
+                                      size: 64, color: Colors.grey[400]),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'ไม่มีข้อมูล',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _insights.length,
+                            separatorBuilder: (context, index) =>
+                                const Divider(),
+                            itemBuilder: (context, index) {
+                              final ad = _insights[index];
+                              final creative = _adCreatives[ad.adId];
+                              final thumbnailUrl =
+                                  creative?.thumbnailUrl ?? creative?.imageUrl;
+                              final costPerConnection = ad.getCostPerAction(
+                                  'onsite_conversion.total_messaging_connection');
+
+                              return InkWell(
+                                onTap: () => _showAdPreview(ad),
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      if (_viewMode == 'ads' &&
+                                          thumbnailUrl != null)
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          child: Image.network(
+                                            thumbnailUrl,
+                                            width: 60,
+                                            height: 60,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    Container(
+                                              width: 60,
+                                              height: 60,
+                                              color: Colors.grey[200],
+                                              child: Icon(
+                                                Icons.image,
+                                                color: Colors.grey[400],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      if (_viewMode == 'ads' &&
+                                          thumbnailUrl != null)
+                                        const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              ad.adName,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              ad.campaignName,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Wrap(
+                                              spacing: 8,
+                                              runSpacing: 4,
+                                              children: [
+                                                _buildMetricChip(
+                                                  '💰 ${_formatCurrency(ad.spend)}',
+                                                  Colors.blue,
+                                                ),
+                                                _buildMetricChip(
+                                                  '💬 ${_formatNumber(ad.messagingFirstReply)}',
+                                                  Colors.green,
+                                                ),
+                                                _buildMetricChip(
+                                                  '📞 ${_formatNumber(ad.totalMessagingConnection)}',
+                                                  Colors.orange,
+                                                ),
+                                                _buildMetricChip(
+                                                  '฿/Lead ${_formatCurrency(costPerConnection)}',
+                                                  Colors.purple,
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 32)),
             ],
           ),
-          const SizedBox(height: 20),
-          ..._topAds.asMap().entries.map((entry) {
-            final index = entry.key;
-            final ad = entry.value;
-            return _buildTopAdItem(index + 1, ad);
-          }).toList(),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildSortButton() {
-    return PopupMenuButton<String>(
-      initialValue: _topAdsSortBy,
-      onSelected: (value) {
-        setState(() => _topAdsSortBy = value);
+  Widget _buildDateRangeChip(String label, String value) {
+    final isSelected = _dateRange == value;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey[700],
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 13,
+          ),
+        ),
+        selected: isSelected,
+        onSelected: (selected) {
+          setState(() {
+            _dateRange = value;
+          });
+          _loadAllData();
+        },
+        selectedColor: Colors.blue[600],
+        backgroundColor: Colors.grey[200],
+        elevation: isSelected ? 2 : 0,
+        pressElevation: 4,
+      ),
+    );
+  }
+
+  Widget _buildCustomDateChip() {
+    final isSelected = _dateRange == 'custom';
+    return FilterChip(
+      label: Text(
+        '🗓️ กำหนดเอง',
+        style: TextStyle(
+          color: isSelected ? Colors.white : Colors.grey[700],
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          fontSize: 13,
+        ),
+      ),
+      selected: isSelected,
+      onSelected: (selected) {
+        _showDatePicker();
       },
+      selectedColor: Colors.blue[600],
+      backgroundColor: Colors.grey[200],
+      elevation: isSelected ? 2 : 0,
+      pressElevation: 4,
+    );
+  }
+
+  Widget _buildViewModeTab(String label, String mode) {
+    final isSelected = _viewMode == mode;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _viewMode = mode;
+        });
+        _loadAllData();
+      },
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(8),
+          color: isSelected ? Colors.blue[100] : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? Colors.blue[300]! : Colors.grey[300]!,
+            width: isSelected ? 2 : 1,
+          ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              _topAdsSortBy == 'leads' ? 'Leads' : 'Cost',
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(width: 4),
-            const Icon(Icons.arrow_drop_down, size: 18),
-          ],
-        ),
-      ),
-      itemBuilder: (context) => [
-        const PopupMenuItem(
-          value: 'leads',
-          child: Text('เรียงตาม Leads'),
-        ),
-        const PopupMenuItem(
-          value: 'cost',
-          child: Text('เรียงตามค่าใช้จ่าย'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTopAdItem(int rank, AdInsight ad) {
-    final bool isTopThree = rank <= 3;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        gradient: isTopThree
-            ? LinearGradient(
-                colors: [
-                  const Color(0xFF3B82F6).withOpacity(0.1),
-                  const Color(0xFF8B5CF6).withOpacity(0.1),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        color: isTopThree ? null : Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isTopThree
-              ? const Color(0xFF3B82F6).withOpacity(0.3)
-              : Colors.grey[200]!,
-          width: 1.5,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              gradient: isTopThree
-                  ? const LinearGradient(
-                      colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
-              color: isTopThree ? null : Colors.grey[400],
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                '$rank',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+              color: isSelected ? Colors.blue[700] : Colors.grey[700],
             ),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  ad.adName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    color: Colors.black87,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    _buildStatBadge(
-                      '💬',
-                      ad.messagingFirstReply.toString(),
-                      Colors.blue,
-                    ),
-                    const SizedBox(width: 6),
-                    _buildStatBadge(
-                      '💰',
-                      '฿${NumberFormat('#,##0').format(ad.spend)}',
-                      Colors.green,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildStatBadge(String icon, String value, Color color) {
+  Widget _buildMetricChip(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(icon, style: const TextStyle(fontSize: 11)),
-          const SizedBox(width: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: color.withOpacity(0.9),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDailySummarySection() {
-    // Group data by date
-    final Map<String, Map<String, dynamic>> dailyData = {};
-
-    for (var ad in _dailySummary) {
-      final date = ad.dateStart;
-      if (!dailyData.containsKey(date)) {
-        dailyData[date] = {
-          'leads': 0,
-          'connection': 0,
-          'impressions': 0,
-          'clicks': 0,
-          'spend': 0.0,
-        };
-      }
-
-      dailyData[date]!['leads'] += ad.messagingFirstReply;
-      dailyData[date]!['connection'] += ad.totalMessagingConnection;
-      dailyData[date]!['impressions'] += ad.impressions;
-      dailyData[date]!['clicks'] += ad.clicks;
-      dailyData[date]!['spend'] += ad.spend;
-    }
-
-    // Sort by date (newest first)
-    final sortedDates = dailyData.keys.toList()..sort((a, b) => b.compareTo(a));
-    final last30Days = sortedDates.take(30).toList();
-
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: color,
         ),
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.calendar_today,
-                      color: Colors.white, size: 28),
-                  const SizedBox(width: 12),
-                  const Text(
-                    '📅 สรุปรายวัน (ย้อนหลัง 30 วัน)',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '${last30Days.length} วัน',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Table Content
-            if (_dailySummary.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(48),
-                child: Column(
-                  children: [
-                    Icon(Icons.inbox_outlined,
-                        size: 64, color: Colors.grey[300]),
-                    const SizedBox(height: 16),
-                    Text(
-                      'ไม่มีข้อมูลสรุปรายวัน',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  headingRowColor: MaterialStateProperty.all(
-                    Colors.grey[100],
-                  ),
-                  columns: const [
-                    DataColumn(
-                      label: Text(
-                        'วันที่',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        '💬 Leads',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        '📊 Connection',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        '👁️ Impressions',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        '👆 Clicks',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        '💰 Cost',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ],
-                  rows: last30Days.map((date) {
-                    final data = dailyData[date]!;
-                    final isEven = last30Days.indexOf(date) % 2 == 0;
-
-                    return DataRow(
-                      color: MaterialStateProperty.all(
-                        isEven ? Colors.grey[50] : Colors.white,
-                      ),
-                      cells: [
-                        DataCell(
-                          Text(
-                            date,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            data['leads'].toString(),
-                            style: const TextStyle(
-                              color: Color(0xFF3B82F6),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            data['connection'].toString(),
-                            style: const TextStyle(
-                              color: Color(0xFF10B981),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            NumberFormat('#,##0').format(data['impressions']),
-                            style: const TextStyle(
-                              color: Color(0xFFF59E0B),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            data['clicks'].toString(),
-                            style: const TextStyle(
-                              color: Color(0xFF8B5CF6),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            '฿${NumberFormat('#,##0.00').format(data['spend'])}',
-                            style: const TextStyle(
-                              color: Color(0xFFEF4444),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  }).toList(),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAdTable() {
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Header with Gradient
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.assessment_outlined,
-                      color: Colors.white, size: 28),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'รายงานโฆษณา',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '${_insights.length} รายการ',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Table Content
-            if (_insights.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(48),
-                child: Column(
-                  children: [
-                    Icon(Icons.inbox_outlined,
-                        size: 64, color: Colors.grey[300]),
-                    const SizedBox(height: 16),
-                    Text(
-                      'ไม่มีข้อมูลโฆษณา',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _insights.length,
-                itemBuilder: (context, index) {
-                  final ad = _insights[index];
-                  return _buildAdListItem(ad, index);
-                },
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAdListItem(AdInsight ad, int index) {
-    final isEven = index % 2 == 0;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: isEven ? Colors.grey[50] : Colors.white,
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.grey[200]!,
-            width: 1,
-          ),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Ad Name
-          Text(
-            ad.adName,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // Stats Row
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _buildStatChip('💬 Leads', ad.messagingFirstReply.toString(),
-                  const Color(0xFF3B82F6)),
-              _buildStatChip(
-                  '📊 Impressions',
-                  NumberFormat('#,##0').format(ad.impressions),
-                  const Color(0xFFF59E0B)),
-              _buildStatChip(
-                  '👆 Clicks', ad.clicks.toString(), const Color(0xFF8B5CF6)),
-              _buildStatChip(
-                  '💰 Cost',
-                  '฿${NumberFormat('#,##0.00').format(ad.spend)}',
-                  const Color(0xFF10B981)),
-              _buildStatChip('📈 CTR', '${ad.ctr.toStringAsFixed(2)}%',
-                  const Color(0xFFEC4899)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatChip(String label, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
-        ],
       ),
     );
   }

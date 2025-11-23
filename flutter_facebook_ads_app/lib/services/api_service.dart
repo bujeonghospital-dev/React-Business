@@ -155,19 +155,42 @@ class ApiService {
   // Fetch Daily Summary (Last 30 days)
   Future<List<AdInsight>> fetchDailySummary() async {
     try {
-      var url =
-          '$baseUrl/facebook-ads-campaigns?level=ad&date_preset=last_30d&time_increment=1';
+      var url = '$baseUrl/facebook-ads-campaigns?level=ad';
+
+      // Add filtering for messaging actions
+      final filtering = jsonEncode([
+        {
+          'field': 'action_type',
+          'operator': 'IN',
+          'value': [
+            'onsite_conversion.messaging_first_reply',
+            'onsite_conversion.total_messaging_connection',
+          ],
+        }
+      ]);
+      url += '&filtering=${Uri.encodeComponent(filtering)}';
+      url += '&action_breakdowns=action_type';
+      url += '&date_preset=last_30d&time_increment=1';
+
+      print('Fetching daily summary from: $url'); // Debug log
 
       final response = await http.get(Uri.parse(url));
+
+      print(
+          'Daily summary response status: ${response.statusCode}'); // Debug log
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true && data['data'] != null) {
-          return (data['data'] as List)
+          final insights = (data['data'] as List)
               .map((item) => AdInsight.fromJson(item))
               .toList();
+          print(
+              'Daily summary loaded: ${insights.length} records'); // Debug log
+          return insights;
         }
       }
+      print('Daily summary failed or empty'); // Debug log
       return [];
     } catch (e) {
       print('Error fetching daily summary: $e');

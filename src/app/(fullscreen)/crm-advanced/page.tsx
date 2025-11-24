@@ -501,7 +501,7 @@ export default function CRMAdvancedPage() {
       )}
 
       {/* Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-0 mb-0 px-6 py-8">
+      {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-0 mb-0 px-6 py-8">
         <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-2xl p-8 transform hover:scale-105 transition-all duration-300 hover:shadow-3xl">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xl font-bold text-white">📅 นัดหมายวันนี้</h3>
@@ -576,7 +576,7 @@ export default function CRMAdvancedPage() {
           </p>
           <p className="text-purple-100 font-medium">รายการที่ต้องติดตาม</p>
         </div>
-      </div>
+      </div> */}
       {/* Main Content */}
       <div className="w-full h-full m-0 p-0">
         <div className="w-full overflow-hidden">

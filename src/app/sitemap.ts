@@ -1,11 +1,11 @@
 // src/app/sitemap.ts
 import type { MetadataRoute } from "next";
-export const dynamic = "force-static";
-export const revalidate = 3600;
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = "https://app.bjhbangkok.com";
-  const now = new Date();
-  const pages = [
+  const baseUrl = "https://app.bjhbangkok.com";
+  const currentDate = new Date();
+
+  const staticPages = [
     "/", // หน้าหลัก
     // เกี่ยวกับเรา
     "/about-philosophy",
@@ -34,10 +34,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/careers",
     "/contact-inquiry",
   ];
-  return pages.map((p) => ({
-    url: `${base}${p}`,
-    lastModified: now,
-    changeFrequency: "weekly",
-    priority: p === "/" ? 1 : 0.7,
+
+  return staticPages.map((route) => ({
+    url: `${baseUrl}${route}`,
+    lastModified: currentDate,
+    changeFrequency: route === "/" ? "daily" : ("weekly" as "daily" | "weekly"),
+    priority: route === "/" ? 1.0 : 0.7,
   }));
 }

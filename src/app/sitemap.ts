@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 export const dynamic = "force-static";
 export const revalidate = 3600;
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = "https://tpp-thanakon.store";
+  const base = "https://app.bjhbangkok.com";
   const now = new Date();
   const pages = [
     "/", // หน้าหลัก
@@ -40,4 +40,4 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: "weekly",
     priority: p === "/" ? 1 : 0.7,
   }));
-}
+}

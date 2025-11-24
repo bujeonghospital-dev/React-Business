@@ -19,28 +19,40 @@ import { Suspense } from "react";
 import Providers from "./providers";
 // ====== SEO / Metadata ======
 export const metadata: Metadata = {
-  metadataBase: new URL("https://tpp-thanakon.store"),
-  title: { default: "THAI PACKAGING & PRINTING PCL", template: "%s | TPP" },
+  metadataBase: new URL("https://app.bjhbangkok.com"),
+  title: {
+    default: "BJH Bangkok - THAI PACKAGING & PRINTING PCL",
+    template: "%s | BJH",
+  },
   description:
-    "Thai Packaging & Printing PCL — packaging & printing solutions.",
+    "BJH Bangkok - Thai Packaging & Printing PCL — Leading packaging & printing solutions provider in Thailand with world-class quality and service.",
+  keywords: [
+    "BJH Bangkok",
+    "Thai Packaging",
+    "Printing Solutions",
+    "Packaging Thailand",
+    "TPP",
+  ],
   robots: { index: true, follow: true },
   alternates: { canonical: "/" },
   icons: { icon: "/BJH.ico", apple: "/BJH.png" },
   // เพิ่ม Open Graph ช่วยแชร์สวยและช่วย Search Engine
   openGraph: {
     type: "website",
-    url: "https://tpp-thanakon.store",
-    siteName: "TPP",
-    title: "THAI PACKAGING & PRINTING PCL",
+    url: "https://app.bjhbangkok.com",
+    siteName: "BJH Bangkok",
+    title: "BJH Bangkok - THAI PACKAGING & PRINTING PCL",
     description:
-      "Thai Packaging & Printing PCL — packaging & printing solutions.",
+      "BJH Bangkok - Thai Packaging & Printing PCL — Leading packaging & printing solutions provider in Thailand.",
+    images: ["/BJH.png"],
   },
   // เพิ่ม Twitter Card (ถ้ายังไม่ใช้รูป ใส่ได้ภายหลัง)
   twitter: {
     card: "summary_large_image",
-    title: "THAI PACKAGING & PRINTING PCL",
+    title: "BJH Bangkok - THAI PACKAGING & PRINTING PCL",
     description:
-      "Thai Packaging & Printing PCL — packaging & printing solutions.",
+      "BJH Bangkok - Thai Packaging & Printing PCL — Leading packaging & printing solutions provider in Thailand.",
+    images: ["/BJH.png"],
   },
 };
 // ====== Fonts ======
@@ -70,9 +82,15 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Organization",
-              name: "Thai Packaging & Printing PCL",
-              url: "https://tpp-thanakon.store",
-              logo: "https://tpp-thanakon.store/BJH.png",
+              name: "BJH Bangkok - Thai Packaging & Printing PCL",
+              url: "https://app.bjhbangkok.com",
+              logo: "https://app.bjhbangkok.com/BJH.png",
+              description:
+                "Leading packaging & printing solutions provider in Thailand",
+              sameAs: [
+                "https://www.facebook.com/bjhbangkok",
+                "https://www.linkedin.com/company/bjhbangkok",
+              ],
             }),
           }}
         />

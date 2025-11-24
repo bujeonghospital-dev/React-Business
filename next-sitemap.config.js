@@ -1,10 +1,10 @@
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
-  siteUrl: "https://tpp-thanakon.store",
+  siteUrl: "https://app.bjhbangkok.com",
   generateRobotsTxt: true,
   changefreq: "weekly",
   priority: 0.7,
-  exclude: ["/api/*", "/_next/*"],
+  exclude: ["/api/*", "/_next/*", "/home", "/login", "/register"],
   transform: async (config, path) => {
     // โฮมเพจเด่นสุด
     if (path === "/") {

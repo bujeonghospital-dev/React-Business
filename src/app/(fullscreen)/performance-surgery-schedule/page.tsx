@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import "./styles.css";
 import SurgeryDetailsModal from "./SurgeryDetailsModal";
 import RevenueDetailsModal from "./RevenueDetailsModal";
@@ -34,6 +35,7 @@ import {
   NClinicData,
 } from "@/utils/databaseNClinic";
 export default function PerformanceSurgerySchedule() {
+  const router = useRouter();
   // State for selected month and year
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth()); // 0-11
@@ -816,7 +818,44 @@ export default function PerformanceSurgerySchedule() {
   return (
     <div className="surgery-schedule-container">
       <div className="schedule-header">
-        <h1>Performance - นัดผ่าตัด</h1>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "16px",
+            marginBottom: "16px",
+          }}
+        >
+          <button
+            onClick={() => router.push("/home")}
+            className="back-button"
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "#4CAF50",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "14px",
+              fontWeight: "500",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              transition: "background-color 0.2s",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.backgroundColor = "#45a049")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.backgroundColor = "#4CAF50")
+            }
+          >
+            ← กลับไปหน้าหลัก
+          </button>
+        </div>
+        <h1 style={{ textAlign: "center", margin: "16px 0" }}>
+          Performance - นัดผ่าตัด
+        </h1>
         {/* Calendar Controls */}
         <div className="calendar-controls">
           <button onClick={handlePreviousMonth} className="nav-button">

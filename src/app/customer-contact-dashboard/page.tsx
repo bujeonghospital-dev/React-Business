@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Phone,
@@ -153,6 +154,7 @@ const staggerContainer = {
   },
 };
 const CustomerContactDashboard = () => {
+  const router = useRouter();
   const [contacts, setContacts] = useState<ContactRecord[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<ContactRecord[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<StatusType>("all");
@@ -1245,6 +1247,20 @@ const CustomerContactDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 w-full">
       <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
+        {/* Back Button */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="mb-4"
+        >
+          <button
+            onClick={() => router.push("/home")}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-lg transition-all shadow-md hover:shadow-lg font-medium text-sm"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            <span>กลับไปหน้าหลัก</span>
+          </button>
+        </motion.div>
         {/* Header Title */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}

@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { FacebookProvider, EmbeddedVideo, EmbeddedPost } from "react-facebook";
 // Declare Facebook SDK types
 declare global {
@@ -174,6 +175,7 @@ interface ApiResponse {
 }
 type ViewMode = "campaigns" | "adsets" | "ads";
 export default function FacebookAdsManagerPage() {
+  const router = useRouter();
   const [insights, setInsights] = useState<AdInsight[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -903,6 +905,16 @@ export default function FacebookAdsManagerPage() {
   }
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+      {/* Back Button */}
+      <div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-3">
+        <button
+          onClick={() => router.push("/home")}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg font-medium text-sm"
+        >
+          <span className="text-lg">←</span>
+          <span>กลับไปหน้าหลัก</span>
+        </button>
+      </div>
       {/* Top Navigation Bar with Date Range Tabs */}
       <div className="bg-white shadow-md border-b border-gray-200">
         <div className="px-3 sm:px-6 py-3">

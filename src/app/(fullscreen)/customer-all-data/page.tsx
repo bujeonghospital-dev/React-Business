@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   Search,
   RefreshCw,
@@ -9,6 +10,7 @@ import {
   Filter,
   X,
   Plus,
+  ArrowLeft,
 } from "lucide-react";
 import { EditCustomerModal } from "@/components/EditCustomerModal";
 import { AddCustomerModal } from "@/components/AddCustomerModal";
@@ -70,6 +72,7 @@ interface TableSizeOption {
   sort_order: number;
 }
 const CustomerAllDataPage = () => {
+  const router = useRouter();
   const [tableData, setTableData] = useState<TableData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -796,6 +799,16 @@ const CustomerAllDataPage = () => {
     <>
       <style>{customScrollbarStyle}</style>
       <div className="w-full min-h-screen bg-gray-50 p-4 flex flex-col">
+        {/* Back Button */}
+        <div className="mb-4">
+          <button
+            onClick={() => router.push("/home")}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg font-medium text-sm"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>กลับไปหน้าหลัก</span>
+          </button>
+        </div>
         {/* Header with User Menu */}
         <div className="flex justify-between items-center mb-4">
           <div>

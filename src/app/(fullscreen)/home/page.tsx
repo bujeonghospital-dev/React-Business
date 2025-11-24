@@ -123,8 +123,8 @@ export default function FullscreenHomePage() {
         {
           title: "สรุปนัดลูกผ่าตัด (CRM)",
           icon: <FaCalendarCheck />,
-          status: "⚙️",
-          link: "/surgery-schedule",
+          status: "",
+          link: "/crm-advanced",
         },
       ],
     },

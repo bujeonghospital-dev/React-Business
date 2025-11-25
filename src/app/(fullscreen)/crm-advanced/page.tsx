@@ -818,8 +818,14 @@ export default function CRMAdvancedPage() {
                           att.status}
                       </div>
                       <div className="flex justify-between text-xs text-gray-600">
-                        <span>⏰ {att.time_in}</span>
-                        <span>🏁 {att.time_out}</span>
+                        <span>
+                          ⏰{" "}
+                          {att.time_in ? att.time_in.slice(0, 5) + "น." : "-"}
+                        </span>
+                        <span>
+                          🏁{" "}
+                          {att.time_out ? att.time_out.slice(0, 5) + "น." : "-"}
+                        </span>
                       </div>
                     </div>
                   );
@@ -2447,7 +2453,7 @@ export default function CRMAdvancedPage() {
                             เวลาเข้า
                           </div>
                           <div className="bg-blue-100 text-blue-800 rounded-lg px-3 py-2 font-bold text-center">
-                            {att.time_in || "-"}
+                            {att.time_in ? att.time_in.slice(0, 5) + "น." : "-"}
                           </div>
                         </div>
                         <div>
@@ -2455,7 +2461,9 @@ export default function CRMAdvancedPage() {
                             เวลาออก
                           </div>
                           <div className="bg-orange-100 text-orange-800 rounded-lg px-3 py-2 font-bold text-center">
-                            {att.time_out || "-"}
+                            {att.time_out
+                              ? att.time_out.slice(0, 5) + "น."
+                              : "-"}
                           </div>
                         </div>
                       </div>

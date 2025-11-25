@@ -1,4 +1,11 @@
-import { Pool } from "pg";
+import { Pool, types } from "pg";
+
+// กำหนดให้ pg ไม่แปลง DATE เป็น JavaScript Date object
+// เพื่อหลีกเลี่ยงปัญหา timezone shift
+types.setTypeParser(types.builtins.DATE, (val) => val); // DATE - return as string
+types.setTypeParser(types.builtins.TIMESTAMP, (val) => val); // TIMESTAMP - return as string
+types.setTypeParser(types.builtins.TIMESTAMPTZ, (val) => val); // TIMESTAMPTZ - return as string
+
 // สร้าง connection pool สำหรับ PostgreSQL (n8n.bjhbangkok.com)
 const pool = new Pool({
   host: process.env.DB_HOST || "n8n.bjhbangkok.com",

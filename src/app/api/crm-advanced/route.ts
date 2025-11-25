@@ -136,23 +136,37 @@ export async function GET(request: NextRequest) {
       const transformedData = {
         success: true,
         data: result.rows.map((row) => {
-          // แปลง date ให้เป็น YYYY-MM-DD format โดยไม่ผ่าน new Date() เพื่อหลีกเลี่ยง timezone shift
+          // แปลง date ให้เป็น YYYY-MM-DD format
+          // เนื่องจากตั้งค่า pg ให้ return date เป็น string แล้ว จึงไม่มีปัญหา timezone
           const formatDate = (dateValue: any): string => {
             if (!dateValue) return "";
-            // ถ้าเป็น string แล้วให้ใช้ .split("T")[0] โดยตรง
-            if (typeof dateValue === "string") {
-              return dateValue.split("T")[0];
+            const dateStr = String(dateValue);
+            // ถ้ามี T อยู่ (ISO format) ให้ตัดเอาส่วน date
+            if (dateStr.includes("T")) {
+              return dateStr.split("T")[0];
             }
-            // ถ้าเป็น Date object ให้แปลงเป็น ISO string แล้ว split
-            if (dateValue instanceof Date) {
-              return dateValue.toISOString().split("T")[0];
+            // ถ้ามี space (timestamp format เช่น "2025-11-25 10:00:00")
+            if (dateStr.includes(" ")) {
+              return dateStr.split(" ")[0];
             }
-            return String(dateValue).split("T")[0];
+            // ถ้าเป็น YYYY-MM-DD อยู่แล้ว
+            return dateStr;
+          };
+
+          // แปลง time ให้เป็น HH:MM:SS format
+          const formatTime = (timeValue: any): string => {
+            if (!timeValue) return "";
+            // ถ้าเป็น string ให้ใช้โดยตรง
+            if (typeof timeValue === "string") {
+              return timeValue;
+            }
+            // ถ้าเป็น object หรืออื่นๆ ให้แปลงเป็น string
+            return String(timeValue);
           };
 
           return {
             id: row.id,
-            appointmentTime: row.appointment_time || "",
+            appointmentTime: formatTime(row.appointment_time),
             status: row.status || "",
             customer_name: row.customer_name || "",
             phone: row.phone || "",

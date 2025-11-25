@@ -11,6 +11,26 @@ const getLocalDateString = (date: Date = new Date()): string => {
   return `${year}-${month}-${day}`;
 };
 
+// Helper function สำหรับแปลงเวลาเป็นรูปแบบ "HH:MM น."
+const formatTimeDisplay = (time: string | undefined | null): string => {
+  if (!time || time === "" || time === "null" || time === "undefined")
+    return "-";
+
+  // ถ้าเป็นรูปแบบ HH:MM:SS หรือ HH:MM:SS+07 หรือ HH:MM
+  const timeStr = String(time).trim();
+
+  // ลองแยกเวลาด้วย :
+  const parts = timeStr.split(":");
+  if (parts.length >= 2) {
+    const hours = parts[0].padStart(2, "0");
+    const minutes = parts[1].substring(0, 2).padStart(2, "0");
+    return `${hours}:${minutes} น.`;
+  }
+
+  // ถ้าไม่ใช่รูปแบบที่รู้จัก ให้ตัดเอา 5 ตัวแรก
+  return timeStr.slice(0, 5) + " น.";
+};
+
 interface CRMRecord {
   id: number;
   appointmentTime: string;
@@ -807,14 +827,8 @@ export default function CRMAdvancedPage() {
                           att.status}
                       </div>
                       <div className="flex justify-between text-xs text-gray-600">
-                        <span>
-                          ⏰{" "}
-                          {att.time_in ? att.time_in.slice(0, 5) + "น." : "-"}
-                        </span>
-                        <span>
-                          🏁{" "}
-                          {att.time_out ? att.time_out.slice(0, 5) + "น." : "-"}
-                        </span>
+                        <span>⏰ {formatTimeDisplay(att.time_in)}</span>
+                        <span>🏁 {formatTimeDisplay(att.time_out)}</span>
                       </div>
                     </div>
                   );
@@ -1578,7 +1592,7 @@ export default function CRMAdvancedPage() {
                         } hover:bg-gradient-to-r hover:from-blue-200 hover:to-indigo-200 transition-all duration-200`}
                       >
                         <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300">
-                          {record.appointmentTime}
+                          {formatTimeDisplay(record.appointmentTime)}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300">
                           <span className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-full text-xs font-bold shadow-lg transform hover:scale-105 transition-transform">
@@ -1808,7 +1822,7 @@ export default function CRMAdvancedPage() {
                         ⏰ เวลานัดหมาย
                       </p>
                       <p className="text-gray-800 font-bold">
-                        {record.appointmentTime}
+                        {formatTimeDisplay(record.appointmentTime)}
                       </p>
                     </div>
                     <div>
@@ -2474,7 +2488,7 @@ export default function CRMAdvancedPage() {
                             เวลาเข้า
                           </div>
                           <div className="bg-blue-100 text-blue-800 rounded-lg px-3 py-2 font-bold text-center">
-                            {att.time_in ? att.time_in.slice(0, 5) + "น." : "-"}
+                            {formatTimeDisplay(att.time_in)}
                           </div>
                         </div>
                         <div>
@@ -2482,9 +2496,7 @@ export default function CRMAdvancedPage() {
                             เวลาออก
                           </div>
                           <div className="bg-orange-100 text-orange-800 rounded-lg px-3 py-2 font-bold text-center">
-                            {att.time_out
-                              ? att.time_out.slice(0, 5) + "น."
-                              : "-"}
+                            {formatTimeDisplay(att.time_out)}
                           </div>
                         </div>
                       </div>

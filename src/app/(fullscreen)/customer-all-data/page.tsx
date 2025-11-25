@@ -172,23 +172,22 @@ const CustomerAllDataPage = () => {
         });
         // Define the desired column order for consistency between table and form
         const columnOrder = [
-          "id",
-          "สถานะ",
-          "แหล่งที่มา",
-          "ผลิตภัณฑ์ที่สนใจ",
-          "หมอ",
           "ผู้ติดต่อ",
+          "สถานะ",
+          "ผลิตภัณฑ์ที่สนใจ",
           "ชื่อ",
           "เบอร์โทร",
           "หมายเหตุ",
+          "วันที่ได้ชื่อ เบอร์",
           "วันที่ติดตามครั้งล่าสุด",
           "วันที่ติดตามครั้งถัดไป",
+          "วันที่ได้นัด consult",
           "วันที่ Consult",
+          "วันที่ได้นัดผ่าตัด",
           "วันที่ผ่าตัด",
           "เวลาที่นัด",
-          "วันที่ได้ชื่อ เบอร์",
-          "วันที่ได้นัด consult",
-          "วันที่ได้นัดผ่าตัด",
+          "แหล่งที่มา",
+          "หมอ",
           "ยอดนำเสนอ",
           "รหัสลูกค้า",
           "ติดดาว",
@@ -196,6 +195,7 @@ const CustomerAllDataPage = () => {
           "เวลาให้เรียกรถ",
           "Lat",
           "Long",
+          "id",
         ];
         const allHeadersSet = new Set<string>();
         const allHeaders: string[] = [];
@@ -218,6 +218,32 @@ const CustomerAllDataPage = () => {
           });
         });
         const filteredHeaders = allHeaders.filter((header: string) => {
+          // Exclude specified columns
+          const excludedColumns = [
+            "รูป",
+            "เพศ",
+            "อายุ",
+            "รหัสลูกค้า",
+            "อาชีพ",
+            "มาจากจังหวัด",
+            "จะเดินทางมารพ.ยังไง",
+            "Event ID",
+            "htmlLink",
+            "iCalUID",
+            "Log",
+            "Doc Calendar",
+            "Doc Event ID",
+            "Doc htmlLink",
+            "Doc iCalUID",
+            "line",
+            "line หมอ",
+            "IVR",
+            "TRANSFER_TO",
+            "status_call",
+          ];
+          if (excludedColumns.includes(header)) {
+            return false;
+          }
           return sanitizedTables.some((table: TableData) => {
             return table.data.some(
               (row: Record<string, any>) =>
@@ -328,6 +354,25 @@ const CustomerAllDataPage = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+  // Helper function to format date values and remove timezone
+  const formatDateValue = (value: any): string => {
+    if (!value) return "";
+    const strValue = String(value);
+
+    // Check if value contains ISO date format with timezone (T...Z)
+    if (strValue.includes("T") && strValue.includes("Z")) {
+      try {
+        // Extract just the date part (YYYY-MM-DD)
+        const dateOnly = strValue.split("T")[0];
+        return dateOnly;
+      } catch (error) {
+        return strValue;
+      }
+    }
+
+    return strValue;
+  };
+
   const handleSort = (column: string) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -813,63 +858,7 @@ const CustomerAllDataPage = () => {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            {/* Filter Column */}
-            <div className="relative group">
-              <button
-                onClick={() => {
-                  closeAllFilterMenus();
-                  setShowFilterMenu(!showFilterMenu);
-                }}
-                className="px-4 py-2.5 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white rounded-lg flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
-              >
-                <Filter className="w-4 h-4" />
-                <span>
-                  {filterColumn === "all" ? "ค้นหาทั้งหมด" : filterColumn}
-                </span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${
-                    showFilterMenu ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                  />
-                </svg>
-              </button>
-              {showFilterMenu && (
-                <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 min-w-[240px] overflow-hidden">
-                  <div className="max-h-64 overflow-y-auto">
-                    <button
-                      onClick={() => {
-                        setFilterColumn("all");
-                        setShowFilterMenu(false);
-                      }}
-                      className="w-full text-left px-4 py-3 hover:bg-teal-50 transition-colors border-b border-gray-100 font-medium text-gray-900 text-sm"
-                    >
-                      ✓ ทั้งหมด
-                    </button>
-                    {tableData[0]?.headers.map((header) => (
-                      <button
-                        key={header}
-                        onClick={() => {
-                          setFilterColumn(header);
-                          setShowFilterMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-3 hover:bg-teal-50 transition-colors border-b border-gray-100 text-gray-700 text-sm hover:text-teal-700"
-                      >
-                        {header}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+
             {/* Status Filter */}
             <div className="relative group">
               <button
@@ -1420,83 +1409,6 @@ const CustomerAllDataPage = () => {
                 </div>
               )}
             </div>
-            {/* Pagination */}
-            <select
-              value={itemsPerPage}
-              onChange={(e) => {
-                setItemsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="500">500 แถว</option>
-              <option value="2000">2000 แถว</option>
-              <option value="3000">3000 แถว</option>
-            </select>
-            {/* Table Size */}
-            <div className="relative group">
-              <button
-                onClick={() => {
-                  closeAllFilterMenus();
-                  setShowTableSizeMenu(!showTableSizeMenu);
-                }}
-                className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-lg flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-                  />
-                </svg>
-                <span>ขยายตาราง ({tableSize}px)</span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${
-                    showTableSizeMenu ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                  />
-                </svg>
-              </button>
-              {showTableSizeMenu && tableSizeOptions.length > 0 && (
-                <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 min-w-[180px] overflow-hidden">
-                  <div className="max-h-64 overflow-y-auto">
-                    {tableSizeOptions.map((option) => (
-                      <button
-                        key={option.id}
-                        onClick={() => {
-                          setTableSize(option.size_value);
-                          setShowTableSizeMenu(false);
-                        }}
-                        className={`w-full text-left px-4 py-3 transition-colors border-b border-gray-100 text-sm font-medium ${
-                          tableSize === option.size_value
-                            ? "bg-amber-50 text-amber-700"
-                            : "bg-white text-gray-700 hover:bg-amber-50 hover:text-amber-700"
-                        }`}
-                      >
-                        {tableSize === option.size_value && "✓ "}
-                        {option.size_label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg font-medium"
@@ -1529,34 +1441,6 @@ const CustomerAllDataPage = () => {
                   : `ลบที่เลือก (${selectedIds.length})`}
               </button>
             )}
-
-            <button
-              onClick={fetchData}
-              disabled={isLoading}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
-            >
-              <RefreshCw
-                className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
-              />
-              รีเฟรช
-            </button>
-            {/* Export */}
-            <div className="flex gap-2">
-              <button
-                onClick={exportToCSV}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                CSV
-              </button>
-              <button
-                onClick={exportToExcel}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                Excel
-              </button>
-            </div>
           </div>
           {/* Active Filters Display */}
           {tableData.length > 0 && (
@@ -1955,30 +1839,52 @@ const CustomerAllDataPage = () => {
                         title="เลือกทั้งหมด"
                       />
                     </th>
-                    {tableData[0].headers.map((header, idx) => (
-                      <th
-                        key={idx}
-                        onClick={() => handleSort(header)}
-                        className="px-3 py-2 text-center text-xs font-bold text-gray-900 border-r border-gray-400 whitespace-nowrap cursor-pointer hover:bg-yellow-400 transition-colors"
-                        style={{ fontSize: "11px" }}
-                      >
-                        <div className="flex items-center justify-center gap-1">
-                          <span>{header}</span>
-                          {sortColumn === header &&
-                            (sortDirection === "asc" ? (
-                              <ChevronUp className="w-3 h-3" />
-                            ) : (
-                              <ChevronDown className="w-3 h-3" />
-                            ))}
-                        </div>
-                      </th>
-                    ))}
-                    <th
-                      className="px-3 py-2 text-center font-bold text-gray-900 border-l-4 border-l-blue-500 bg-yellow-300 sticky right-0 z-40"
-                      style={{ minWidth: "120px" }}
-                    >
-                      🔧 จัดการ
-                    </th>
+                    {tableData[0].headers.map((header, idx) => {
+                      // Define gradient colors for header date columns
+                      const headerGradients: Record<string, string> = {
+                        วันที่ติดตามครั้งล่าสุด:
+                          "bg-gradient-to-r from-emerald-300 to-emerald-400",
+                        วันที่ติดตามครั้งถัดไป:
+                          "bg-gradient-to-r from-emerald-300 to-emerald-400",
+                        "วันที่ Consult":
+                          "bg-gradient-to-r from-fuchsia-300 to-fuchsia-400",
+                        วันที่ผ่าตัด:
+                          "bg-gradient-to-r from-orange-300 to-orange-400",
+                        เวลาที่นัด:
+                          "bg-gradient-to-r from-orange-300 to-orange-400",
+                        "วันที่ได้ชื่อ เบอร์":
+                          "bg-gradient-to-r from-blue-300 to-blue-400",
+                        "วันที่ได้นัด consult":
+                          "bg-gradient-to-r from-fuchsia-300 to-fuchsia-400",
+                        วันที่ได้นัดผ่าตัด:
+                          "bg-gradient-to-r from-orange-300 to-orange-400",
+                      };
+
+                      const headerGradient =
+                        headerGradients[header] || "bg-yellow-300";
+                      const hoverClass = headerGradients[header]
+                        ? "hover:opacity-90"
+                        : "hover:bg-yellow-400";
+
+                      return (
+                        <th
+                          key={idx}
+                          onClick={() => handleSort(header)}
+                          className={`px-3 py-2 text-center text-xs font-bold text-gray-900 border-r border-gray-400 whitespace-nowrap cursor-pointer ${hoverClass} transition-all ${headerGradient}`}
+                          style={{ fontSize: "11px" }}
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <span>{header}</span>
+                            {sortColumn === header &&
+                              (sortDirection === "asc" ? (
+                                <ChevronUp className="w-3 h-3" />
+                              ) : (
+                                <ChevronDown className="w-3 h-3" />
+                              ))}
+                          </div>
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody>
@@ -2011,7 +1917,11 @@ const CustomerAllDataPage = () => {
                     return (
                       <tr
                         key={rowIndex}
-                        className={`border border-gray-300 transition-all duration-200 group ${bgColor} hover:bg-blue-50`}
+                        onClick={() => {
+                          setEditingCustomer(row);
+                          setIsEditModalOpen(true);
+                        }}
+                        className={`border border-gray-300 transition-all duration-200 group ${bgColor} hover:bg-blue-50 cursor-pointer`}
                       >
                         <td
                           className="px-3 py-2 border-r border-gray-300 text-center"
@@ -2030,64 +1940,68 @@ const CustomerAllDataPage = () => {
                             value !== undefined &&
                             value !== null &&
                             value !== "";
+                          const displayValue = formatDateValue(value);
+                          const isNotesColumn = header === "หมายเหตุ";
+
+                          // Define gradient colors for specific date columns
+                          const dateColumns: Record<string, string> = {
+                            วันที่ติดตามครั้งล่าสุด:
+                              "bg-gradient-to-r from-emerald-100 to-emerald-200",
+                            วันที่ติดตามครั้งถัดไป:
+                              "bg-gradient-to-r from-emerald-100 to-emerald-200",
+                            "วันที่ Consult":
+                              "bg-gradient-to-r from-fuchsia-100 to-fuchsia-200",
+                            วันที่ผ่าตัด:
+                              "bg-gradient-to-r from-orange-100 to-orange-200",
+                            เวลาที่นัด:
+                              "bg-gradient-to-r from-orange-100 to-orange-200",
+                            "วันที่ได้ชื่อ เบอร์":
+                              "bg-gradient-to-r from-blue-100 to-blue-200",
+                            "วันที่ได้นัด consult":
+                              "bg-gradient-to-r from-fuchsia-100 to-fuchsia-200",
+                            วันที่ได้นัดผ่าตัด:
+                              "bg-gradient-to-r from-orange-100 to-orange-200",
+                          };
+
+                          const gradientClass = dateColumns[header] || "";
+                          const isDateColumn = !!dateColumns[header];
+
                           return (
                             <td
                               key={colIdx}
-                              className="px-3 py-2 text-xs text-gray-900 border-r border-gray-300 text-center align-middle"
-                              style={{ fontSize: "11px" }}
+                              className={`px-3 py-2 text-xs text-gray-900 border-r border-gray-300 text-center align-middle ${
+                                isNotesColumn ? "" : "whitespace-nowrap"
+                              } ${gradientClass}`}
+                              style={{
+                                fontSize: "11px",
+                                minWidth: isNotesColumn
+                                  ? "450px"
+                                  : isDateColumn
+                                  ? "80px"
+                                  : undefined,
+                                maxWidth: isNotesColumn
+                                  ? "450px"
+                                  : isDateColumn
+                                  ? "80px"
+                                  : undefined,
+                              }}
                             >
                               {hasValue ? (
-                                <span className="block">{String(value)}</span>
+                                <span
+                                  className={
+                                    isNotesColumn
+                                      ? "block text-left whitespace-pre-wrap break-words"
+                                      : "block"
+                                  }
+                                >
+                                  {displayValue}
+                                </span>
                               ) : (
                                 <span className="text-gray-400 block">-</span>
                               )}
                             </td>
                           );
                         })}
-                        <td
-                          className="px-3 py-2 border-l-4 border-l-blue-500 text-center align-middle sticky right-0 z-20"
-                          style={{
-                            backgroundColor: isChecked
-                              ? "#DBEAFE"
-                              : patternIndex === 1
-                              ? "#FBD5D5"
-                              : patternIndex === 3
-                              ? "#E9D5FF"
-                              : "#FFFFFF",
-                            minWidth: "120px",
-                          }}
-                        >
-                          <div className="flex gap-2 justify-center items-center">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                console.log(
-                                  "🔧 Edit clicked:",
-                                  row.id || row["id"]
-                                );
-                                setEditingCustomer(row);
-                                setIsEditModalOpen(true);
-                              }}
-                              className="inline-flex items-center gap-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-bold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 transition-all duration-200"
-                              title="แก้ไขข้อมูล"
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                />
-                              </svg>
-                              แก้ไข
-                            </button>
-                          </div>
-                        </td>
                       </tr>
                     );
                   })}

@@ -3,6 +3,14 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+// Helper function สำหรับสร้างวันที่แบบ local time (YYYY-MM-DD)
+const getLocalDateString = (date: Date = new Date()): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 interface CRMRecord {
   id: number;
   appointmentTime: string;
@@ -102,7 +110,7 @@ export default function CRMAdvancedPage() {
 
   // ดึงข้อมูลจาก API - เริ่มต้นด้วยวันนี้
   useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalDateString();
     setStartDate(today);
     fetchRecords(today, today);
   }, []);
@@ -227,13 +235,13 @@ export default function CRMAdvancedPage() {
       fetchRecords(startDate, startDate);
     } else {
       // ถ้าไม่กรอกวันที่ ให้ใช้วันนี้
-      const today = new Date().toISOString().split("T")[0];
+      const today = getLocalDateString();
       fetchRecords(today, today);
     }
   };
 
   const handleResetFilter = () => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalDateString();
     setStartDate(today);
     setSelectedDate("");
     if (viewMode === "calendar") {
@@ -294,11 +302,12 @@ export default function CRMAdvancedPage() {
 
   const getRecordsForDate = (dateStr: string) => {
     return records.filter((record) => {
+      // ใช้ .split("T")[0] โดยตรง ไม่ผ่าน new Date() เพื่อหลีกเลี่ยงปัญหา timezone
       const surgeryDate = record.surgery_date
-        ? new Date(record.surgery_date).toISOString().split("T")[0]
+        ? record.surgery_date.split("T")[0]
         : null;
       const consultDate = record.consult_date
-        ? new Date(record.consult_date).toISOString().split("T")[0]
+        ? record.consult_date.split("T")[0]
         : null;
       return surgeryDate === dateStr || consultDate === dateStr;
     });
@@ -446,11 +455,8 @@ export default function CRMAdvancedPage() {
         if (showAttendancePopup && selectedAttendanceDateStr) {
           const updatedAttendances = attendances.filter((att) => att.id !== id);
           const filtered = updatedAttendances.filter((att) => {
-            const workDate = new Date(att.work_date);
-            const attDate = `${workDate.getFullYear()}-${String(
-              workDate.getMonth() + 1
-            ).padStart(2, "0")}-${String(workDate.getDate()).padStart(2, "0")}`;
-            return attDate === selectedAttendanceDateStr;
+            const attDateStr = att.work_date.split("T")[0];
+            return attDateStr === selectedAttendanceDateStr;
           });
           setSelectedDateAttendances(filtered);
 
@@ -470,34 +476,19 @@ export default function CRMAdvancedPage() {
 
   const handleSaveAttendance = async () => {
     try {
-      if (!attendanceForm.employee_id || !attendanceForm.work_date) {
-        alert("กรุณาเลือกพนักงานและวันที่");
+      // Validate required fields
+      if (!attendanceForm.employee_id || attendanceForm.employee_id === 0) {
+        alert("กรุณาเลือกพนักงาน");
+        return;
+      }
+
+      if (!attendanceForm.work_date) {
+        alert("กรุณาเลือกวันที่");
         return;
       }
 
       // Normalize work_date to YYYY-MM-DD format for comparison
       const normalizedWorkDate = attendanceForm.work_date.split("T")[0];
-
-      // Check for duplicate staff on the same date
-      // When editing, exclude the current record from duplicate check
-      const isDuplicate = attendances.some((att) => {
-        // Skip checking against the record being edited
-        if (editingAttendance && att.id === editingAttendance.id) {
-          return false;
-        }
-
-        // Check if same employee and same date
-        return (
-          att.employee_id === attendanceForm.employee_id &&
-          new Date(att.work_date).toISOString().split("T")[0] ===
-            normalizedWorkDate
-        );
-      });
-
-      if (isDuplicate) {
-        alert("พนักงานคนนี้มีข้อมูลการเข้างานในวันนี้แล้ว!");
-        return;
-      }
 
       const method = "POST";
       const url = editingAttendance
@@ -556,14 +547,8 @@ export default function CRMAdvancedPage() {
           if (updatedAttendances.success) {
             const filtered = updatedAttendances.data.filter(
               (att: HRAttendance) => {
-                const workDate = new Date(att.work_date);
-                const attDate = `${workDate.getFullYear()}-${String(
-                  workDate.getMonth() + 1
-                ).padStart(2, "0")}-${String(workDate.getDate()).padStart(
-                  2,
-                  "0"
-                )}`;
-                return attDate === selectedAttendanceDateStr;
+                const attDateStr = att.work_date.split("T")[0];
+                return attDateStr === selectedAttendanceDateStr;
               }
             );
             setSelectedDateAttendances(filtered);
@@ -593,12 +578,9 @@ export default function CRMAdvancedPage() {
   // ดึงข้อมูลการเข้างานของวันที่เลือก
   const getAttendancesForDate = (dateStr: string) => {
     const filtered = attendances.filter((att) => {
-      // แปลง work_date ให้เป็นรูปแบบ YYYY-MM-DD โดยใช้ local time
-      const workDate = new Date(att.work_date);
-      const attDate = `${workDate.getFullYear()}-${String(
-        workDate.getMonth() + 1
-      ).padStart(2, "0")}-${String(workDate.getDate()).padStart(2, "0")}`;
-      return attDate === dateStr;
+      // แปลง work_date ให้เป็นรูปแบบ YYYY-MM-DD โดยใช้ UTC
+      const workDateStr = att.work_date.split("T")[0];
+      return workDateStr === dateStr;
     });
     console.log(`Attendances for ${dateStr}:`, filtered);
     return filtered;
@@ -656,7 +638,7 @@ export default function CRMAdvancedPage() {
     const { daysInMonth, startingDayOfWeek, year, month } =
       getDaysInMonth(currentMonth);
     const days = [];
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalDateString();
 
     // Empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
@@ -718,10 +700,17 @@ export default function CRMAdvancedPage() {
 
   // Render Calendar 2 (สำหรับตารางเข้างาน)
   const renderCalendar2 = () => {
-    const { daysInMonth, startingDayOfWeek, year, month } =
-      getDaysInMonth(currentMonth2);
+    const year = currentMonth2.getFullYear();
+    const month = currentMonth2.getMonth(); // 0-11
+
+    // คำนวณจำนวนวันในเดือน
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay(); // 0 = Sunday
+
     const days = [];
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalDateString();
 
     // Empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
@@ -744,7 +733,6 @@ export default function CRMAdvancedPage() {
           key={day}
           onClick={() => {
             setSelectedDate(dateStr);
-            setAttendanceForm((prev) => ({ ...prev, work_date: dateStr }));
             if (hasAttendances) {
               setSelectedDateAttendances(dayAttendances);
               setSelectedAttendanceDateStr(dateStr);
@@ -752,6 +740,7 @@ export default function CRMAdvancedPage() {
             } else {
               // Open form to add new attendance
               setEditingAttendance(null);
+              // ใช้ dateStr โดยตรงโดยไม่ผ่านฟังก์ชันแปลง (เป็น YYYY-MM-DD อยู่แล้ว)
               setAttendanceForm({
                 employee_id: 0,
                 work_date: dateStr,
@@ -1307,16 +1296,25 @@ export default function CRMAdvancedPage() {
                 <button
                   onClick={() => {
                     setEditingAttendance(null);
-                    setAttendanceForm({
+                    // ใช้ local time สำหรับวันที่ปัจจุบัน
+                    const now = new Date();
+                    const todayStr = `${now.getFullYear()}-${String(
+                      now.getMonth() + 1
+                    ).padStart(2, "0")}-${String(now.getDate()).padStart(
+                      2,
+                      "0"
+                    )}`;
+                    const newForm = {
                       employee_id: 0,
-                      work_date: new Date().toISOString().split("T")[0],
+                      work_date: todayStr,
                       time_in: "08:00",
                       time_out: "17:00",
                       status: "PRESENT",
                       work_hours: 8.0,
                       overtime_hours: 0,
                       note: "",
-                    });
+                    };
+                    setAttendanceForm(newForm);
                     setShowAttendanceForm(true);
                   }}
                   className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg transition-all shadow-lg font-bold flex items-center gap-2"
@@ -1708,11 +1706,17 @@ export default function CRMAdvancedPage() {
                 <div>
                   <h2 className="text-2xl font-bold text-white">
                     นัดหมายวันที่{" "}
-                    {new Date(selectedDateStr).toLocaleDateString("th-TH", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    {(() => {
+                      const [year, month, day] = selectedDateStr
+                        .split("-")
+                        .map(Number);
+                      const date = new Date(year, month - 1, day);
+                      return date.toLocaleDateString("th-TH", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      });
+                    })()}
                   </h2>
                   <p className="text-blue-100 text-sm mt-1">
                     ทั้งหมด {selectedDateRecords.length} รายการ
@@ -1854,9 +1858,13 @@ export default function CRMAdvancedPage() {
                         <div className="bg-red-100 px-3 py-1 rounded-full">
                           <span className="text-red-700 font-bold">
                             🏥 ผ่าตัด:{" "}
-                            {new Date(record.surgery_date).toLocaleDateString(
-                              "th-TH"
-                            )}
+                            {(() => {
+                              const [year, month, day] = record
+                                .surgery_date!.split("-")
+                                .map(Number);
+                              const date = new Date(year, month - 1, day);
+                              return date.toLocaleDateString("th-TH");
+                            })()}
                           </span>
                         </div>
                       )}
@@ -1864,9 +1872,13 @@ export default function CRMAdvancedPage() {
                         <div className="bg-blue-100 px-3 py-1 rounded-full">
                           <span className="text-blue-700 font-bold">
                             📅 ปรึกษา:{" "}
-                            {new Date(record.consult_date).toLocaleDateString(
-                              "th-TH"
-                            )}
+                            {(() => {
+                              const [year, month, day] = record
+                                .consult_date!.split("-")
+                                .map(Number);
+                              const date = new Date(year, month - 1, day);
+                              return date.toLocaleDateString("th-TH");
+                            })()}
                           </span>
                         </div>
                       )}
@@ -2178,46 +2190,50 @@ export default function CRMAdvancedPage() {
                 <label className="block text-gray-700 font-bold mb-2">
                   พนักงาน <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={attendanceForm.employee_id}
-                  onChange={(e) =>
-                    handleAttendanceFormChange(
-                      "employee_id",
-                      parseInt(e.target.value)
-                    )
-                  }
-                  className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-teal-500 focus:outline-none text-gray-800"
-                  disabled={!!editingAttendance}
-                >
-                  <option value={0}>เลือกพนักงาน</option>
-                  {employees
-                    .filter((emp) => {
-                      // When editing, show the current employee
-                      if (
-                        editingAttendance &&
-                        emp.id === editingAttendance.employee_id
-                      ) {
+                {editingAttendance ? (
+                  // แสดงชื่อพนักงานเมื่อแก้ไข (ไม่ให้เปลี่ยน)
+                  <div className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 bg-gray-100 text-gray-800 font-bold">
+                    {editingAttendance.employee_name ||
+                      `ID: ${editingAttendance.employee_id}`}
+                  </div>
+                ) : (
+                  <select
+                    value={attendanceForm.employee_id}
+                    onChange={(e) =>
+                      handleAttendanceFormChange(
+                        "employee_id",
+                        parseInt(e.target.value)
+                      )
+                    }
+                    className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-teal-500 focus:outline-none text-gray-800"
+                  >
+                    <option value={0}>เลือกพนักงาน</option>
+                    {employees
+                      .filter((emp) => {
+                        // When creating new, filter out employees who already have attendance on this date
+                        if (attendanceForm.work_date) {
+                          // Normalize both dates to YYYY-MM-DD format
+                          const formDate =
+                            attendanceForm.work_date.split("T")[0];
+                          const hasAttendance = attendances.some((att) => {
+                            const attDateStr = att.work_date.split("T")[0];
+                            // Convert both to numbers to ensure type consistency
+                            return (
+                              Number(att.employee_id) === Number(emp.id) &&
+                              attDateStr === formDate
+                            );
+                          });
+                          return !hasAttendance;
+                        }
                         return true;
-                      }
-                      // When creating new, filter out employees who already have attendance on this date
-                      if (!editingAttendance && attendanceForm.work_date) {
-                        const hasAttendance = attendances.some(
-                          (att) =>
-                            att.employee_id === emp.id &&
-                            new Date(att.work_date)
-                              .toISOString()
-                              .split("T")[0] === attendanceForm.work_date
-                        );
-                        return !hasAttendance;
-                      }
-                      return true;
-                    })
-                    .map((emp) => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.full_name} - {emp.role}
-                      </option>
-                    ))}
-                </select>
+                      })
+                      .map((emp) => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.full_name} - {emp.role}
+                        </option>
+                      ))}
+                  </select>
+                )}
               </div>
 
               {/* วันที่ */}
@@ -2319,15 +2335,18 @@ export default function CRMAdvancedPage() {
                 <div>
                   <h2 className="text-2xl font-bold text-white">
                     การเข้างานวันที่{" "}
-                    {new Date(selectedAttendanceDateStr).toLocaleDateString(
-                      "th-TH",
-                      {
+                    {(() => {
+                      const [year, month, day] = selectedAttendanceDateStr
+                        .split("-")
+                        .map(Number);
+                      const date = new Date(year, month - 1, day);
+                      return date.toLocaleDateString("th-TH", {
                         year: "numeric",
                         month: "long",
                         day: "numeric",
                         weekday: "long",
-                      }
-                    )}
+                      });
+                    })()}
                   </h2>
                   <p className="text-teal-100 text-sm mt-1">
                     ทั้งหมด {selectedDateAttendances.length} คน
@@ -2360,19 +2379,21 @@ export default function CRMAdvancedPage() {
               <div className="mb-4 flex justify-end">
                 <button
                   onClick={() => {
-                    setEditingAttendance(null);
-                    setAttendanceForm({
-                      employee_id: 0,
-                      work_date: selectedAttendanceDateStr,
-                      time_in: "08:00",
-                      time_out: "17:00",
-                      status: "PRESENT",
-                      work_hours: 8.0,
-                      overtime_hours: 0,
-                      note: "",
-                    });
                     setShowAttendancePopup(false);
-                    setShowAttendanceForm(true);
+                    setEditingAttendance(null);
+                    setTimeout(() => {
+                      setAttendanceForm({
+                        employee_id: 0,
+                        work_date: selectedAttendanceDateStr,
+                        time_in: "08:00",
+                        time_out: "17:00",
+                        status: "PRESENT",
+                        work_hours: 8.0,
+                        overtime_hours: 0,
+                        note: "",
+                      });
+                      setShowAttendanceForm(true);
+                    }, 100);
                   }}
                   className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg transition-all shadow-lg font-bold flex items-center gap-2"
                 >
@@ -2472,9 +2493,11 @@ export default function CRMAdvancedPage() {
                       <div className="mt-3 flex gap-2">
                         <button
                           onClick={() => {
+                            // Set editing attendance พร้อมกับ form
+                            setEditingAttendance(att);
                             setAttendanceForm({
                               employee_id: att.employee_id,
-                              work_date: att.work_date,
+                              work_date: att.work_date.split("T")[0], // Normalize date
                               time_in: att.time_in,
                               time_out: att.time_out,
                               status: att.status,

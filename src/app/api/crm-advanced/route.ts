@@ -135,26 +135,45 @@ export async function GET(request: NextRequest) {
       // Transform data
       const transformedData = {
         success: true,
-        data: result.rows.map((row) => ({
-          id: row.id,
-          appointmentTime: row.appointment_time || "",
-          status: row.status || "",
-          customer_name: row.customer_name || "",
-          phone: row.phone || "",
-          interested_product: row.interested_product || "",
-          doctor: row.doctor || "",
-          contact_staff: row.contact_staff || "",
-          proposed_amount: parseFloat(row.proposed_amount || 0),
-          proposedAmount: parseFloat(row.proposed_amount || 0),
-          star_flag: row.star_flag || "",
-          country: row.country || "",
-          note: row.note || "",
-          surgery_date: row.surgery_date || "",
-          consult_date: row.consult_date || "",
-          // เพิ่ม field สำหรับแสดงในปฏิทิน
-          displayDate:
-            row.surgery_date || row.consult_date || row.appointment_time || "",
-        })),
+        data: result.rows.map((row) => {
+          // แปลง date ให้เป็น YYYY-MM-DD format โดยไม่ผ่าน new Date() เพื่อหลีกเลี่ยง timezone shift
+          const formatDate = (dateValue: any): string => {
+            if (!dateValue) return "";
+            // ถ้าเป็น string แล้วให้ใช้ .split("T")[0] โดยตรง
+            if (typeof dateValue === "string") {
+              return dateValue.split("T")[0];
+            }
+            // ถ้าเป็น Date object ให้แปลงเป็น ISO string แล้ว split
+            if (dateValue instanceof Date) {
+              return dateValue.toISOString().split("T")[0];
+            }
+            return String(dateValue).split("T")[0];
+          };
+
+          return {
+            id: row.id,
+            appointmentTime: row.appointment_time || "",
+            status: row.status || "",
+            customer_name: row.customer_name || "",
+            phone: row.phone || "",
+            interested_product: row.interested_product || "",
+            doctor: row.doctor || "",
+            contact_staff: row.contact_staff || "",
+            proposed_amount: parseFloat(row.proposed_amount || 0),
+            proposedAmount: parseFloat(row.proposed_amount || 0),
+            star_flag: row.star_flag || "",
+            country: row.country || "",
+            note: row.note || "",
+            surgery_date: formatDate(row.surgery_date),
+            consult_date: formatDate(row.consult_date),
+            // เพิ่ม field สำหรับแสดงในปฏิทิน
+            displayDate:
+              formatDate(row.surgery_date) ||
+              formatDate(row.consult_date) ||
+              row.appointment_time ||
+              "",
+          };
+        }),
         total: result.rows.length,
         timestamp: new Date().toISOString(),
         source: "PostgreSQL Database",

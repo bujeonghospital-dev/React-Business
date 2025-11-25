@@ -17,21 +17,35 @@ import NavProgress from "@/components/NavProgress";
 import HomeBackground from "@/components/HomeBackground";
 import { Suspense } from "react";
 import Providers from "./providers";
+import { DefaultSEO } from "@/components/SEO";
 // ====== SEO / Metadata ======
 export const metadata: Metadata = {
   metadataBase: new URL("https://app.bjhbangkok.com"),
   title: {
-    default: "BJH Bangkok - THAI PACKAGING & PRINTING PCL",
-    template: "%s | BJH",
+    default:
+      "BJH Bangkok | Thai Packaging & Printing | บรรจุภัณฑ์และงานพิมพ์คุณภาพ",
+    template: "%s | BJH Bangkok",
   },
   description:
-    "BJH Bangkok - Thai Packaging & Printing PCL — Leading packaging & printing solutions provider in Thailand with world-class quality and service.",
+    "BJH Bangkok (บีเจเอช แบงค็อก) - ผู้นำด้านบรรจุภัณฑ์และงานพิมพ์ในประเทศไทย | Thai Packaging & Printing PCL | บริการครบวงจร คุณภาพระดับโลก | ติดต่อ BJH Bangkok วันนี้",
   keywords: [
     "BJH Bangkok",
+    "บีเจเอช แบงค็อก",
+    "bjh bangkok",
+    "BJH",
     "Thai Packaging",
+    "Thai Packaging and Printing",
+    "TPP",
+    "บรรจุภัณฑ์",
+    "งานพิมพ์",
     "Printing Solutions",
     "Packaging Thailand",
-    "TPP",
+    "กล่องกระดาษ",
+    "corrugated box bangkok",
+    "packaging company bangkok",
+    "printing company bangkok",
+    "บริษัทบรรจุภัณฑ์ กรุงเทพ",
+    "บริษัทงานพิมพ์ กรุงเทพ",
   ],
   robots: { index: true, follow: true },
   alternates: { canonical: "/" },
@@ -41,17 +55,23 @@ export const metadata: Metadata = {
     type: "website",
     url: "https://app.bjhbangkok.com",
     siteName: "BJH Bangkok",
-    title: "BJH Bangkok - THAI PACKAGING & PRINTING PCL",
+    title: "BJH Bangkok | Thai Packaging & Printing | บรรจุภัณฑ์และงานพิมพ์",
     description:
-      "BJH Bangkok - Thai Packaging & Printing PCL — Leading packaging & printing solutions provider in Thailand.",
-    images: ["/BJH.png"],
+      "BJH Bangkok (บีเจเอช แบงค็อก) - ผู้นำด้านบรรจุภัณฑ์และงานพิมพ์ในประเทศไทย | Thai Packaging & Printing PCL",
+    images: [
+      {
+        url: "https://app.bjhbangkok.com/BJH.png",
+        width: 1200,
+        height: 630,
+        alt: "BJH Bangkok Logo",
+      },
+    ],
   },
   // เพิ่ม Twitter Card (ถ้ายังไม่ใช้รูป ใส่ได้ภายหลัง)
   twitter: {
     card: "summary_large_image",
-    title: "BJH Bangkok - THAI PACKAGING & PRINTING PCL",
-    description:
-      "BJH Bangkok - Thai Packaging & Printing PCL — Leading packaging & printing solutions provider in Thailand.",
+    title: "BJH Bangkok | Thai Packaging & Printing",
+    description: "BJH Bangkok - ผู้นำด้านบรรจุภัณฑ์และงานพิมพ์ในประเทศไทย",
     images: ["/BJH.png"],
   },
 };
@@ -74,19 +94,95 @@ export default function RootLayout({
           name="google-site-verification"
           content="flGnNhb1Ui0L9FS0V80ePdbJw7VeQWIuNXjtDV2R6nU"
         />
-        {/* JSON-LD: Organization (ปรับ URL รูปโลโก้ให้ตรงไฟล์จริงของคุณ) */}
+        {/* JSON-LD: Organization - ช่วยให้ Google เข้าใจข้อมูลบริษัท */}
         <script
           type="application/ld+json"
-          // ถ้ามีโลโก้จริง เช่น /images/logo.png เปลี่ยนค่า "logo" ให้ถูก
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Organization",
-              name: "BJH Bangkok - Thai Packaging & Printing PCL",
+              name: "BJH Bangkok",
+              legalName: "Thai Packaging & Printing Public Company Limited",
+              alternateName: [
+                "บีเจเอช แบงค็อก",
+                "TPP",
+                "Thai Packaging",
+                "BJH",
+              ],
               url: "https://app.bjhbangkok.com",
               logo: "https://app.bjhbangkok.com/BJH.png",
               description:
-                "Leading packaging & printing solutions provider in Thailand",
+                "BJH Bangkok - ผู้นำด้านบรรจุภัณฑ์และงานพิมพ์ในประเทศไทย | Leading packaging & printing solutions provider in Thailand",
+              foundingDate: "1991",
+              email: "info@bjhbangkok.com",
+              telephone: "+66-2-xxx-xxxx",
+              address: {
+                "@type": "PostalAddress",
+                addressCountry: "TH",
+                addressLocality: "Bangkok",
+                addressRegion: "Bangkok",
+              },
+              geo: {
+                "@type": "GeoCoordinates",
+                latitude: "13.7563",
+                longitude: "100.5018",
+              },
+              sameAs: [
+                "https://www.facebook.com/bjhbangkok",
+                "https://www.linkedin.com/company/bjhbangkok",
+              ],
+              knowsAbout: [
+                "Packaging",
+                "Printing",
+                "Corrugated Box",
+                "บรรจุภัณฑ์",
+                "งานพิมพ์",
+              ],
+            }),
+          }}
+        />
+        {/* JSON-LD: LocalBusiness - สำหรับการค้นหาในพื้นที่ */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "LocalBusiness",
+              "@id": "https://app.bjhbangkok.com/#organization",
+              name: "BJH Bangkok",
+              alternateName: "บีเจเอช แบงค็อก",
+              description:
+                "ผู้นำด้านบรรจุภัณฑ์และงานพิมพ์ในกรุงเทพฯ และประเทศไทย",
+              url: "https://app.bjhbangkok.com",
+              image: "https://app.bjhbangkok.com/BJH.png",
+              priceRange: "$$",
+              telephone: "+66-2-xxx-xxxx",
+              email: "info@bjhbangkok.com",
+              address: {
+                "@type": "PostalAddress",
+                addressLocality: "Bangkok",
+                addressRegion: "Bangkok",
+                addressCountry: "TH",
+              },
+              geo: {
+                "@type": "GeoCoordinates",
+                latitude: "13.7563",
+                longitude: "100.5018",
+              },
+              openingHoursSpecification: [
+                {
+                  "@type": "OpeningHoursSpecification",
+                  dayOfWeek: [
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                  ],
+                  opens: "08:00",
+                  closes: "17:00",
+                },
+              ],
               sameAs: [
                 "https://www.facebook.com/bjhbangkok",
                 "https://www.linkedin.com/company/bjhbangkok",
@@ -98,6 +194,7 @@ export default function RootLayout({
       <body
         className={`about-bg-image-background min-h-dvh overflow-x-hidden antialiased ${font.className}`}
       >
+        <DefaultSEO />
         <Providers>
           <Suspense fallback={null}>
             <HomeBackground />

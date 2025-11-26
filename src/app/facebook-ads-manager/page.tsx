@@ -395,8 +395,8 @@ export default function FacebookAdsManagerPage() {
           viewMode === "campaigns"
             ? "campaign"
             : viewMode === "adsets"
-            ? "adset"
-            : "ad";
+              ? "adset"
+              : "ad";
         let url = `https://believable-ambition-production.up.railway.app/api/facebook-ads-campaigns?level=${levelParam}`;
         const filtering = JSON.stringify([
           {
@@ -429,8 +429,7 @@ export default function FacebookAdsManagerPage() {
         ) {
           const retryDelay = Math.min(30000 * Math.pow(2, retryCount), 120000); // Exponential backoff: 30s, 60s, 120s
           setError(
-            `⏳ API Rate Limit - จะรีเฟรชอัตโนมัติในอีก ${
-              retryDelay / 1000
+            `⏳ API Rate Limit - จะรีเฟรชอัตโนมัติในอีก ${retryDelay / 1000
             } วินาที... (ครั้งที่ ${retryCount + 1})`
           );
 
@@ -467,7 +466,7 @@ export default function FacebookAdsManagerPage() {
                 if (existingAction) {
                   existingAction.value = String(
                     parseInt(existingAction.value || "0") +
-                      parseInt(action.value || "0")
+                    parseInt(action.value || "0")
                   );
                 } else {
                   existing.actions!.push({ ...action });
@@ -483,7 +482,7 @@ export default function FacebookAdsManagerPage() {
                 if (existingConversion) {
                   existingConversion.value = String(
                     parseInt(existingConversion.value || "0") +
-                      parseInt(conversion.value || "0")
+                    parseInt(conversion.value || "0")
                   );
                 } else {
                   existing.conversions!.push({ ...conversion });
@@ -799,7 +798,7 @@ export default function FacebookAdsManagerPage() {
                 if (existingAction) {
                   existingAction.value = String(
                     parseInt(existingAction.value || "0") +
-                      parseInt(action.value || "0")
+                    parseInt(action.value || "0")
                   );
                 } else {
                   existing.actions!.push({ ...action });
@@ -876,18 +875,18 @@ export default function FacebookAdsManagerPage() {
     return isNaN(num)
       ? "—"
       : `฿${num.toLocaleString("th-TH", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}`;
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
   };
   const formatPercentage = (value: string | number) => {
     const num = typeof value === "string" ? parseFloat(value) : value;
     return isNaN(num)
       ? "—"
       : `${num.toLocaleString("th-TH", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}%`;
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}%`;
   };
   const getResultsByActionType = (
     actions: Action[] | undefined,
@@ -968,7 +967,7 @@ export default function FacebookAdsManagerPage() {
   const getTopAdsFilteredInsights = useCallback(() => {
     // ใช้ช่วงเวลาเดียวกับ main dateRange (📊 ช่องควบคุม)
     return insights;
-  }, [insights, dateRange]);
+  }, [insights]);
   const filteredInsights = insights;
   if (loading) {
     return (
@@ -1030,61 +1029,55 @@ export default function FacebookAdsManagerPage() {
             </button>
             <button
               onClick={() => handleDateRangeChange("today")}
-              className={`px-3 sm:px-6 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm ${
-                dateRange === "today"
+              className={`px-3 sm:px-6 py-2 rounded-lg transition-colors font-medium text-xs sm:text-sm ${dateRange === "today"
                   ? "bg-blue-500 text-white shadow-md"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               วันนี้
             </button>
             <button
               onClick={() => handleDateRangeChange("yesterday")}
-              className={`px-6 py-2 rounded-lg transition-colors font-medium text-sm ${
-                dateRange === "yesterday"
+              className={`px-6 py-2 rounded-lg transition-colors font-medium text-sm ${dateRange === "yesterday"
                   ? "bg-blue-500 text-white shadow-md"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               เมื่อวาน
             </button>
             <button
               onClick={() => handleDateRangeChange("last_7d")}
-              className={`px-6 py-2 rounded-lg transition-colors font-medium text-sm ${
-                dateRange === "last_7d"
+              className={`px-6 py-2 rounded-lg transition-colors font-medium text-sm ${dateRange === "last_7d"
                   ? "bg-blue-500 text-white shadow-md"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               7 วัน
             </button>
             <button
               onClick={() => handleDateRangeChange("last_30d")}
-              className={`px-6 py-2 rounded-lg transition-colors font-medium text-sm ${
-                dateRange === "last_30d"
+              className={`px-6 py-2 rounded-lg transition-colors font-medium text-sm ${dateRange === "last_30d"
                   ? "bg-blue-500 text-white shadow-md"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               30 วัน
             </button>
             <button
               onClick={() => handleDateRangeChange("this_month")}
-              className={`px-6 py-2 rounded-lg transition-colors font-medium text-sm ${
-                dateRange === "this_month"
+              className={`px-6 py-2 rounded-lg transition-colors font-medium text-sm ${dateRange === "this_month"
                   ? "bg-blue-500 text-white shadow-md"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               เดือนนี้
             </button>
             <button
               onClick={() => handleDateRangeChange("custom")}
-              className={`px-6 py-2 rounded-lg transition-colors font-medium text-sm ${
-                dateRange === "custom"
+              className={`px-6 py-2 rounded-lg transition-colors font-medium text-sm ${dateRange === "custom"
                   ? "bg-blue-500 text-white shadow-md"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               🗓️ กำหนดเอง
             </button>
@@ -1099,41 +1092,37 @@ export default function FacebookAdsManagerPage() {
             <div className="flex items-center gap-2 border-l border-gray-300 pl-4 ml-2">
               <button
                 onClick={() => setSelectedPage(1)}
-                className={`px-4 py-2 rounded-lg transition-colors font-medium text-sm ${
-                  selectedPage === 1
+                className={`px-4 py-2 rounded-lg transition-colors font-medium text-sm ${selectedPage === 1
                     ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
+                  }`}
               >
                 Page 1
               </button>
               <button
                 onClick={() => setSelectedPage(2)}
-                className={`px-4 py-2 rounded-lg transition-colors font-medium text-sm ${
-                  selectedPage === 2
+                className={`px-4 py-2 rounded-lg transition-colors font-medium text-sm ${selectedPage === 2
                     ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
+                  }`}
               >
                 Page 2
               </button>
               <button
                 onClick={() => setSelectedPage(3)}
-                className={`px-4 py-2 rounded-lg transition-colors font-medium text-sm ${
-                  selectedPage === 3
+                className={`px-4 py-2 rounded-lg transition-colors font-medium text-sm ${selectedPage === 3
                     ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
+                  }`}
               >
                 Page 3
               </button>
               <button
                 onClick={() => setSelectedPage(4)}
-                className={`px-4 py-2 rounded-lg transition-colors font-medium text-sm ${
-                  selectedPage === 4
+                className={`px-4 py-2 rounded-lg transition-colors font-medium text-sm ${selectedPage === 4
                     ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
+                  }`}
               >
                 Page 4
               </button>
@@ -2153,11 +2142,10 @@ export default function FacebookAdsManagerPage() {
                 <div className="flex gap-2 flex-1">
                   <button
                     onClick={() => setTopAdsSortBy("leads")}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${
-                      topAdsSortBy === "leads"
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdsSortBy === "leads"
                         ? "bg-purple-600 text-white shadow-lg"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
+                      }`}
                   >
                     <span className="hidden sm:inline">
                       💬 Total Inbox (มาก → น้อย)
@@ -2166,11 +2154,10 @@ export default function FacebookAdsManagerPage() {
                   </button>
                   <button
                     onClick={() => setTopAdsSortBy("phone")}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${
-                      topAdsSortBy === "phone"
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdsSortBy === "phone"
                         ? "bg-purple-600 text-white shadow-lg"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
+                      }`}
                   >
                     <span className="hidden sm:inline">
                       📞 ชื่อ - เบอร์ (มาก → น้อย)
@@ -2179,11 +2166,10 @@ export default function FacebookAdsManagerPage() {
                   </button>
                   <button
                     onClick={() => setTopAdsSortBy("cost")}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${
-                      topAdsSortBy === "cost"
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdsSortBy === "cost"
                         ? "bg-purple-600 text-white shadow-lg"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
+                      }`}
                   >
                     <span className="hidden sm:inline">
                       💰 ต้นทุน (น้อย → มาก)
@@ -2192,11 +2178,10 @@ export default function FacebookAdsManagerPage() {
                   </button>
                   <button
                     onClick={() => setTopAdsSortBy("thruplay")}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${
-                      topAdsSortBy === "thruplay"
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdsSortBy === "thruplay"
                         ? "bg-purple-600 text-white shadow-lg"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
+                      }`}
                   >
                     <span className="hidden sm:inline">
                       🎬 ThruPlay (มาก → น้อย)
@@ -2337,12 +2322,12 @@ export default function FacebookAdsManagerPage() {
                         "| Creative:",
                         creative
                           ? {
-                              id: creative.id,
-                              has_thumbnail: !!creative.thumbnail_url,
-                              has_image: !!creative.image_url,
-                              thumbnail_preview:
-                                creative.thumbnail_url?.substring(0, 60),
-                            }
+                            id: creative.id,
+                            has_thumbnail: !!creative.thumbnail_url,
+                            has_image: !!creative.image_url,
+                            thumbnail_preview:
+                              creative.thumbnail_url?.substring(0, 60),
+                          }
                           : "NO CREATIVE DATA"
                       );
                       console.log(
@@ -2530,11 +2515,10 @@ export default function FacebookAdsManagerPage() {
                 <div className="flex gap-2 flex-1">
                   <button
                     onClick={() => setTopAdSetSortBy("leads")}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${
-                      topAdSetSortBy === "leads"
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdSetSortBy === "leads"
                         ? "bg-purple-600 text-white shadow-lg"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
+                      }`}
                   >
                     <span className="hidden sm:inline">
                       💬 Total Inbox (มาก → น้อย)
@@ -2543,11 +2527,10 @@ export default function FacebookAdsManagerPage() {
                   </button>
                   <button
                     onClick={() => setTopAdSetSortBy("phone")}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${
-                      topAdSetSortBy === "phone"
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdSetSortBy === "phone"
                         ? "bg-purple-600 text-white shadow-lg"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
+                      }`}
                   >
                     <span className="hidden sm:inline">
                       📞 ชื่อ - เบอร์ (มาก → น้อย)
@@ -2556,11 +2539,10 @@ export default function FacebookAdsManagerPage() {
                   </button>
                   <button
                     onClick={() => setTopAdSetSortBy("thruplay")}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${
-                      topAdSetSortBy === "thruplay"
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdSetSortBy === "thruplay"
                         ? "bg-purple-600 text-white shadow-lg"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
+                      }`}
                   >
                     <span className="hidden sm:inline">
                       🎬 ThruPlay (มาก → น้อย)
@@ -2601,11 +2583,10 @@ export default function FacebookAdsManagerPage() {
                     }
                     setAdSetCampaignFilter(newFilter);
                   }}
-                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${
-                    adSetCampaignFilter.has("TOF")
+                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${adSetCampaignFilter.has("TOF")
                       ? "bg-blue-600 text-white shadow-lg"
                       : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
+                    }`}
                 >
                   TOF
                 </button>
@@ -2619,11 +2600,10 @@ export default function FacebookAdsManagerPage() {
                     }
                     setAdSetCampaignFilter(newFilter);
                   }}
-                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${
-                    adSetCampaignFilter.has("MOF")
+                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${adSetCampaignFilter.has("MOF")
                       ? "bg-green-600 text-white shadow-lg"
                       : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
+                    }`}
                 >
                   MOF
                 </button>
@@ -2637,11 +2617,10 @@ export default function FacebookAdsManagerPage() {
                     }
                     setAdSetCampaignFilter(newFilter);
                   }}
-                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${
-                    adSetCampaignFilter.has("BOF")
+                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${adSetCampaignFilter.has("BOF")
                       ? "bg-orange-600 text-white shadow-lg"
                       : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
+                    }`}
                 >
                   BOF
                 </button>

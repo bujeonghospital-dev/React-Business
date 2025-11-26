@@ -1,7 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import CustomerRegistrationModal, {
+  CustomerFormData,
+  LeadSummary,
+  StaffOption,
+} from "./CustomerRegistrationModal";
 
 // Helper function สำหรับสร้างวันที่แบบ local time (YYYY-MM-DD)
 const getLocalDateString = (date: Date = new Date()): string => {
@@ -31,6 +36,33 @@ const formatTimeDisplay = (time: string | undefined | null): string => {
   return timeStr.slice(0, 5) + " น.";
 };
 
+// Helper สำหรับย่อหมายเหตุให้แสดงเพียงไม่กี่ประโยค
+const getNotePreview = (
+  raw: string | null | undefined,
+  maxSentences = 2
+): string => {
+  if (!raw) {
+    return "-";
+  }
+
+  const normalized = String(raw)
+    .replace(/\r?\n+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized || normalized.toLowerCase() === "null" || normalized.toLowerCase() === "undefined") {
+    return "-";
+  }
+
+  const sentences = normalized.match(/[^.!?]+[.!?]?/g);
+
+  if (!sentences || sentences.length <= maxSentences) {
+    return normalized.length > 160 ? `${normalized.slice(0, 160).trim()} …` : normalized;
+  }
+
+  return `${sentences.slice(0, maxSentences).join(" ").trim()} …`;
+};
+
 interface CRMRecord {
   id: number;
   appointmentTime: string;
@@ -48,7 +80,7 @@ interface CRMRecord {
   proposed_amount: number;
   proposedAmount: number;
   star_flag: string;
-  note: string;
+  note: string | null;
   surgery_date?: string;
   consult_date?: string;
   displayDate?: string;
@@ -127,6 +159,308 @@ export default function CRMAdvancedPage() {
     useState<string>("");
   const [editingAttendance, setEditingAttendance] =
     useState<HRAttendance | null>(null);
+  const [noteModalRecord, setNoteModalRecord] = useState<CRMRecord | null>(
+    null
+  );
+
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [customerForm, setCustomerForm] = useState<CustomerFormData | null>(
+    null
+  );
+  const [customerLoading, setCustomerLoading] = useState(false);
+  const [customerSaving, setCustomerSaving] = useState(false);
+  const [customerExists, setCustomerExists] = useState(false);
+  const [customerMessage, setCustomerMessage] = useState<string | null>(null);
+  const [customerError, setCustomerError] = useState<string | null>(null);
+  const [selectedLeadSummary, setSelectedLeadSummary] =
+    useState<LeadSummary | null>(null);
+  const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [staffError, setStaffError] = useState<string | null>(null);
+
+  const dateFieldKeys: Array<keyof CustomerFormData> = [
+    "birthdate",
+    "registerdate",
+    "binddate",
+    "idcardIssueDate",
+    "idcardExpireDate",
+  ];
+
+  const getNameParts = (fullName: string) => {
+    if (!fullName) {
+      return { firstName: "", lastName: "" };
+    }
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length === 1) {
+      return { firstName: parts[0], lastName: "" };
+    }
+    const [first, ...rest] = parts;
+    return { firstName: first, lastName: rest.join(" ") };
+  };
+
+  const buildLeadSummary = (record: CRMRecord): LeadSummary => ({
+    id: record.id,
+    name: record.customer_name || "",
+    phone: record.phone || "",
+    status: record.status || "",
+    interestedProduct: record.interested_product || record.interestedProduct || "",
+  });
+
+  const normalizeDateValue = (value: unknown) => {
+    if (!value) {
+      return "";
+    }
+    const str = String(value);
+    if (str.length >= 10) {
+      return str.slice(0, 10);
+    }
+    return str;
+  };
+
+  const buildBaseCustomerForm = (record: CRMRecord): CustomerFormData => {
+    const today = getLocalDateString();
+    const { firstName, lastName } = getNameParts(record.customer_name || "");
+
+    return {
+      recordno: "",
+      code: "",
+      cn: String(record.id),
+      prefix: "",
+      name: firstName,
+      surname: lastName,
+      nickname: "",
+      gender: "",
+      idcard: "",
+      birthdate: "",
+      registerdate: today,
+      member: "",
+      cusgroup: "",
+      mobilephone: record.phone || "",
+      email: "",
+      lineid: "",
+      facebook: "",
+      medianame: "",
+      disease: "",
+      allergic: "",
+      displayname: record.customer_name || "",
+      locno: "",
+      soi: "",
+      road: "",
+      moo: "",
+      tumbon: "",
+      amphur: "",
+      province: "",
+      zipcode: "",
+      country: "Thailand",
+      address: "",
+      ownercode: "",
+      ownername: record.contact_staff || "",
+      binddate: today,
+      idcardLaserCode: "",
+      idcardIssueDate: "",
+      idcardExpireDate: "",
+      idcardProvinceNative: "",
+      idcardDistrictNative: "",
+      idcardSubdistrictNative: "",
+      idcardFrontImage: "",
+      idcardBackImage: "",
+    };
+  };
+
+  const mapDbRecordToForm = (
+    dbRecord: Record<string, unknown>,
+    fallback: CustomerFormData
+  ): CustomerFormData => {
+    const next: CustomerFormData = { ...fallback };
+
+    (Object.keys(dbRecord) as Array<keyof CustomerFormData>).forEach((key) => {
+      if (key === "cn") {
+        return;
+      }
+
+      const rawValue = dbRecord[key];
+
+      if (key === "recordno") {
+        next.recordno = rawValue === undefined || rawValue === null ? "" : String(rawValue);
+        return;
+      }
+
+      if (dateFieldKeys.includes(key)) {
+        next[key] = normalizeDateValue(rawValue);
+        return;
+      }
+
+      next[key] = rawValue === undefined || rawValue === null ? "" : String(rawValue);
+    });
+
+    if (!next.displayname) {
+      const composed = [next.prefix, next.name, next.surname]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      next.displayname = composed;
+    }
+
+    return next;
+  };
+
+  const ensureStaffOptions = useCallback(async () => {
+    if (staffLoading) {
+      return;
+    }
+
+    if (staffOptions.length > 0 && !staffError) {
+      return;
+    }
+
+    setStaffLoading(true);
+    setStaffError(null);
+
+    try {
+      const response = await fetch("/api/n-staff");
+      const result = await response.json();
+
+      if (!response.ok || result.success === false) {
+        throw new Error(result?.error || "ไม่สามารถโหลดรายชื่อผู้ดูแลได้");
+      }
+
+      const data: StaffOption[] = Array.isArray(result.data) ? result.data : [];
+      setStaffOptions(data);
+    } catch (err: any) {
+      setStaffError(err?.message || "ไม่สามารถโหลดรายชื่อผู้ดูแลได้");
+    } finally {
+      setStaffLoading(false);
+    }
+  }, [staffLoading, staffOptions.length, staffError]);
+
+  const openCustomerModal = async (record: CRMRecord) => {
+    ensureStaffOptions();
+
+    const baseForm = buildBaseCustomerForm(record);
+    setSelectedLeadSummary(buildLeadSummary(record));
+    setCustomerForm(baseForm);
+    setShowCustomerModal(true);
+    setCustomerExists(false);
+    setCustomerLoading(true);
+    setCustomerSaving(false);
+    setCustomerMessage(null);
+    setCustomerError(null);
+
+    try {
+      const response = await fetch(`/api/n-customer?cn=${record.id}`);
+      const result = await response.json();
+
+      if (!response.ok || result.success === false) {
+        if (result?.error) {
+          setCustomerError(result.error);
+        }
+        return;
+      }
+
+      if (result.exists && result.data) {
+        setCustomerForm(mapDbRecordToForm(result.data, baseForm));
+        setCustomerExists(true);
+      }
+    } catch (err: any) {
+      setCustomerError(err?.message || "ไม่สามารถโหลดข้อมูลลูกค้าได้");
+    } finally {
+      setCustomerLoading(false);
+    }
+  };
+
+  const closeCustomerModal = () => {
+    setShowCustomerModal(false);
+    setCustomerForm(null);
+    setCustomerError(null);
+    setCustomerMessage(null);
+    setCustomerExists(false);
+    setCustomerLoading(false);
+    setCustomerSaving(false);
+    setSelectedLeadSummary(null);
+  };
+
+  const handleCustomerFormChange = (
+    field: keyof CustomerFormData,
+    value: string
+  ) => {
+    setCustomerForm((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      if (field === "prefix" || field === "name" || field === "surname") {
+        const currentComposite = [prev.prefix, prev.name, prev.surname]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+        const nextState = { ...prev, [field]: value } as CustomerFormData;
+        const nextComposite = [nextState.prefix, nextState.name, nextState.surname]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+
+        if (!prev.displayname || prev.displayname.trim() === currentComposite) {
+          nextState.displayname = nextComposite;
+        }
+
+        return nextState;
+      }
+
+      return { ...prev, [field]: value } as CustomerFormData;
+    });
+  };
+
+  const handleCustomerSubmit = async () => {
+    if (!customerForm) {
+      return;
+    }
+
+    setCustomerSaving(true);
+    setCustomerError(null);
+    setCustomerMessage(null);
+
+    try {
+      const {
+        idcardFrontImage,
+        idcardBackImage,
+        ...rest
+      } = customerForm;
+
+      const payload: Partial<CustomerFormData> = {
+        ...rest,
+        cn: customerForm.cn,
+      };
+
+      if (!payload.recordno || !payload.recordno.trim()) {
+        delete payload.recordno;
+      }
+
+      const response = await fetch("/api/n-customer", {
+        method: customerExists ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || result.success === false) {
+        throw new Error(result?.error || "บันทึกข้อมูลลูกค้าไม่สำเร็จ");
+      }
+
+      if (result.data) {
+        setCustomerForm(mapDbRecordToForm(result.data, customerForm));
+      }
+
+      setCustomerExists(true);
+      setCustomerMessage("บันทึกข้อมูลลูกค้าสำเร็จ");
+    } catch (err: any) {
+      setCustomerError(err?.message || "บันทึกข้อมูลลูกค้าไม่สำเร็จ");
+    } finally {
+      setCustomerSaving(false);
+    }
+  };
 
   // ดึงข้อมูลจาก API - เริ่มต้นด้วยวันนี้
   useEffect(() => {
@@ -157,6 +491,12 @@ export default function CRMAdvancedPage() {
       fetchAttendances(currentMonth2);
     }
   }, [currentMonth2, viewMode]);
+
+  useEffect(() => {
+    if (showCustomerModal) {
+      ensureStaffOptions();
+    }
+  }, [showCustomerModal, ensureStaffOptions]);
 
   // โหลดรายชื่อพนักงาน
   const fetchEmployees = async () => {
@@ -377,6 +717,16 @@ export default function CRMAdvancedPage() {
     setSelectedDateStr("");
   };
 
+  const openNoteModal = (record: CRMRecord) => {
+    const noteValue = record.note?.trim();
+    if (!noteValue) {
+      return;
+    }
+    setNoteModalRecord(record);
+  };
+
+  const closeNoteModal = () => setNoteModalRecord(null);
+
   const handleEmployeeFormChange = (
     field: keyof HREmployee,
     value: string | number | boolean
@@ -518,21 +868,21 @@ export default function CRMAdvancedPage() {
       // When editing, send updated data (allow changing date)
       const bodyData = editingAttendance
         ? {
-            employee_id: attendanceForm.employee_id,
-            work_date: normalizedWorkDate,
-            time_in: attendanceForm.time_in,
-            time_out: attendanceForm.time_out,
-            status: attendanceForm.status,
-            work_hours: Number(attendanceForm.work_hours),
-            overtime_hours: Number(attendanceForm.overtime_hours),
-            note: attendanceForm.note,
-          }
+          employee_id: attendanceForm.employee_id,
+          work_date: normalizedWorkDate,
+          time_in: attendanceForm.time_in,
+          time_out: attendanceForm.time_out,
+          status: attendanceForm.status,
+          work_hours: Number(attendanceForm.work_hours),
+          overtime_hours: Number(attendanceForm.overtime_hours),
+          note: attendanceForm.note,
+        }
         : {
-            ...attendanceForm,
-            work_date: normalizedWorkDate,
-            work_hours: Number(attendanceForm.work_hours),
-            overtime_hours: Number(attendanceForm.overtime_hours),
-          };
+          ...attendanceForm,
+          work_date: normalizedWorkDate,
+          work_hours: Number(attendanceForm.work_hours),
+          overtime_hours: Number(attendanceForm.overtime_hours),
+        };
 
       const response = await fetch(url, {
         method,
@@ -559,8 +909,7 @@ export default function CRMAdvancedPage() {
         // Update popup if it's open
         if (showAttendancePopup && selectedAttendanceDateStr) {
           const updatedAttendances = await fetch(
-            `/api/hr-attendance?month=${
-              currentMonth2.getMonth() + 1
+            `/api/hr-attendance?month=${currentMonth2.getMonth() + 1
             }&year=${currentMonth2.getFullYear()}`
           ).then((res) => res.json());
 
@@ -696,13 +1045,18 @@ export default function CRMAdvancedPage() {
                 {dayRecords.length} รายการ
               </div>
               {dayRecords.slice(0, 2).map((record) => (
-                <div
+                <button
                   key={record.id}
-                  className="text-xs bg-white/90 text-gray-800 px-2 py-1 rounded truncate"
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openCustomerModal(record);
+                  }}
+                  className="block w-full truncate rounded bg-white/90 px-2 py-1 text-left text-xs text-blue-700 transition hover:bg-blue-100"
                   title={`${record.customer_name} - ${record.status}`}
                 >
                   {record.customer_name}
-                </div>
+                </button>
               ))}
               {dayRecords.length > 2 && (
                 <div className="text-xs text-white/80 font-medium">
@@ -817,10 +1171,9 @@ export default function CRMAdvancedPage() {
                         {att.employee_name}
                       </div>
                       <div
-                        className={`px-1 py-0.5 rounded text-xs font-semibold ${
-                          statusColors[att.status] ||
+                        className={`px-1 py-0.5 rounded text-xs font-semibold ${statusColors[att.status] ||
                           "bg-gray-100 text-gray-800"
-                        }`}
+                          }`}
                       >
                         {att.status_rank ||
                           statusLabels[att.status] ||
@@ -918,11 +1271,10 @@ export default function CRMAdvancedPage() {
           <div className="flex gap-2">
             <button
               onClick={() => setViewMode("table")}
-              className={`px-6 py-2 rounded-lg transition-all shadow-lg font-medium flex items-center gap-2 ${
-                viewMode === "table"
-                  ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white"
-                  : "bg-white/20 text-white hover:bg-white/30"
-              }`}
+              className={`px-6 py-2 rounded-lg transition-all shadow-lg font-medium flex items-center gap-2 ${viewMode === "table"
+                ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white"
+                : "bg-white/20 text-white hover:bg-white/30"
+                }`}
             >
               <svg
                 className="w-5 h-5"
@@ -941,11 +1293,10 @@ export default function CRMAdvancedPage() {
             </button>
             <button
               onClick={() => setViewMode("calendar")}
-              className={`px-6 py-2 rounded-lg transition-all shadow-lg font-medium flex items-center gap-2 ${
-                viewMode === "calendar"
-                  ? "bg-gradient-to-r from-purple-500 to-pink-600 text-white"
-                  : "bg-white/20 text-white hover:bg-white/30"
-              }`}
+              className={`px-6 py-2 rounded-lg transition-all shadow-lg font-medium flex items-center gap-2 ${viewMode === "calendar"
+                ? "bg-gradient-to-r from-purple-500 to-pink-600 text-white"
+                : "bg-white/20 text-white hover:bg-white/30"
+                }`}
             >
               <svg
                 className="w-5 h-5"
@@ -964,11 +1315,10 @@ export default function CRMAdvancedPage() {
             </button>
             <button
               onClick={() => setViewMode("calendar2")}
-              className={`px-6 py-2 rounded-lg transition-all shadow-lg font-medium flex items-center gap-2 ${
-                viewMode === "calendar2"
-                  ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white"
-                  : "bg-white/20 text-white hover:bg-white/30"
-              }`}
+              className={`px-6 py-2 rounded-lg transition-all shadow-lg font-medium flex items-center gap-2 ${viewMode === "calendar2"
+                ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white"
+                : "bg-white/20 text-white hover:bg-white/30"
+                }`}
             >
               <svg
                 className="w-5 h-5"
@@ -1517,66 +1867,66 @@ export default function CRMAdvancedPage() {
                   <thead>
                     <tr className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500">
                       <th
-                        className="px-6 py-5 text-left text-sm font-bold text-white border-r border-white/20 tracking-wide"
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
                         style={{ width: "200px" }}
                       >
                         เวลาที่นัด
                       </th>
                       <th
-                        className="px-6 py-5 text-left text-sm font-bold text-white border-r border-white/20 tracking-wide "
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
                         style={{ width: "200px" }}
                       >
                         สถานะ
                       </th>
                       <th
-                        className="px-6 py-5 text-left text-sm font-bold text-white border-r border-white/20 tracking-wide "
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
                         style={{ width: "200px" }}
                       >
                         ชื่อลูกค้า
                       </th>
                       <th
-                        className="px-6 py-5 text-left text-sm font-bold text-white border-r border-white/20 tracking-wide"
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
                         style={{ width: "200px" }}
                       >
                         เบอร์โทร
                       </th>
                       <th
-                        className="px-6 py-5 text-left text-sm font-bold text-white border-r border-white/20 tracking-wide"
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
                         style={{ width: "200px" }}
                       >
                         ผลิตภัณฑ์ที่สนใจ
                       </th>
                       <th
-                        className="px-6 py-5 text-left text-sm font-bold text-white border-r border-white/20 tracking-wide"
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
                         style={{ width: "200px" }}
                       >
                         หมอ
                       </th>
                       <th
-                        className="px-6 py-5 text-left text-sm font-bold text-white border-r border-white/20 tracking-wide "
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
                         style={{ width: "200px" }}
                       >
                         ชื่อผู้ติดต่อ
                       </th>
                       <th
-                        className="px-6 py-5 text-left text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                        style={{ width: "200px", textAlign: "center" }}
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
+                        style={{ width: "200px" }}
                       >
                         ยอดนำเสนอ
                       </th>
                       <th
-                        className="px-6 py-5 text-left text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                        style={{ width: "200px", textAlign: "center" }}
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
+                        style={{ width: "200px" }}
                       >
                         ติดดาว
                       </th>
                       <th
-                        className="px-6 py-5 text-left text-sm font-bold text-white border-r border-white/20 tracking-wide"
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
                         style={{ width: "200px" }}
                       >
                         ประเทศ
                       </th>
-                      <th className="px-6 py-5 text-left text-sm font-bold text-white tracking-wide">
+                      <th className="px-6 py-5 text-center text-sm font-bold text-white tracking-wide">
                         หมายเหตุ
                       </th>
                     </tr>
@@ -1585,42 +1935,44 @@ export default function CRMAdvancedPage() {
                     {records.map((record, index) => (
                       <tr
                         key={record.id}
-                        className={`${
-                          index % 2 === 0
-                            ? "bg-gradient-to-r from-slate-50 to-blue-50"
-                            : "bg-gradient-to-r from-blue-100 to-indigo-100"
-                        } hover:bg-gradient-to-r hover:from-blue-200 hover:to-indigo-200 transition-all duration-200`}
+                        className={`${index % 2 === 0
+                          ? "bg-gradient-to-r from-slate-50 to-blue-50"
+                          : "bg-gradient-to-r from-blue-100 to-indigo-100"
+                          } hover:bg-gradient-to-r hover:from-blue-200 hover:to-indigo-200 transition-all duration-200`}
                       >
-                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300">
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
                           {formatTimeDisplay(record.appointmentTime)}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300">
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
                           <span className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-full text-xs font-bold shadow-lg transform hover:scale-105 transition-transform">
                             {record.status}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300">
-                          {record.customer_name}
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
+                          <button
+                            type="button"
+                            onClick={() => openCustomerModal(record)}
+                            className="inline-block font-semibold text-blue-600 underline-offset-2 transition hover:underline"
+                          >
+                            {record.customer_name}
+                          </button>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300">
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
                           {record.phone}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300">
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
                           {record.interested_product}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 font-medium">
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 font-medium text-center">
                           {record.doctor}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300">
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
                           {record.contact_staff}
                         </td>
-                        <td
-                          className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-right"
-                          style={{ textAlign: "center" }}
-                        >
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
                           {record.proposed_amount.toLocaleString()}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 bg-gradient-to-r from-amber-100 to-yellow-100">
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 bg-gradient-to-r from-amber-100 to-yellow-100 text-center">
                           <div className="flex items-center justify-center">
                             {record.star_flag ? (
                               <svg
@@ -1646,11 +1998,39 @@ export default function CRMAdvancedPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-700">
+                        <td className="px-6 py-4 text-sm text-gray-700 text-center">
                           {record.country}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300">
-                          {record.note}
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
+                          {(() => {
+                            const notePreview = getNotePreview(record.note);
+                            if (notePreview === "-") {
+                              return "-";
+                            }
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => openNoteModal(record)}
+                                className="w-full px-4 py-2 bg-white/70 hover:bg-white/90 text-blue-600 font-semibold rounded-lg shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                title="กดเพื่อดูหมายเหตุทั้งหมด"
+                              >
+                                <span
+                                  className="block text-sm text-gray-800 text-left pl-2"
+                                  style={{
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: "vertical",
+                                    overflow: "hidden",
+                                  }}
+                                >
+                                  {notePreview}
+                                </span>
+                                <span className="mt-1 block text-xs text-blue-500 text-left pl-2">
+                                  ดูเพิ่มเติม
+                                </span>
+                              </button>
+                            );
+                          })()}
                         </td>
                       </tr>
                     ))}
@@ -1780,9 +2160,13 @@ export default function CRMAdvancedPage() {
                           </svg>
                         )}
                       </div>
-                      <h3 className="text-xl font-bold text-blue-600">
+                      <button
+                        type="button"
+                        onClick={() => openCustomerModal(record)}
+                        className="text-left text-xl font-bold text-blue-700 underline-offset-2 transition hover:underline"
+                      >
                         {record.customer_name}
-                      </h3>
+                      </button>
                       <p className="text-sm text-gray-600">{record.phone}</p>
                     </div>
                     <div className="text-right">
@@ -2472,10 +2856,9 @@ export default function CRMAdvancedPage() {
                           สถานะ
                         </div>
                         <span
-                          className={`inline-block px-4 py-2 rounded-lg font-bold border-2 text-sm ${
-                            statusColors[att.status] ||
+                          className={`inline-block px-4 py-2 rounded-lg font-bold border-2 text-sm ${statusColors[att.status] ||
                             "bg-gray-100 text-gray-800 border-gray-300"
-                          }`}
+                            }`}
                         >
                           {statusLabels[att.status] || att.status}
                         </span>
@@ -2577,6 +2960,76 @@ export default function CRMAdvancedPage() {
           </div>
         </div>
       )}
+
+      {noteModalRecord && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={closeNoteModal}
+        >
+          <div
+            className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-8"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  หมายเหตุทั้งหมด
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  {noteModalRecord.customer_name || "ไม่ระบุชื่อลูกค้า"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeNoteModal}
+                className="text-gray-500 hover:text-gray-800 transition"
+                aria-label="ปิดหน้าต่างหมายเหตุ"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24">
+                  <path
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 6l12 12M6 18L18 6"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="bg-gray-100 rounded-xl p-6 text-left max-h-[60vh] overflow-y-auto">
+              <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                {noteModalRecord.note ?? "-"}
+              </p>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={closeNoteModal}
+                className="px-6 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg shadow-md hover:from-blue-600 hover:to-indigo-600 transition"
+              >
+                ปิด
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <CustomerRegistrationModal
+        visible={showCustomerModal}
+        loading={customerLoading}
+        saving={customerSaving}
+        exists={customerExists}
+        form={customerForm}
+        error={customerError}
+        message={customerMessage}
+        lead={selectedLeadSummary}
+        staffOptions={staffOptions}
+        staffLoading={staffLoading}
+        staffError={staffError}
+        onClose={closeCustomerModal}
+        onChange={handleCustomerFormChange}
+        onSubmit={handleCustomerSubmit}
+      />
     </div>
   );
 }

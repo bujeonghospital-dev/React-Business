@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Appointment } from "@/types/appointment";
 import CustomerRegistrationModal, {
   CustomerFormData,
   LeadSummary,
@@ -62,65 +61,6 @@ const getNotePreview = (
   }
 
   return `${sentences.slice(0, maxSentences).join(" ").trim()} …`;
-};
-
-const getLegacyCustomerName = (appointment: Appointment): string => {
-  if (appointment.display_name && appointment.display_name.trim()) {
-    return appointment.display_name.trim();
-  }
-
-  const parts = [appointment.prefix, appointment.name, appointment.surname]
-    .filter((value): value is string => Boolean(value && value.trim()))
-    .map((value) => value.trim());
-
-  if (parts.length > 0) {
-    return parts.join(" ");
-  }
-
-  if (appointment.nickname && appointment.nickname.trim()) {
-    return appointment.nickname.trim();
-  }
-
-  return "-";
-};
-
-const getLegacyDateParts = (dateTime: string | null) => {
-  if (!dateTime) {
-    return { dateLabel: "-", timeLabel: "-" };
-  }
-
-  const parsed = new Date(dateTime);
-  if (!Number.isNaN(parsed.getTime())) {
-    return {
-      dateLabel: parsed.toLocaleDateString("th-TH", {
-        day: "2-digit",
-        month: "short",
-      }),
-      timeLabel: `${parsed.toLocaleTimeString("th-TH", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })} น.`,
-    };
-  }
-
-  const [datePart, timePart] = dateTime.split(/[T\s]/);
-  return {
-    dateLabel: datePart || "-",
-    timeLabel: timePart ? formatTimeDisplay(timePart.slice(0, 5)) : "-",
-  };
-};
-
-const formatLegacyPhoneNumber = (phone: string | null): string => {
-  if (!phone) {
-    return "-";
-  }
-
-  const digitsOnly = phone.replace(/\D/g, "");
-  if (digitsOnly.length === 10) {
-    return `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3, 6)}-${digitsOnly.slice(6)}`;
-  }
-
-  return phone.trim();
 };
 
 interface CRMRecord {
@@ -183,7 +123,6 @@ export default function CRMAdvancedPage() {
   );
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [currentMonth2, setCurrentMonth2] = useState<Date>(new Date());
-  const [customerSegment, setCustomerSegment] = useState<"new" | "old">("new");
   const [selectedDateRecords, setSelectedDateRecords] = useState<CRMRecord[]>(
     []
   );
@@ -238,9 +177,6 @@ export default function CRMAdvancedPage() {
   const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
   const [staffLoading, setStaffLoading] = useState(false);
   const [staffError, setStaffError] = useState<string | null>(null);
-  const [legacyRecords, setLegacyRecords] = useState<Appointment[]>([]);
-  const [legacyLoading, setLegacyLoading] = useState(false);
-  const [legacyError, setLegacyError] = useState<string | null>(null);
 
   const dateFieldKeys: Array<keyof CustomerFormData> = [
     "birthdate",
@@ -538,7 +474,7 @@ export default function CRMAdvancedPage() {
     if (startDate && viewMode === "table") {
       fetchRecords(startDate, startDate);
     }
-  }, [startDate, viewMode]);
+  }, [startDate]);
 
   // โหลดข้อมูลตามเดือนที่เลือกในปฏิทิน
   useEffect(() => {
@@ -561,7 +497,6 @@ export default function CRMAdvancedPage() {
       ensureStaffOptions();
     }
   }, [showCustomerModal, ensureStaffOptions]);
-
 
   // โหลดรายชื่อพนักงาน
   const fetchEmployees = async () => {
@@ -600,43 +535,6 @@ export default function CRMAdvancedPage() {
       console.error("Error fetching attendances:", error);
     }
   };
-
-  const fetchLegacyAppointments = useCallback(async (dateStr?: string) => {
-    const effectiveDate = dateStr && dateStr.trim() ? dateStr : getLocalDateString();
-
-    try {
-      setLegacyLoading(true);
-      setLegacyError(null);
-
-      const params = new URLSearchParams();
-      params.append("from", effectiveDate);
-      params.append("to", effectiveDate);
-
-      const response = await fetch(`/api/appointments?${params.toString()}`);
-      const data = await response.json();
-
-      if (!response.ok || data.success === false) {
-        throw new Error(data?.error || "ไม่สามารถโหลดข้อมูลลูกค้าเก่าได้");
-      }
-
-      setLegacyRecords(Array.isArray(data.data) ? data.data : []);
-    } catch (error: any) {
-      console.error("Error fetching legacy appointments:", error);
-      setLegacyRecords([]);
-      setLegacyError(error?.message || "ไม่สามารถโหลดข้อมูลลูกค้าเก่าได้");
-    } finally {
-      setLegacyLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (viewMode !== "table" || customerSegment !== "old") {
-      return;
-    }
-
-    const targetDate = startDate && startDate.trim() ? startDate : getLocalDateString();
-    fetchLegacyAppointments(targetDate);
-  }, [customerSegment, fetchLegacyAppointments, startDate, viewMode]);
 
   const fetchRecords = async (start?: string, end?: string) => {
     try {
@@ -715,9 +613,6 @@ export default function CRMAdvancedPage() {
     } else {
       // ถ้าอยู่ในโหมดตาราง ให้โหลดข้อมูลวันนี้
       fetchRecords(today, today);
-      if (customerSegment === "old") {
-        fetchLegacyAppointments(today);
-      }
     }
   };
 
@@ -1048,66 +943,6 @@ export default function CRMAdvancedPage() {
       alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
     }
   };
-
-  const parseAppointmentTimeValue = (value: string): number => {
-    const match = value.match(/(\d{1,2}):(\d{2})/);
-    if (!match) {
-      return Number.MAX_SAFE_INTEGER;
-    }
-    const hours = parseInt(match[1], 10);
-    const minutes = parseInt(match[2], 10);
-    return hours * 60 + minutes;
-  };
-
-  const parseLegacyDateValue = (value: string | null): number => {
-    if (!value) {
-      return Number.MAX_SAFE_INTEGER;
-    }
-
-    const timestamp = Date.parse(value);
-    if (!Number.isNaN(timestamp)) {
-      return timestamp;
-    }
-
-    const timeMatch = value.match(/(\d{1,2}):(\d{2})/);
-    if (timeMatch) {
-      return parseAppointmentTimeValue(`${timeMatch[1]}:${timeMatch[2]}`);
-    }
-
-    return Number.MAX_SAFE_INTEGER;
-  };
-
-  const sortedByAppointment = [...records].sort((a, b) =>
-    parseAppointmentTimeValue(a.appointmentTime) -
-    parseAppointmentTimeValue(b.appointmentTime)
-  );
-
-  const legacyRecordsSorted = [...legacyRecords].sort(
-    (a, b) => parseLegacyDateValue(a.start_date) - parseLegacyDateValue(b.start_date)
-  );
-
-  const legacySelectedDate = startDate && startDate.trim() ? startDate : getLocalDateString();
-  const legacySelectedDateLabel = (() => {
-    if (!legacySelectedDate) {
-      return "";
-    }
-
-    const [year, month, day] = legacySelectedDate.split("-").map(Number);
-    if (!year || !month || !day) {
-      return legacySelectedDate;
-    }
-
-    const parsed = new Date(year, month - 1, day);
-    if (Number.isNaN(parsed.getTime())) {
-      return legacySelectedDate;
-    }
-
-    return parsed.toLocaleDateString("th-TH", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-  })();
 
   // ดึงข้อมูลการเข้างานของวันที่เลือก
   const getAttendancesForDate = (dateStr: string) => {
@@ -2002,439 +1837,185 @@ export default function CRMAdvancedPage() {
           )}
           {/* Table Container */}
           {viewMode === "table" && (
-            <div className="space-y-5">
-              <div className="flex flex-wrap gap-3 justify-center">
-                <button
-                  type="button"
-                  onClick={() => setCustomerSegment("new")}
-                  className={`rounded-full px-6 py-2 text-sm font-semibold uppercase tracking-wide transition ${customerSegment === "new"
-                    ? "bg-white text-blue-700 shadow-lg"
-                    : "bg-white/40 text-white border border-white/40"
-                    }`}
-                >
-                  ลูกค้าใหม่
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCustomerSegment("old")}
-                  className={`rounded-full px-6 py-2 text-sm font-semibold uppercase tracking-wide transition ${customerSegment === "old"
-                    ? "bg-slate-50 text-slate-900 shadow-lg"
-                    : "bg-white/20 text-white border border-white/30"
-                    }`}
-                >
-                  ลูกค้าเก่า
-                </button>
-              </div>
-              {customerSegment === "new" ? (
-                <div className="overflow-x-auto w-full rounded-3xl border border-white/30 shadow-2xl transition bg-white">
-                  {!loading && sortedByAppointment.length === 0 ? (
-                    <div className="flex justify-center items-center py-12">
-                      <div className="bg-white/20 backdrop-blur-md rounded-2xl p-8 shadow-2xl text-center">
-                        <svg
-                          className="w-16 h-16 text-white/50 mx-auto mb-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-                          />
-                        </svg>
-                        <h3 className="text-white font-bold text-xl mb-2">
-                          ไม่พบข้อมูล
-                        </h3>
-                        <p className="text-white/80">
-                          ไม่มีรายการนัดหมายในช่วงเวลาที่เลือก
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <table className="w-full border-collapse table-fixed">
-                      <thead>
-                        <tr className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500">
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            เวลาที่นัด
-                          </th>
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            สถานะ
-                          </th>
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            ชื่อลูกค้า
-                          </th>
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            เบอร์โทร
-                          </th>
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            ผลิตภัณฑ์ที่สนใจ
-                          </th>
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            หมอ
-                          </th>
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            ชื่อผู้ติดต่อ
-                          </th>
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            ยอดนำเสนอ
-                          </th>
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            ติดดาว
-                          </th>
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            ประเทศ
-                          </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white tracking-wide">
-                            หมายเหตุ
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sortedByAppointment.map((record, index) => (
-                          <tr
-                            key={record.id}
-                            className={`${index % 2 === 0
-                              ? "bg-gradient-to-r from-slate-50 to-blue-50"
-                              : "bg-gradient-to-r from-blue-100 to-indigo-100"
-                              } hover:bg-gradient-to-r hover:from-blue-200 hover:to-indigo-200 transition-all duration-200`}
-                          >
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
-                              {formatTimeDisplay(record.appointmentTime)}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
-                              <span className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-full text-xs font-bold shadow-lg transform hover:scale-105 transition-transform">
-                                {record.status}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
-                              <button
-                                type="button"
-                                onClick={() => openCustomerModal(record)}
-                                className="inline-block font-semibold text-blue-600 underline-offset-2 transition hover:underline"
-                              >
-                                {record.customer_name}
-                              </button>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
-                              {record.phone}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
-                              {record.interested_product}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 font-medium text-center">
-                              {record.doctor}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
-                              {record.contact_staff}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
-                              {record.proposed_amount.toLocaleString()}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 bg-gradient-to-r from-amber-100 to-yellow-100 text-center">
-                              <div className="flex items-center justify-center">
-                                {record.star_flag ? (
-                                  <svg
-                                    className="w-6 h-6 text-yellow-500 fill-current"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                                  </svg>
-                                ) : (
-                                  <svg
-                                    className="w-6 h-6 text-gray-400"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-                                    />
-                                  </svg>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-700 text-center">
-                              {record.country}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
-                              {(() => {
-                                const notePreview = getNotePreview(record.note);
-                                if (notePreview === "-") {
-                                  return "-";
-                                }
-                                return (
-                                  <button
-                                    type="button"
-                                    onClick={() => openNoteModal(record)}
-                                    className="w-full px-4 py-2 bg-white/70 hover:bg-white/90 text-blue-600 font-semibold rounded-lg shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                    title="กดเพื่อดูหมายเหตุทั้งหมด"
-                                  >
-                                    <span
-                                      className="block text-sm text-gray-800 text-left pl-2"
-                                      style={{
-                                        display: "-webkit-box",
-                                        WebkitLineClamp: 2,
-                                        WebkitBoxOrient: "vertical",
-                                        overflow: "hidden",
-                                      }}
-                                    >
-                                      {notePreview}
-                                    </span>
-                                    <span className="mt-1 block text-xs text-blue-500 text-left pl-2">
-                                      ดูเพิ่มเติม
-                                    </span>
-                                  </button>
-                                );
-                              })()}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
+            <div className="overflow-x-auto w-full">
+              {!loading && records.length === 0 ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="bg-white/20 backdrop-blur-md rounded-2xl p-8 shadow-2xl text-center">
+                    <svg
+                      className="w-16 h-16 text-white/50 mx-auto mb-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                      />
+                    </svg>
+                    <h3 className="text-white font-bold text-xl mb-2">
+                      ไม่พบข้อมูล
+                    </h3>
+                    <p className="text-white/80">
+                      ไม่มีรายการนัดหมายในช่วงเวลาที่เลือก
+                    </p>
+                  </div>
                 </div>
               ) : (
-                <div className="overflow-x-auto w-full rounded-3xl border border-white/30 shadow-2xl transition bg-slate-50">
-                  <div className="flex flex-wrap items-center justify-between gap-4 px-6 pt-6 pb-2 text-slate-700">
-                    <div className="font-semibold">
-                      ข้อมูลลูกค้าเก่าวันที่ {legacySelectedDateLabel || legacySelectedDate}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => fetchLegacyAppointments(legacySelectedDate)}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg shadow hover:from-purple-600 hover:to-indigo-600 transition"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                <table className="w-full border-collapse table-fixed">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500">
+                      <th
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
+                        style={{ width: "200px" }}
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                      </svg>
-                      รีโหลดข้อมูล
-                    </button>
-                  </div>
-
-                  {legacyError && (
-                    <div className="bg-red-500/10 border border-red-200 text-red-700 rounded-2xl px-6 py-4 m-6 flex flex-wrap items-center justify-between gap-4">
-                      <span className="font-medium">{legacyError}</span>
-                      <button
-                        type="button"
-                        onClick={() => fetchLegacyAppointments(legacySelectedDate)}
-                        className="px-4 py-2 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition"
+                        เวลาที่นัด
+                      </th>
+                      <th
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
+                        style={{ width: "200px" }}
                       >
-                        ลองอีกครั้ง
-                      </button>
-                    </div>
-                  )}
-
-                  {legacyLoading ? (
-                    <div className="flex justify-center items-center py-12">
-                      <div className="bg-white/60 rounded-2xl p-8 shadow-2xl">
-                        <div className="flex items-center gap-4">
-                          <svg
-                            className="animate-spin h-8 w-8 text-indigo-500"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                          </svg>
-                          <span className="text-indigo-700 font-semibold text-lg">
-                            กำลังโหลดข้อมูลลูกค้าเก่า...
+                        สถานะ
+                      </th>
+                      <th
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
+                        style={{ width: "200px" }}
+                      >
+                        ชื่อลูกค้า
+                      </th>
+                      <th
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
+                        style={{ width: "200px" }}
+                      >
+                        เบอร์โทร
+                      </th>
+                      <th
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
+                        style={{ width: "200px" }}
+                      >
+                        ผลิตภัณฑ์ที่สนใจ
+                      </th>
+                      <th
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
+                        style={{ width: "200px" }}
+                      >
+                        หมอ
+                      </th>
+                      <th
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
+                        style={{ width: "200px" }}
+                      >
+                        ชื่อผู้ติดต่อ
+                      </th>
+                      <th
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
+                        style={{ width: "200px" }}
+                      >
+                        ยอดนำเสนอ
+                      </th>
+                      <th
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
+                        style={{ width: "200px" }}
+                      >
+                        ติดดาว
+                      </th>
+                      <th
+                        className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
+                        style={{ width: "200px" }}
+                      >
+                        ประเทศ
+                      </th>
+                      <th className="px-6 py-5 text-center text-sm font-bold text-white tracking-wide">
+                        หมายเหตุ
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {records.map((record, index) => (
+                      <tr
+                        key={record.id}
+                        className={`${index % 2 === 0
+                          ? "bg-gradient-to-r from-slate-50 to-blue-50"
+                          : "bg-gradient-to-r from-blue-100 to-indigo-100"
+                          } hover:bg-gradient-to-r hover:from-blue-200 hover:to-indigo-200 transition-all duration-200`}
+                      >
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
+                          {formatTimeDisplay(record.appointmentTime)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
+                          <span className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-full text-xs font-bold shadow-lg transform hover:scale-105 transition-transform">
+                            {record.status}
                           </span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : legacyRecordsSorted.length === 0 ? (
-                    <div className="flex justify-center items-center py-12">
-                      <div className="bg-white/70 rounded-2xl p-8 shadow-2xl text-center">
-                        <svg
-                          className="w-16 h-16 text-indigo-300 mx-auto mb-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 17v-2a2 2 0 012-2h2a2 2 0 012 2v2m-6 0h6m-3-9h.01M4 6h16M4 10h16M4 14h16"
-                          />
-                        </svg>
-                        <h3 className="text-indigo-700 font-bold text-xl mb-2">
-                          ไม่มีรายการลูกค้าเก่า
-                        </h3>
-                        <p className="text-indigo-500">
-                          ไม่พบข้อมูลในวันที่เลือก ลองเปลี่ยนวันที่หรือรีโหลดอีกครั้ง
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <table className="w-full border-collapse table-fixed">
-                      <thead>
-                        <tr className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide">
-                            เวลาที่นัด
-                          </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide">
-                            สถานะ
-                          </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide">
-                            ชื่อลูกค้า
-                          </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide">
-                            เบอร์โทร
-                          </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide">
-                            หัตถการ / บริการ
-                          </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide">
-                            แพทย์
-                          </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide">
-                            ผู้ดูแล
-                          </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide">
-                            รหัสนัด
-                          </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide">
-                            ติดดาว
-                          </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white tracking-wide">
-                            หมายเหตุ
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {legacyRecordsSorted.map((appointment, index) => {
-                          const { dateLabel, timeLabel } = getLegacyDateParts(appointment.start_date);
-                          const productName = appointment.dest_name || appointment.activity || "-";
-                          const statusLabel = appointment.activity || "รอติดต่อ";
-                          const contactName = appointment.organize || appointment.bind_code || "-";
-                          const notePreview = getNotePreview(appointment.note);
-                          const visitLinked = Boolean(appointment.vn && appointment.vn.trim());
-                          const appointmentKey = appointment.appoint_code || `${appointment.code}-${index}`;
-
-                          return (
-                            <tr
-                              key={appointmentKey}
-                              className={`${index % 2 === 0
-                                ? "bg-gradient-to-r from-white via-indigo-50 to-purple-50"
-                                : "bg-gradient-to-r from-purple-50 via-pink-50 to-rose-50"
-                                } hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 transition-all duration-200`}
-                            >
-                              <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-200 text-center">
-                                <div className="font-semibold text-indigo-700 text-base">
-                                  {timeLabel}
-                                </div>
-                                <div className="text-xs text-gray-500">{dateLabel}</div>
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-200 text-center">
-                                <span className="inline-block px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-xs font-bold shadow">
-                                  {statusLabel}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-200 text-center">
-                                {getLegacyCustomerName(appointment)}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-200 text-center">
-                                {formatLegacyPhoneNumber(appointment.mobilephone)}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-200 text-center">
-                                {productName}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-200 text-center">
-                                {appointment.doctor_name || "-"}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-200 text-center">
-                                {contactName}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-200 text-center">
-                                {appointment.appoint_code || appointment.code || "-"}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-200 bg-gradient-to-r from-amber-100 to-yellow-100 text-center">
-                                <div className="flex items-center justify-center">
-                                  {visitLinked ? (
-                                    <svg
-                                      className="w-6 h-6 text-yellow-500 fill-current"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                                    </svg>
-                                  ) : (
-                                    <svg
-                                      className="w-6 h-6 text-gray-400"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-                                      />
-                                    </svg>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-800 text-left">
-                                <div
-                                  className="text-sm text-gray-700"
-                                  title={appointment.note || undefined}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
+                          <button
+                            type="button"
+                            onClick={() => openCustomerModal(record)}
+                            className="inline-block font-semibold text-blue-600 underline-offset-2 transition hover:underline"
+                          >
+                            {record.customer_name}
+                          </button>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
+                          {record.phone}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
+                          {record.interested_product}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 font-medium text-center">
+                          {record.doctor}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
+                          {record.contact_staff}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
+                          {record.proposed_amount.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 bg-gradient-to-r from-amber-100 to-yellow-100 text-center">
+                          <div className="flex items-center justify-center">
+                            {record.star_flag ? (
+                              <svg
+                                className="w-6 h-6 text-yellow-500 fill-current"
+                                viewBox="0 0 24 24"
+                              >
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                              </svg>
+                            ) : (
+                              <svg
+                                className="w-6 h-6 text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                                />
+                              </svg>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-700 text-center">
+                          {record.country}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
+                          {(() => {
+                            const notePreview = getNotePreview(record.note);
+                            if (notePreview === "-") {
+                              return "-";
+                            }
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => openNoteModal(record)}
+                                className="w-full px-4 py-2 bg-white/70 hover:bg-white/90 text-blue-600 font-semibold rounded-lg shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                title="กดเพื่อดูหมายเหตุทั้งหมด"
+                              >
+                                <span
+                                  className="block text-sm text-gray-800 text-left pl-2"
                                   style={{
                                     display: "-webkit-box",
                                     WebkitLineClamp: 2,
@@ -2443,20 +2024,23 @@ export default function CRMAdvancedPage() {
                                   }}
                                 >
                                   {notePreview}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
+                                </span>
+                                <span className="mt-1 block text-xs text-blue-500 text-left pl-2">
+                                  ดูเพิ่มเติม
+                                </span>
+                              </button>
+                            );
+                          })()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
           )}
           {/* Footer Summary */}
-          {viewMode === "table" && customerSegment === "new" && (
+          {viewMode === "table" && (
             <div className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 px-8 py-6 border-t-4 border-indigo-600">
               <div className="flex justify-between items-center">
                 <div className="text-base text-white flex items-center gap-2">
@@ -2473,31 +2057,9 @@ export default function CRMAdvancedPage() {
                   </span>
                   <span className="bg-white text-purple-600 px-4 py-2 rounded-lg font-bold shadow-lg">
                     {records
-                      .reduce((sum, r) => sum + (r.proposedAmount || r.proposed_amount || 0), 0)
+                      .reduce((sum, r) => sum + r.proposedAmount, 0)
                       .toLocaleString()}{" "}
                     บาท
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-          {viewMode === "table" && customerSegment === "old" && (
-            <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-8 py-6 border-t-4 border-purple-600">
-              <div className="flex flex-wrap justify-between items-center gap-4 text-white">
-                <div className="flex items-center gap-3 text-base">
-                  <span className="bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm font-bold">
-                    📁 ลูกค้าเก่า:
-                  </span>
-                  <span className="bg-white text-purple-600 px-4 py-2 rounded-lg font-bold shadow-lg">
-                    {legacyRecordsSorted.length} รายการ
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 text-base">
-                  <span className="bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm font-bold">
-                    ⭐ เชื่อมต่อ VN:
-                  </span>
-                  <span className="bg-white text-pink-600 px-4 py-2 rounded-lg font-bold shadow-lg">
-                    {legacyRecordsSorted.filter((item) => item.vn && item.vn.trim()).length} รายการ
                   </span>
                 </div>
               </div>

@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import VisitListPanel from "../../../components/VisitListPanel";
-import VisitForm, { VisitFormMode } from "../../../components/VisitForm";
 
 export interface CustomerFormData {
   recordno?: string;
@@ -232,16 +230,6 @@ export default function CustomerRegistrationModal({
   const documentsSectionRef = useRef<HTMLDivElement | null>(null);
   const addressSectionRef = useRef<HTMLDivElement | null>(null);
   const advancedSectionRef = useRef<HTMLDivElement | null>(null);
-  const visitSectionRef = useRef<HTMLDivElement | null>(null);
-
-  const [visitPanelOpen, setVisitPanelOpen] = useState(false);
-  const [visitRefreshSignal, setVisitRefreshSignal] = useState(0);
-  const [visitFormConfig, setVisitFormConfig] = useState<{ mode: VisitFormMode; vn?: string } | null>(null);
-  const openVisitForm = (mode: VisitFormMode, vn?: string) => {
-    setVisitPanelOpen(true);
-    setVisitFormConfig({ mode, vn });
-  };
-  const refreshVisitList = () => setVisitRefreshSignal((prev) => prev + 1);
 
   useEffect(() => {
     setFrontPreview(form?.idcardFrontImage || "");
@@ -673,11 +661,6 @@ export default function CustomerRegistrationModal({
     ...advancedNativeFields,
   ]);
 
-  const visitStatus: SectionStatus = {
-    label: "Visit",
-    className: "bg-blue-100 text-blue-800",
-  };
-
   const sectionNavItems: SectionNavItem[] = [
     { id: "basic", label: "ข้อมูลลูกค้า", ref: basicSectionRef, status: basicStatus },
     {
@@ -694,7 +677,6 @@ export default function CustomerRegistrationModal({
       status: advancedStatus,
       requiresAdvanced: true,
     },
-    { id: "visits", label: "Visit", ref: visitSectionRef, status: visitStatus },
   ];
 
   const scrollToSection = (target: RefObject<HTMLDivElement | null>) => {
@@ -872,68 +854,6 @@ export default function CustomerRegistrationModal({
               {error}
             </div>
           )}
-
-          <div
-            ref={visitSectionRef}
-            className="space-y-3 rounded-2xl border border-blue-200 bg-white/80 p-5 shadow-sm"
-          >
-            <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800">Visit</h3>
-                <p className="text-sm text-gray-600">
-                  ดูประวัติการเข้าพบหรือเยี่ยมลูกค้ารายนี้ และเชื่อมต่อกับระบบ Visit
-                </p>
-              </div>
-              {form?.cn ? (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setVisitPanelOpen((prev) => !prev)}
-                    className="inline-flex items-center gap-2 rounded-full border border-blue-300 bg-white px-4 py-2 text-sm font-semibold text-blue-600 shadow-sm transition hover:border-blue-500"
-                  >
-                    {visitPanelOpen ? "ซ่อน Visit" : "ดู Visit ทั้งหมด"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openVisitForm("create")}
-                    className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow transition hover:from-blue-700 hover:to-indigo-700"
-                  >
-                    เพิ่ม Visit
-                  </button>
-                </div>
-              ) : (
-                <span className="text-sm font-medium text-gray-500 md:text-right">
-                  กำลังโหลด CN...
-                </span>
-              )}
-            </div>
-
-            {visitPanelOpen && form?.cn && (
-              <div className="space-y-4">
-                <VisitListPanel
-                  cn={form.cn}
-                  allowDelete
-                  refreshSignal={visitRefreshSignal}
-                  onRowClick={(visit) => openVisitForm("edit", visit.vn)}
-                  onDeleteSuccess={refreshVisitList}
-                />
-                {visitFormConfig && (
-                  <div className="rounded-2xl border border-dashed border-blue-300 bg-blue-50 p-5">
-                    <VisitForm
-                      mode={visitFormConfig.mode}
-                      cn={form.cn}
-                      vn={visitFormConfig.vn}
-                      onSaved={() => {
-                        refreshVisitList();
-                        setVisitFormConfig(null);
-                      }}
-                      onCancel={() => setVisitFormConfig(null)}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
 
           <form
             onSubmit={(event) => {

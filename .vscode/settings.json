@@ -49,6 +49,5 @@
   "terminal.integrated.fontSize": 14,
   "[typescriptreact]": {
     "editor.defaultFormatter": "vscode.typescript-language-features"
-  },
-  "github.copilot.nextEditSuggestions.enabled": true
+  }
 }

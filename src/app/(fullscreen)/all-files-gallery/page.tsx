@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   type LucideIcon,
@@ -223,7 +223,7 @@ const customScrollbarStyle = `
   }
 `;
 
-// Mock data สำหรับตัวอย่าง
+// File interface - files will be stored in /public/marketing/
 interface FileItem {
   id: number;
   name: string;
@@ -239,172 +239,8 @@ interface FileItem {
   category: string;
 }
 
-const mockFiles: FileItem[] = [
-  {
-    id: 1,
-    name: "Before-After-001.jpg",
-    type: "image",
-    url: "/images/sample1.jpg",
-    thumbnail: "https://picsum.photos/seed/1/400/300",
-    size: "2.4 MB",
-    date: "2025-11-25",
-    tags: ["Before/After", "Face"],
-    favorite: true,
-    views: 1250,
-    category: "Before/After",
-  },
-  {
-    id: 2,
-    name: "Surgery-Video-001.mp4",
-    type: "video",
-    url: "/videos/sample1.mp4",
-    thumbnail: "https://picsum.photos/seed/2/400/300",
-    size: "45.8 MB",
-    date: "2025-11-24",
-    tags: ["Surgery", "Training"],
-    favorite: false,
-    views: 890,
-    duration: "12:45",
-    category: "Surgery Videos",
-  },
-  {
-    id: 3,
-    name: "Promo-Clip-001.mp4",
-    type: "clip",
-    url: "/clips/sample1.mp4",
-    thumbnail: "https://picsum.photos/seed/3/400/300",
-    size: "15.2 MB",
-    date: "2025-11-23",
-    tags: ["Promotion", "Social"],
-    favorite: true,
-    views: 2340,
-    duration: "00:45",
-    category: "Promo Clips",
-  },
-  {
-    id: 4,
-    name: "Patient-Photo-002.jpg",
-    type: "image",
-    url: "/images/sample2.jpg",
-    thumbnail: "https://picsum.photos/seed/4/400/300",
-    size: "1.8 MB",
-    date: "2025-11-22",
-    tags: ["Patient", "Consultation"],
-    favorite: false,
-    views: 560,
-    category: "Consultations",
-  },
-  {
-    id: 5,
-    name: "Training-Video-002.mp4",
-    type: "video",
-    url: "/videos/sample2.mp4",
-    thumbnail: "https://picsum.photos/seed/5/400/300",
-    size: "89.4 MB",
-    date: "2025-11-21",
-    tags: ["Training", "Medical"],
-    favorite: true,
-    views: 1890,
-    duration: "28:30",
-    category: "Training",
-  },
-  {
-    id: 6,
-    name: "Social-Clip-002.mp4",
-    type: "clip",
-    url: "/clips/sample2.mp4",
-    thumbnail: "https://picsum.photos/seed/6/400/300",
-    size: "8.5 MB",
-    date: "2025-11-20",
-    tags: ["Social", "TikTok"],
-    favorite: false,
-    views: 4560,
-    duration: "00:30",
-    category: "Social Media",
-  },
-  {
-    id: 7,
-    name: "Before-After-003.jpg",
-    type: "image",
-    url: "/images/sample3.jpg",
-    thumbnail: "https://picsum.photos/seed/7/400/300",
-    size: "3.1 MB",
-    date: "2025-11-19",
-    tags: ["Before/After", "Body"],
-    favorite: true,
-    views: 980,
-    category: "Before/After",
-  },
-  {
-    id: 8,
-    name: "Clinic-Tour.mp4",
-    type: "video",
-    url: "/videos/sample3.mp4",
-    thumbnail: "https://picsum.photos/seed/8/400/300",
-    size: "156.7 MB",
-    date: "2025-11-18",
-    tags: ["Tour", "Marketing"],
-    favorite: false,
-    views: 3200,
-    duration: "05:20",
-    category: "Marketing",
-  },
-  {
-    id: 9,
-    name: "Testimonial-001.mp4",
-    type: "clip",
-    url: "/clips/sample3.mp4",
-    thumbnail: "https://picsum.photos/seed/9/400/300",
-    size: "22.3 MB",
-    date: "2025-11-17",
-    tags: ["Testimonial", "Review"],
-    favorite: true,
-    views: 1560,
-    duration: "01:15",
-    category: "Testimonials",
-  },
-  {
-    id: 10,
-    name: "Product-Photo-001.jpg",
-    type: "image",
-    url: "/images/sample4.jpg",
-    thumbnail: "https://picsum.photos/seed/10/400/300",
-    size: "4.2 MB",
-    date: "2025-11-16",
-    tags: ["Product", "Catalog"],
-    favorite: false,
-    views: 670,
-    category: "Products",
-  },
-  {
-    id: 11,
-    name: "Event-Highlight.mp4",
-    type: "video",
-    url: "/videos/sample4.mp4",
-    thumbnail: "https://picsum.photos/seed/11/400/300",
-    size: "234.5 MB",
-    date: "2025-11-15",
-    tags: ["Event", "Highlight"],
-    favorite: true,
-    views: 5670,
-    duration: "15:00",
-    category: "Events",
-  },
-  {
-    id: 12,
-    name: "Instagram-Reel-001.mp4",
-    type: "clip",
-    url: "/clips/sample4.mp4",
-    thumbnail: "https://picsum.photos/seed/12/400/300",
-    size: "12.8 MB",
-    date: "2025-11-14",
-    tags: ["Instagram", "Reel"],
-    favorite: false,
-    views: 8900,
-    duration: "00:60",
-    category: "Social Media",
-  },
-];
+// Initial empty files - users will upload files to /public/marketing/
+const initialFiles: FileItem[] = [];
 
 // Recursive nested folder structure
 interface NestedFolder {
@@ -413,6 +249,7 @@ interface NestedFolder {
   fileIds: number[];
   children: NestedFolder[];
   parentId: string | null;
+  relativePath: string | null;
 }
 
 interface MediaFolder {
@@ -422,9 +259,11 @@ interface MediaFolder {
   gradient: string;
   icon: LucideIcon;
   subFolders: NestedFolder[];
+  rootFileIds: number[];
+  relativePath?: string;
 }
 
-type MediaFolderTemplate = Omit<MediaFolder, "subFolders">;
+type MediaFolderTemplate = Omit<MediaFolder, "subFolders" | "rootFileIds">;
 
 const folderTemplates: MediaFolderTemplate[] = [
   {
@@ -490,6 +329,28 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "");
 
+const getPathSegments = (value: string) =>
+  value
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+const getIdFromPath = (value: string) =>
+  getPathSegments(value).map((segment) => slugify(segment)).join("-");
+
+type ApiFolderNode = {
+  id: string;
+  name: string;
+  fileIds: number[];
+  path: string;
+  children: ApiFolderNode[];
+};
+
+type MarketingApiResponse = {
+  folders: ApiFolderNode[];
+  files: FileItem[];
+};
+
 // Helper functions for nested folder operations
 const findFolderById = (folders: NestedFolder[], id: string): NestedFolder | null => {
   for (const folder of folders) {
@@ -521,7 +382,7 @@ const getAllFileIds = (folder: NestedFolder): number[] => {
 const createInitialFolders = (mediaFiles: FileItem[]): MediaFolder[] => {
   const templateMap = new Map<string, MediaFolder>();
   folderTemplates.forEach((template) => {
-    templateMap.set(template.id, { ...template, subFolders: [] });
+    templateMap.set(template.id, { ...template, subFolders: [], rootFileIds: [], relativePath: template.name });
   });
 
   const fallbackId = "other-files";
@@ -541,6 +402,7 @@ const createInitialFolders = (mediaFiles: FileItem[]): MediaFolder[] => {
         fileIds: [],
         children: [],
         parentId: null,
+        relativePath: `${folder.name}/${subFolderName}`,
       };
       folder.subFolders.push(subFolder);
     }
@@ -552,10 +414,33 @@ const createInitialFolders = (mediaFiles: FileItem[]): MediaFolder[] => {
 
   return folderTemplates.map((template) => templateMap.get(template.id)!);
 };
+
+const mapApiNodeToNested = (node: ApiFolderNode, parentId: string | null): NestedFolder => ({
+  id: node.id,
+  name: node.name,
+  fileIds: node.fileIds,
+  parentId,
+  relativePath: node.path,
+  children: node.children.map((child) => mapApiNodeToNested(child, node.id)),
+});
+
+const buildFoldersFromApi = (nodes: ApiFolderNode[]): MediaFolder[] => {
+  const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+  return folderTemplates.map((template) => {
+    const serverNode = nodeMap.get(template.id);
+    return {
+      ...template,
+      rootFileIds: serverNode?.fileIds ?? [],
+      subFolders: serverNode
+        ? serverNode.children.map((child) => mapApiNodeToNested(child, null))
+        : [],
+    };
+  });
+};
 const AllFilesGalleryPage = () => {
   const router = useRouter();
-  const [files, setFiles] = useState<FileItem[]>(mockFiles);
-  const [isLoading, setIsLoading] = useState(false);
+  const [files, setFiles] = useState<FileItem[]>(initialFiles);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list" | "masonry">("grid");
@@ -573,7 +458,7 @@ const AllFilesGalleryPage = () => {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [folders, setFolders] = useState<MediaFolder[]>(() =>
-    createInitialFolders(mockFiles)
+    createInitialFolders(initialFiles)
   );
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   // Breadcrumb path: array of folder IDs representing the navigation path
@@ -600,8 +485,45 @@ const AllFilesGalleryPage = () => {
   const [aiProcessingFiles, setAIProcessingFiles] = useState<number[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareFileId, setShareFileId] = useState<number | null>(null);
+  const [isGlobalDropActive, setIsGlobalDropActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const isMountedRef = useRef(true);
+
+  const loadMarketingFolders = useCallback(async (signal?: AbortSignal) => {
+    if (isMountedRef.current) {
+      setIsLoading(true);
+    }
+
+    try {
+      const response = await fetch("/api/marketing-folders", { signal });
+      if (!response.ok) {
+        throw new Error(`Failed to load marketing folders: ${response.status}`);
+      }
+      const data: MarketingApiResponse = await response.json();
+      if (!isMountedRef.current) return;
+      const folderData = Array.isArray(data.folders) ? data.folders : [];
+      const fileData = Array.isArray(data.files) ? data.files : initialFiles;
+      setFiles(fileData);
+      setFolders(buildFoldersFromApi(folderData));
+    } catch (error) {
+      console.error("Unable to load marketing folders", error);
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    const controller = new AbortController();
+    loadMarketingFolders(controller.signal);
+    return () => {
+      controller.abort();
+      isMountedRef.current = false;
+    };
+  }, [loadMarketingFolders]);
 
   // Detect mobile device
   useEffect(() => {
@@ -689,8 +611,11 @@ const AllFilesGalleryPage = () => {
       return new Set<number>();
     }
 
-    // At root of main folder, show all files from all sub folders
-    const allIds = activeFolder.subFolders.flatMap((sub) => getAllFileIds(sub));
+    // At root of main folder, show all files (including root-level files)
+    const allIds = [
+      ...activeFolder.rootFileIds,
+      ...activeFolder.subFolders.flatMap((sub) => getAllFileIds(sub)),
+    ];
     return new Set(allIds);
   }, [activeFolder, currentNestedFolder, folderPath, files]);
 
@@ -860,7 +785,22 @@ const AllFilesGalleryPage = () => {
     });
   };
 
-  const handleCreateSubFolder = () => {
+  const getCurrentParentPath = (): string | null => {
+    if (!activeFolder) return null;
+    const segments = [activeFolder.name];
+    let searchIn = activeFolder.subFolders;
+
+    for (const folderId of folderPath) {
+      const match = searchIn.find((item) => item.id === folderId);
+      if (!match) break;
+      segments.push(match.name);
+      searchIn = match.children;
+    }
+
+    return segments.join("/");
+  };
+
+  const handleCreateSubFolder = async () => {
     if (!activeFolderId) return;
     const trimmedName = subFolderDraftName.trim();
     if (!trimmedName) return;
@@ -868,7 +808,6 @@ const AllFilesGalleryPage = () => {
     const folder = folders.find((item) => item.id === activeFolderId);
     if (!folder) return;
 
-    // Check for duplicates at the current level
     const currentLevelFolders = folderPath.length === 0
       ? folder.subFolders
       : (currentNestedFolder?.children || []);
@@ -882,27 +821,32 @@ const AllFilesGalleryPage = () => {
       return;
     }
 
-    const parentId = folderPath.length > 0 ? folderPath[folderPath.length - 1] : null;
-    const newFolder: NestedFolder = {
-      id: `${activeFolderId}-${slugify(trimmedName)}-${Date.now()}`,
-      name: trimmedName,
-      fileIds: [],
-      children: [],
-      parentId,
-    };
+    const parentPath = getCurrentParentPath();
+    if (!parentPath) return;
 
-    setFolders((prev) =>
-      prev.map((item) => {
-        if (item.id !== activeFolderId) return item;
-        return {
-          ...item,
-          subFolders: addFolderToNested(item.subFolders, folderPath, newFolder)
-        };
-      })
-    );
+    try {
+      const response = await fetch("/api/marketing-folders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parentPath, folderName: trimmedName }),
+      });
 
-    setSubFolderDraftName("");
-    setIsCreatingSubFolder(false);
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        throw new Error(errorBody?.error || `ไม่สามารถสร้างโฟลเดอร์ได้ (รหัส ${response.status})`);
+      }
+
+      await loadMarketingFolders();
+      setSubFolderDraftName("");
+      setIsCreatingSubFolder(false);
+    } catch (error) {
+      console.error("Failed to create subfolder", error);
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("เกิดข้อผิดพลาดขณะสร้างโฟลเดอร์");
+      }
+    }
   };
 
   const handleDeleteSubFolder = (subFolderId: string) => {
@@ -940,10 +884,16 @@ const AllFilesGalleryPage = () => {
     setEditingSubFolderValue("");
   };
 
-  const handleSaveSubFolderName = (subFolderId: string) => {
+  const handleSaveSubFolderName = async (subFolderId: string) => {
     if (!activeFolderId) return;
     const trimmedValue = editingSubFolderValue.trim();
     if (!trimmedValue) return;
+
+    const folderToRename = displayFolders.find((sub) => sub.id === subFolderId);
+    if (!folderToRename || !folderToRename.relativePath) {
+      alert("ไม่สามารถเปลี่ยนชื่อโฟลเดอร์นี้ได้ในขณะนี้");
+      return;
+    }
 
     // Check for duplicates at the current level
     const hasDuplicate = displayFolders.some(
@@ -957,18 +907,41 @@ const AllFilesGalleryPage = () => {
       return;
     }
 
-    setFolders((prev) =>
-      prev.map((item) => {
-        if (item.id !== activeFolderId) return item;
-        return {
-          ...item,
-          subFolders: updateFolderNameInNested(item.subFolders, subFolderId, trimmedValue)
-        };
-      })
-    );
+    try {
+      const response = await fetch("/api/marketing-folders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPath: folderToRename.relativePath,
+          newName: trimmedValue,
+        }),
+      });
 
-    setEditingSubFolderId(null);
-    setEditingSubFolderValue("");
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        throw new Error(errorBody?.error || `ไม่สามารถเปลี่ยนชื่อโฟลเดอร์ได้ (รหัส ${response.status})`);
+      }
+
+      const data = await response.json().catch(() => null);
+      const parentSegments = getPathSegments(folderToRename.relativePath).slice(0, -1);
+      const fallbackPath = parentSegments.length
+        ? `${parentSegments.join("/")}/${trimmedValue}`
+        : trimmedValue;
+      const newPath = data?.path || fallbackPath;
+      const newId = getIdFromPath(newPath);
+
+      await loadMarketingFolders();
+      setFolderPath((prev) => prev.map((id) => (id === subFolderId ? newId : id)));
+      setEditingSubFolderId(null);
+      setEditingSubFolderValue("");
+    } catch (error) {
+      console.error("Failed to rename folder", error);
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("เกิดข้อผิดพลาดขณะเปลี่ยนชื่อโฟลเดอร์");
+      }
+    }
   };
 
   // Folder edit/delete handlers
@@ -1009,7 +982,9 @@ const AllFilesGalleryPage = () => {
     const folder = folders.find((f) => f.id === folderId);
     if (!folder) return;
 
-    const totalFiles = folder.subFolders.reduce((acc, sub) => acc + getAllFileIds(sub).length, 0);
+    const totalFiles =
+      folder.rootFileIds.length +
+      folder.subFolders.reduce((acc, sub) => acc + getAllFileIds(sub).length, 0);
     if (totalFiles > 0) {
       alert("Remove or reassign all files before deleting this folder.");
       return;
@@ -1049,35 +1024,41 @@ const AllFilesGalleryPage = () => {
 
   const handleDropOnFolder = (e: React.DragEvent, folderId: string) => {
     e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.files?.length) {
+      processUploadedFiles(e.dataTransfer.files, folderId);
+      setIsGlobalDropActive(false);
+      setDragOverFolderId(null);
+      return;
+    }
     const fileId = parseInt(e.dataTransfer.getData("text/plain"));
 
     if (isNaN(fileId)) return;
 
     setFolders(prev => prev.map(folder => {
+      const cleanedFolder = removeFileFromFolder(folder, fileId);
+
       if (folder.id !== folderId) {
-        // Remove file from other folders
-        return {
-          ...folder,
-          subFolders: removeFileFromNestedFolders(folder.subFolders, fileId)
-        };
+        return cleanedFolder;
       }
 
-      // Add file to this folder's first subfolder or create one
-      if (folder.subFolders.length === 0) {
-        // Create a default subfolder
+      let updatedSubFolders = cleanedFolder.subFolders;
+
+      if (updatedSubFolders.length === 0) {
         const newSubFolder: NestedFolder = {
           id: `${folder.id}-default`,
           name: "Unsorted",
           fileIds: [fileId],
           children: [],
           parentId: null,
+          relativePath: null,
         };
-        return { ...folder, subFolders: [newSubFolder] };
+        updatedSubFolders = [newSubFolder];
       } else {
-        // Add to the first leaf subfolder
-        const updatedSubFolders = addFileToFirstLeaf(folder.subFolders, fileId);
-        return { ...folder, subFolders: updatedSubFolders };
+        updatedSubFolders = addFileToFirstLeaf(updatedSubFolders, fileId);
       }
+
+      return { ...cleanedFolder, subFolders: updatedSubFolders };
     }));
 
     setDraggingFileId(null);
@@ -1092,6 +1073,12 @@ const AllFilesGalleryPage = () => {
       children: removeFileFromNestedFolders(folder.children, fileId)
     }));
   };
+
+  const removeFileFromFolder = (folder: MediaFolder, fileId: number): MediaFolder => ({
+    ...folder,
+    rootFileIds: folder.rootFileIds.filter((id) => id !== fileId),
+    subFolders: removeFileFromNestedFolders(folder.subFolders, fileId),
+  });
 
   // Helper function to add file to first leaf folder
   const addFileToFirstLeaf = (folders: NestedFolder[], fileId: number): NestedFolder[] => {
@@ -1117,6 +1104,52 @@ const AllFilesGalleryPage = () => {
     return result;
   };
 
+  const addFileToNestedFolderById = (
+    folders: NestedFolder[],
+    targetId: string,
+    fileId: number
+  ): { folders: NestedFolder[]; added: boolean } => {
+    let added = false;
+    const updated = folders.map((folder) => {
+      if (folder.id === targetId) {
+        if (folder.fileIds.includes(fileId)) return folder;
+        added = true;
+        return { ...folder, fileIds: [...folder.fileIds, fileId] };
+      }
+
+      const childResult = addFileToNestedFolderById(folder.children, targetId, fileId);
+      if (childResult.added) {
+        added = true;
+        return { ...folder, children: childResult.folders };
+      }
+      return folder;
+    });
+    return { folders: updated, added };
+  };
+
+  const insertFileIntoMediaFolders = (
+    mediaFolders: MediaFolder[],
+    targetId: string,
+    fileId: number
+  ): MediaFolder[] => {
+    let updated = false;
+    const result = mediaFolders.map((folder) => {
+      if (folder.id === targetId) {
+        if (folder.rootFileIds.includes(fileId)) return folder;
+        updated = true;
+        return { ...folder, rootFileIds: [...folder.rootFileIds, fileId] };
+      }
+
+      const nested = addFileToNestedFolderById(folder.subFolders, targetId, fileId);
+      if (nested.added) {
+        updated = true;
+        return { ...folder, subFolders: nested.folders };
+      }
+      return folder;
+    });
+    return updated ? result : mediaFolders;
+  };
+
   // Distribute all files randomly into folders
   const distributeFilesRandomly = () => {
     const allFileIds = files.map(f => f.id);
@@ -1125,6 +1158,7 @@ const AllFilesGalleryPage = () => {
       // First, clear all files from folders
       const clearedFolders = prev.map(folder => ({
         ...folder,
+        rootFileIds: [],
         subFolders: clearFilesFromNestedFolders(folder.subFolders)
       }));
 
@@ -1148,6 +1182,7 @@ const AllFilesGalleryPage = () => {
             fileIds: folderFileIds,
             children: [],
             parentId: null,
+            relativePath: null,
           };
           return { ...folder, subFolders: [newSubFolder] };
         }
@@ -1212,6 +1247,7 @@ const AllFilesGalleryPage = () => {
   };
 
   const getFolderFileCount = (folder: MediaFolder) =>
+    folder.rootFileIds.length +
     folder.subFolders.reduce((acc, sub) => acc + getAllFileIds(sub).length, 0);
 
   const toggleFavorite = (id: number) => {
@@ -1233,10 +1269,7 @@ const AllFilesGalleryPage = () => {
       setSelectedFiles(prev => prev.filter(id => id !== fileId));
 
       // Remove from folders
-      setFolders(prev => prev.map(folder => ({
-        ...folder,
-        subFolders: removeFileFromNestedFolders(folder.subFolders, fileId)
-      })));
+      setFolders(prev => prev.map(folder => removeFileFromFolder(folder, fileId)));
     }
   };
 
@@ -1291,17 +1324,18 @@ const AllFilesGalleryPage = () => {
     return num.toString();
   };
 
-  // Mobile file upload handlers
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const uploadedFiles = event.target.files;
-    if (!uploadedFiles) return;
-
+  const processUploadedFiles = (uploadedFiles: FileList, targetFolderId?: string | null) => {
+    const destinationFolderId = targetFolderId ?? currentNestedFolder?.id ?? null;
     Array.from(uploadedFiles).forEach((file, index) => {
+      const timestamp = Date.now();
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const storagePath = `/marketing/${timestamp}_${sanitizedName}`;
+
       const newFile: FileItem = {
-        id: Date.now() + index,
+        id: timestamp + index,
         name: file.name,
         type: file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : 'clip',
-        url: URL.createObjectURL(file),
+        url: storagePath,
         thumbnail: URL.createObjectURL(file),
         size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
         date: new Date().toISOString().split('T')[0],
@@ -1311,10 +1345,47 @@ const AllFilesGalleryPage = () => {
         category: 'Uploads',
       };
       setFiles(prev => [...prev, newFile]);
+      if (destinationFolderId) {
+        setFolders(prev => insertFileIntoMediaFolders(prev, destinationFolderId, newFile.id));
+      }
+      console.log(`File would be saved to: ${storagePath}`);
     });
 
     setShowUploadModal(false);
-    if (event.target) event.target.value = '';
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const uploadedFiles = event.target.files;
+    if (!uploadedFiles) return;
+    processUploadedFiles(uploadedFiles, currentNestedFolder?.id ?? null);
+    event.target.value = '';
+  };
+
+  const handleGlobalDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    const hasFiles = Array.from(e.dataTransfer.types || []).includes("Files");
+    if (!hasFiles) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsGlobalDropActive(true);
+    e.dataTransfer.dropEffect = "copy";
+  };
+
+  const handleGlobalDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    if (e.currentTarget !== e.target) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsGlobalDropActive(false);
+  };
+
+  const handleGlobalDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!e.dataTransfer.files?.length) {
+      setIsGlobalDropActive(false);
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    setIsGlobalDropActive(false);
+    processUploadedFiles(e.dataTransfer.files, currentNestedFolder?.id ?? null);
   };
 
   // Share to LINE handler
@@ -1408,7 +1479,20 @@ const AllFilesGalleryPage = () => {
   return (
     <>
       <style>{customScrollbarStyle}</style>
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+      <div
+        className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden"
+        onDragOver={handleGlobalDragOver}
+        onDragEnter={handleGlobalDragOver}
+        onDragLeave={handleGlobalDragLeave}
+        onDrop={handleGlobalDrop}
+      >
+        {isGlobalDropActive && (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 transition-opacity pointer-events-none">
+            <div className="px-6 py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-purple-700 to-blue-500 text-white text-lg font-semibold pointer-events-none">
+              วางไฟล์เพื่ออัพโหลดที่นี่
+            </div>
+          </div>
+        )}
         {/* Animated Background Effects */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {/* Gradient Orbs */}
@@ -1840,14 +1924,14 @@ const AllFilesGalleryPage = () => {
               onDragLeave={handleAIDragLeave}
               onDrop={handleAIDrop}
               className={`glass-card rounded-2xl p-4 mb-6 border-2 border-dashed transition-all duration-300 ${aiDragOver
-                  ? 'ai-drop-zone-active border-emerald-400'
-                  : 'ai-drop-zone border-purple-400/50'
+                ? 'ai-drop-zone-active border-emerald-400'
+                : 'ai-drop-zone border-purple-400/50'
                 }`}
             >
               <div className="flex items-center justify-center gap-4">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${aiDragOver
-                    ? 'bg-gradient-to-br from-emerald-500 to-green-600'
-                    : 'bg-gradient-to-br from-purple-500 to-pink-500'
+                  ? 'bg-gradient-to-br from-emerald-500 to-green-600'
+                  : 'bg-gradient-to-br from-purple-500 to-pink-500'
                   }`}>
                   <Wand2 className="w-6 h-6 text-white" />
                 </div>
@@ -1962,8 +2046,8 @@ const AllFilesGalleryPage = () => {
                   <button
                     onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
                     className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm ${showFavoritesOnly
-                        ? "bg-gradient-to-r from-red-500 to-pink-500 text-white"
-                        : "bg-white/10 text-purple-300"
+                      ? "bg-gradient-to-r from-red-500 to-pink-500 text-white"
+                      : "bg-white/10 text-purple-300"
                       }`}
                   >
                     <Heart className={`w-4 h-4 ${showFavoritesOnly ? "fill-current" : ""}`} />

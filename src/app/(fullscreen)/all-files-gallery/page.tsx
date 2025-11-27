@@ -1,7 +1,8 @@
 "use client";
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
+  type LucideIcon,
   Search,
   RefreshCw,
   Download,
@@ -36,6 +37,13 @@ import {
   Clock,
   HardDrive,
   Check,
+  Plus,
+  Pencil,
+  Megaphone,
+  MessageSquareQuote,
+  Sparkles,
+  Presentation,
+  Archive,
 } from "lucide-react";
 import UserMenu from "@/components/UserMenu";
 
@@ -331,6 +339,119 @@ const mockFiles: FileItem[] = [
   },
 ];
 
+interface SubFolder {
+  id: string;
+  name: string;
+  fileIds: number[];
+}
+
+interface MediaFolder {
+  id: string;
+  name: string;
+  description: string;
+  gradient: string;
+  icon: LucideIcon;
+  subFolders: SubFolder[];
+}
+
+type MediaFolderTemplate = Omit<MediaFolder, "subFolders">;
+
+const folderTemplates: MediaFolderTemplate[] = [
+  {
+    id: "ad-content",
+    name: "Ad Content",
+    description: "Campaign-ready media assets",
+    gradient: "from-fuchsia-500 to-rose-500",
+    icon: Megaphone,
+  },
+  {
+    id: "customer-reviews",
+    name: "Customer Reviews",
+    description: "Testimonials & consultation highlights",
+    gradient: "from-amber-500 to-pink-500",
+    icon: MessageSquareQuote,
+  },
+  {
+    id: "branding",
+    name: "Branding",
+    description: "Before/After & product visuals",
+    gradient: "from-emerald-500 to-lime-500",
+    icon: Sparkles,
+  },
+  {
+    id: "presentations",
+    name: "Presentations",
+    description: "Slides, events & keynote clips",
+    gradient: "from-sky-500 to-indigo-500",
+    icon: Presentation,
+  },
+  {
+    id: "all-footages",
+    name: "All Footages",
+    description: "Training & raw recordings",
+    gradient: "from-purple-500 to-blue-500",
+    icon: Film,
+  },
+  {
+    id: "other-files",
+    name: "Other Files",
+    description: "Miscellaneous resources",
+    gradient: "from-slate-500 to-gray-600",
+    icon: Archive,
+  },
+];
+
+const categoryFolderMap: Record<string, MediaFolderTemplate["id"]> = {
+  "Promo Clips": "ad-content",
+  "Social Media": "ad-content",
+  Marketing: "ad-content",
+  "Before/After": "branding",
+  Products: "branding",
+  Testimonials: "customer-reviews",
+  Consultations: "customer-reviews",
+  Events: "presentations",
+  "Surgery Videos": "all-footages",
+  Training: "all-footages",
+};
+
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+
+const createInitialFolders = (mediaFiles: FileItem[]): MediaFolder[] => {
+  const templateMap = new Map<string, MediaFolder>();
+  folderTemplates.forEach((template) => {
+    templateMap.set(template.id, { ...template, subFolders: [] });
+  });
+
+  const fallbackId = "other-files";
+
+  mediaFiles.forEach((file) => {
+    const folderId = categoryFolderMap[file.category] || fallbackId;
+    const folder = templateMap.get(folderId);
+    if (!folder) return;
+
+    const subFolderName = file.category;
+    let subFolder = folder.subFolders.find((sub) => sub.name === subFolderName);
+
+    if (!subFolder) {
+      subFolder = {
+        id: `${folder.id}-${slugify(subFolderName)}`,
+        name: subFolderName,
+        fileIds: [],
+      };
+      folder.subFolders.push(subFolder);
+    }
+
+    if (!subFolder.fileIds.includes(file.id)) {
+      subFolder.fileIds.push(file.id);
+    }
+  });
+
+  return folderTemplates.map((template) => templateMap.get(template.id)!);
+};
 const AllFilesGalleryPage = () => {
   const router = useRouter();
   const [files, setFiles] = useState<FileItem[]>(mockFiles);
@@ -351,6 +472,19 @@ const AllFilesGalleryPage = () => {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [folders, setFolders] = useState<MediaFolder[]>(() =>
+    createInitialFolders(mockFiles)
+  );
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+  const [activeSubFolderId, setActiveSubFolderId] = useState<string | null>(
+    null
+  );
+  const [isCreatingSubFolder, setIsCreatingSubFolder] = useState(false);
+  const [subFolderDraftName, setSubFolderDraftName] = useState("");
+  const [editingSubFolderId, setEditingSubFolderId] = useState<string | null>(
+    null
+  );
+  const [editingSubFolderValue, setEditingSubFolderValue] = useState("");
 
   // Categories สำหรับ filter
   const categories = useMemo(() => {
@@ -358,9 +492,30 @@ const AllFilesGalleryPage = () => {
     return ["all", ...Array.from(cats)];
   }, [files]);
 
+  const activeFolder = useMemo(() => {
+    if (!activeFolderId) return null;
+    return folders.find((folder) => folder.id === activeFolderId) || null;
+  }, [activeFolderId, folders]);
+
+  const visibleFileIdSet = useMemo(() => {
+    if (!activeFolder) {
+      return new Set(files.map((file) => file.id));
+    }
+
+    if (activeSubFolderId) {
+      const target = activeFolder.subFolders.find(
+        (sub) => sub.id === activeSubFolderId
+      );
+      return new Set(target ? target.fileIds : []);
+    }
+
+    const allIds = activeFolder.subFolders.flatMap((sub) => sub.fileIds);
+    return new Set(allIds);
+  }, [activeFolder, activeSubFolderId, files]);
+
   // Filtered และ Sorted files
   const filteredFiles = useMemo(() => {
-    let result = [...files];
+    let result = files.filter((file) => visibleFileIdSet.has(file.id));
 
     // Filter by type
     if (filterType !== "all") {
@@ -417,19 +572,8 @@ const AllFilesGalleryPage = () => {
     searchTerm,
     sortBy,
     sortDirection,
+    visibleFileIdSet,
   ]);
-
-  // Stats
-  const stats = useMemo(() => {
-    return {
-      total: files.length,
-      images: files.filter((f) => f.type === "image").length,
-      videos: files.filter((f) => f.type === "video").length,
-      clips: files.filter((f) => f.type === "clip").length,
-      favorites: files.filter((f) => f.favorite).length,
-      totalViews: files.reduce((acc, f) => acc + f.views, 0),
-    };
-  }, [files]);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -443,6 +587,144 @@ const AllFilesGalleryPage = () => {
     };
     checkAuth();
   }, []);
+
+  const handleFolderSelect = (folderId: string) => {
+    setSelectedFiles([]);
+    setShowLightbox(false);
+
+    if (folderId === activeFolderId) {
+      setActiveFolderId(null);
+      setActiveSubFolderId(null);
+    } else {
+      setActiveFolderId(folderId);
+      setActiveSubFolderId(null);
+    }
+
+    setIsCreatingSubFolder(false);
+    setSubFolderDraftName("");
+    setEditingSubFolderId(null);
+    setEditingSubFolderValue("");
+    setSelectedCategory("all");
+  };
+
+  const handleSubFolderSelect = (subFolderId: string) => {
+    setActiveSubFolderId((prev) => (prev === subFolderId ? null : subFolderId));
+  };
+
+  const handleCreateSubFolder = () => {
+    if (!activeFolderId) return;
+    const trimmedName = subFolderDraftName.trim();
+    if (!trimmedName) return;
+
+    const folder = folders.find((item) => item.id === activeFolderId);
+    if (!folder) return;
+
+    const hasDuplicate = folder.subFolders.some(
+      (sub) => sub.name.toLowerCase() === trimmedName.toLowerCase()
+    );
+
+    if (hasDuplicate) {
+      alert("This sub folder name is already in use.");
+      return;
+    }
+
+    const newSubFolder: SubFolder = {
+      id: `${folder.id}-${slugify(trimmedName)}-${Date.now()}`,
+      name: trimmedName,
+      fileIds: [],
+    };
+
+    setFolders((prev) =>
+      prev.map((item) =>
+        item.id === folder.id
+          ? { ...item, subFolders: [...item.subFolders, newSubFolder] }
+          : item
+      )
+    );
+
+    setSubFolderDraftName("");
+    setIsCreatingSubFolder(false);
+  };
+
+  const handleDeleteSubFolder = (subFolderId: string) => {
+    if (!activeFolderId) return;
+    const folder = folders.find((item) => item.id === activeFolderId);
+    if (!folder) return;
+
+    const target = folder.subFolders.find((sub) => sub.id === subFolderId);
+    if (!target) return;
+
+    if (target.fileIds.length > 0) {
+      alert("Remove or reassign files before deleting this sub folder.");
+      return;
+    }
+
+    setFolders((prev) =>
+      prev.map((item) =>
+        item.id === activeFolderId
+          ? {
+              ...item,
+              subFolders: item.subFolders.filter((sub) => sub.id !== subFolderId),
+            }
+          : item
+      )
+    );
+
+    if (activeSubFolderId === subFolderId) {
+      setActiveSubFolderId(null);
+    }
+  };
+
+  const handleStartEditSubFolder = (subFolder: SubFolder) => {
+    setEditingSubFolderId(subFolder.id);
+    setEditingSubFolderValue(subFolder.name);
+  };
+
+  const handleCancelEditSubFolder = () => {
+    setEditingSubFolderId(null);
+    setEditingSubFolderValue("");
+  };
+
+  const handleSaveSubFolderName = (subFolderId: string) => {
+    if (!activeFolderId) return;
+    const trimmedValue = editingSubFolderValue.trim();
+    if (!trimmedValue) return;
+
+    const folder = folders.find((item) => item.id === activeFolderId);
+    if (!folder) return;
+
+    const hasDuplicate = folder.subFolders.some(
+      (sub) =>
+        sub.id !== subFolderId &&
+        sub.name.toLowerCase() === trimmedValue.toLowerCase()
+    );
+
+    if (hasDuplicate) {
+      alert("This sub folder name is already in use.");
+      return;
+    }
+
+    setFolders((prev) =>
+      prev.map((item) => {
+        if (item.id !== activeFolderId) {
+          return item;
+        }
+
+        return {
+          ...item,
+          subFolders: item.subFolders.map((sub) =>
+            sub.id === subFolderId ? { ...sub, name: trimmedValue } : sub
+          ),
+        };
+      })
+    );
+
+    setEditingSubFolderId(null);
+    setEditingSubFolderValue("");
+  };
+
+  const getFolderFileCount = (folder: MediaFolder) =>
+    folder.subFolders.reduce((acc, sub) => acc + sub.fileIds.length, 0);
 
   const toggleFavorite = (id: number) => {
     setFiles((prev) =>
@@ -566,63 +848,184 @@ const AllFilesGalleryPage = () => {
             </div>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-            {[
-              {
-                label: "ไฟล์ทั้งหมด",
-                value: stats.total,
-                icon: FolderOpen,
-                color: "from-violet-500 to-purple-600",
-              },
-              {
-                label: "รูปภาพ",
-                value: stats.images,
-                icon: ImageIcon,
-                color: "from-emerald-500 to-teal-600",
-              },
-              {
-                label: "วิดีโอ",
-                value: stats.videos,
-                icon: FileVideo,
-                color: "from-blue-500 to-indigo-600",
-              },
-              {
-                label: "คลิป",
-                value: stats.clips,
-                icon: Film,
-                color: "from-pink-500 to-rose-600",
-              },
-              {
-                label: "รายการโปรด",
-                value: stats.favorites,
-                icon: Heart,
-                color: "from-red-500 to-orange-600",
-              },
-              {
-                label: "ยอดวิว",
-                value: formatNumber(stats.totalViews),
-                icon: Eye,
-                color: "from-cyan-500 to-blue-600",
-              },
-            ].map((stat, index) => (
-              <div
-                key={index}
-                className="glass-card rounded-2xl p-4 hover:scale-105 transition-all duration-300 cursor-pointer group animate-slide-up"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <div
-                  className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-lg`}
+          {/* Folder Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+            {folders.map((folder) => {
+              const Icon = folder.icon;
+              const isActive = activeFolderId === folder.id;
+              const fileCount = getFolderFileCount(folder);
+              const subFolderCount = folder.subFolders.length;
+
+              return (
+                <button
+                  key={folder.id}
+                  onClick={() => handleFolderSelect(folder.id)}
+                  className={`glass-card rounded-2xl p-4 text-left transition-all duration-300 hover:scale-105 border ${
+                    isActive
+                      ? "border-purple-400/70 shadow-purple-500/40"
+                      : "border-white/10 hover:border-purple-300/40"
+                  }`}
                 >
-                  <stat.icon className="w-6 h-6 text-white" />
-                </div>
-                <div className="text-2xl font-bold text-white">
-                  {stat.value}
-                </div>
-                <div className="text-sm text-purple-200/60">{stat.label}</div>
-              </div>
-            ))}
+                  <div
+                    className={`w-12 h-12 rounded-xl bg-gradient-to-br ${folder.gradient} flex items-center justify-center mb-4 shadow-lg`}
+                  >
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="text-xl font-semibold text-white">
+                    {folder.name}
+                  </div>
+                  <p className="text-sm text-purple-200/70 mt-1">
+                    {folder.description}
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-purple-100/70 mt-4">
+                    <span>{subFolderCount} sub folders</span>
+                    <span>{fileCount} files</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
+
+          {activeFolder ? (
+            <div className="glass-card rounded-2xl p-5 mb-8">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-semibold text-white">
+                    {activeFolder.name} Sub Folders
+                  </h3>
+                  <p className="text-sm text-purple-200/70">
+                    Select a sub folder to filter files or create a new one to
+                    organize upcoming assets.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setActiveSubFolderId(null)}
+                    className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                      activeSubFolderId
+                        ? "bg-white/10 text-purple-100 hover:bg-white/20"
+                        : "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
+                    }`}
+                  >
+                    View All Files
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsCreatingSubFolder((prev) => !prev);
+                      setSubFolderDraftName("");
+                      setEditingSubFolderId(null);
+                      setEditingSubFolderValue("");
+                    }}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg"
+                  >
+                    <Plus className="w-4 h-4" />
+                    {isCreatingSubFolder ? "ยกเลิก" : "สร้างโฟลเดอร์ย่อย"}
+                  </button>
+                </div>
+              </div>
+
+              {isCreatingSubFolder && (
+                <div className="mt-4 flex flex-col md:flex-row gap-3">
+                  <input
+                    type="text"
+                    value={subFolderDraftName}
+                    onChange={(e) => setSubFolderDraftName(e.target.value)}
+                    placeholder="ตั้งชื่อโฟลเดอร์ย่อย"
+                    className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-purple-200/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                  <button
+                    onClick={handleCreateSubFolder}
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold hover:from-green-400 hover:to-emerald-500 shadow-lg"
+                  >
+                    สร้าง
+                  </button>
+                </div>
+              )}
+
+              <div className="mt-5 flex flex-col gap-3">
+                {activeFolder.subFolders.length === 0 ? (
+                  <p className="text-sm text-purple-200/70">
+                    ยังไม่มีโฟลเดอร์ย่อยสำหรับหมวดนี้
+                  </p>
+                ) : (
+                  activeFolder.subFolders.map((subFolder) => {
+                    const isSelected = activeSubFolderId === subFolder.id;
+                    const isEditing = editingSubFolderId === subFolder.id;
+
+                    return (
+                      <div
+                        key={subFolder.id}
+                        className={`flex flex-col md:flex-row md:items-center gap-3 p-3 rounded-2xl border transition-all ${
+                          isSelected
+                            ? "border-purple-400 bg-white/15"
+                            : "border-white/10 bg-white/5"
+                        }`}
+                      >
+                        {isEditing ? (
+                          <div className="flex-1 flex flex-col md:flex-row gap-3">
+                            <input
+                              type="text"
+                              value={editingSubFolderValue}
+                              onChange={(e) =>
+                                setEditingSubFolderValue(e.target.value)
+                              }
+                              className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleSaveSubFolderName(subFolder.id)}
+                                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white text-sm"
+                              >
+                                บันทึก
+                              </button>
+                              <button
+                                onClick={handleCancelEditSubFolder}
+                                className="px-4 py-2 rounded-xl bg-white/10 text-purple-100 text-sm"
+                              >
+                                ยกเลิก
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex-1 flex items-center gap-3">
+                            <button
+                              onClick={() => handleSubFolderSelect(subFolder.id)}
+                              className="flex-1 text-left"
+                            >
+                              <div className="text-white font-semibold">
+                                {subFolder.name}
+                              </div>
+                              <div className="text-xs text-purple-200/70">
+                                {subFolder.fileIds.length} ไฟล์
+                              </div>
+                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleStartEditSubFolder(subFolder)}
+                                className="p-2 rounded-lg bg-white/10 text-purple-100 hover:bg-white/20"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSubFolder(subFolder.id)}
+                                className="p-2 rounded-lg bg-white/10 text-red-200 hover:bg-red-500/20"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="glass-card rounded-2xl p-5 mb-8 text-purple-200/80 text-sm">
+              เลือกโฟลเดอร์ด้านบนเพื่อจัดการโฟลเดอร์ย่อยและแสดงไฟล์เฉพาะหมวดนั้น
+            </div>
+          )}
 
           {/* Control Bar */}
           <div className="glass-card rounded-2xl p-4 mb-6">

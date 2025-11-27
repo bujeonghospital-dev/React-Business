@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   type LucideIcon,
@@ -44,6 +44,12 @@ import {
   Sparkles,
   Presentation,
   Archive,
+  Camera,
+  Smartphone,
+  Send,
+  Wand2,
+  Menu,
+  ChevronDown,
 } from "lucide-react";
 import UserMenu from "@/components/UserMenu";
 
@@ -154,9 +160,70 @@ const customScrollbarStyle = `
     transform: translateY(10px);
     transition: all 0.3s ease;
   }
+
+  /* Mobile responsive styles */
+  @media (max-width: 768px) {
+    .image-card:hover {
+      transform: none;
+    }
+    
+    .file-actions {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .mobile-touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+
+  /* Touch-friendly interactions */
+  @media (hover: none) {
+    .image-card:active {
+      transform: scale(0.98);
+    }
+    
+    .file-actions {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* AI Drop Zone Animation */
+  @keyframes ai-pulse {
+    0%, 100% { 
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(236, 72, 153, 0.2);
+      border-color: rgba(168, 85, 247, 0.5);
+    }
+    50% { 
+      box-shadow: 0 0 30px rgba(168, 85, 247, 0.6), 0 0 60px rgba(236, 72, 153, 0.4);
+      border-color: rgba(236, 72, 153, 0.7);
+    }
+  }
+
+  .ai-drop-zone {
+    animation: ai-pulse 2s ease-in-out infinite;
+  }
+
+  .ai-drop-zone-active {
+    animation: none;
+    box-shadow: 0 0 40px rgba(34, 197, 94, 0.6), 0 0 80px rgba(34, 197, 94, 0.3);
+    border-color: rgba(34, 197, 94, 0.8);
+    background: rgba(34, 197, 94, 0.1);
+  }
+
+  /* LINE Share Button */
+  .line-share-btn {
+    background: linear-gradient(135deg, #00B900 0%, #00C300 100%);
+  }
+
+  .line-share-btn:hover {
+    background: linear-gradient(135deg, #00C300 0%, #00D400 100%);
+  }
 `;
 
-// Mock data สำหรับตัวอย่าง
+// File interface - files will be stored in /public/marketing/
 interface FileItem {
   id: number;
   name: string;
@@ -172,177 +239,17 @@ interface FileItem {
   category: string;
 }
 
-const mockFiles: FileItem[] = [
-  {
-    id: 1,
-    name: "Before-After-001.jpg",
-    type: "image",
-    url: "/images/sample1.jpg",
-    thumbnail: "https://picsum.photos/seed/1/400/300",
-    size: "2.4 MB",
-    date: "2025-11-25",
-    tags: ["Before/After", "Face"],
-    favorite: true,
-    views: 1250,
-    category: "Before/After",
-  },
-  {
-    id: 2,
-    name: "Surgery-Video-001.mp4",
-    type: "video",
-    url: "/videos/sample1.mp4",
-    thumbnail: "https://picsum.photos/seed/2/400/300",
-    size: "45.8 MB",
-    date: "2025-11-24",
-    tags: ["Surgery", "Training"],
-    favorite: false,
-    views: 890,
-    duration: "12:45",
-    category: "Surgery Videos",
-  },
-  {
-    id: 3,
-    name: "Promo-Clip-001.mp4",
-    type: "clip",
-    url: "/clips/sample1.mp4",
-    thumbnail: "https://picsum.photos/seed/3/400/300",
-    size: "15.2 MB",
-    date: "2025-11-23",
-    tags: ["Promotion", "Social"],
-    favorite: true,
-    views: 2340,
-    duration: "00:45",
-    category: "Promo Clips",
-  },
-  {
-    id: 4,
-    name: "Patient-Photo-002.jpg",
-    type: "image",
-    url: "/images/sample2.jpg",
-    thumbnail: "https://picsum.photos/seed/4/400/300",
-    size: "1.8 MB",
-    date: "2025-11-22",
-    tags: ["Patient", "Consultation"],
-    favorite: false,
-    views: 560,
-    category: "Consultations",
-  },
-  {
-    id: 5,
-    name: "Training-Video-002.mp4",
-    type: "video",
-    url: "/videos/sample2.mp4",
-    thumbnail: "https://picsum.photos/seed/5/400/300",
-    size: "89.4 MB",
-    date: "2025-11-21",
-    tags: ["Training", "Medical"],
-    favorite: true,
-    views: 1890,
-    duration: "28:30",
-    category: "Training",
-  },
-  {
-    id: 6,
-    name: "Social-Clip-002.mp4",
-    type: "clip",
-    url: "/clips/sample2.mp4",
-    thumbnail: "https://picsum.photos/seed/6/400/300",
-    size: "8.5 MB",
-    date: "2025-11-20",
-    tags: ["Social", "TikTok"],
-    favorite: false,
-    views: 4560,
-    duration: "00:30",
-    category: "Social Media",
-  },
-  {
-    id: 7,
-    name: "Before-After-003.jpg",
-    type: "image",
-    url: "/images/sample3.jpg",
-    thumbnail: "https://picsum.photos/seed/7/400/300",
-    size: "3.1 MB",
-    date: "2025-11-19",
-    tags: ["Before/After", "Body"],
-    favorite: true,
-    views: 980,
-    category: "Before/After",
-  },
-  {
-    id: 8,
-    name: "Clinic-Tour.mp4",
-    type: "video",
-    url: "/videos/sample3.mp4",
-    thumbnail: "https://picsum.photos/seed/8/400/300",
-    size: "156.7 MB",
-    date: "2025-11-18",
-    tags: ["Tour", "Marketing"],
-    favorite: false,
-    views: 3200,
-    duration: "05:20",
-    category: "Marketing",
-  },
-  {
-    id: 9,
-    name: "Testimonial-001.mp4",
-    type: "clip",
-    url: "/clips/sample3.mp4",
-    thumbnail: "https://picsum.photos/seed/9/400/300",
-    size: "22.3 MB",
-    date: "2025-11-17",
-    tags: ["Testimonial", "Review"],
-    favorite: true,
-    views: 1560,
-    duration: "01:15",
-    category: "Testimonials",
-  },
-  {
-    id: 10,
-    name: "Product-Photo-001.jpg",
-    type: "image",
-    url: "/images/sample4.jpg",
-    thumbnail: "https://picsum.photos/seed/10/400/300",
-    size: "4.2 MB",
-    date: "2025-11-16",
-    tags: ["Product", "Catalog"],
-    favorite: false,
-    views: 670,
-    category: "Products",
-  },
-  {
-    id: 11,
-    name: "Event-Highlight.mp4",
-    type: "video",
-    url: "/videos/sample4.mp4",
-    thumbnail: "https://picsum.photos/seed/11/400/300",
-    size: "234.5 MB",
-    date: "2025-11-15",
-    tags: ["Event", "Highlight"],
-    favorite: true,
-    views: 5670,
-    duration: "15:00",
-    category: "Events",
-  },
-  {
-    id: 12,
-    name: "Instagram-Reel-001.mp4",
-    type: "clip",
-    url: "/clips/sample4.mp4",
-    thumbnail: "https://picsum.photos/seed/12/400/300",
-    size: "12.8 MB",
-    date: "2025-11-14",
-    tags: ["Instagram", "Reel"],
-    favorite: false,
-    views: 8900,
-    duration: "00:60",
-    category: "Social Media",
-  },
-];
+// Initial empty files - users will upload files to /public/marketing/
+const initialFiles: FileItem[] = [];
 
-interface SubFolder {
+// Recursive nested folder structure
+interface NestedFolder {
   id: string;
   name: string;
   fileIds: number[];
+  children: NestedFolder[];
+  parentId: string | null;
+  relativePath: string | null;
 }
 
 interface MediaFolder {
@@ -351,52 +258,54 @@ interface MediaFolder {
   description: string;
   gradient: string;
   icon: LucideIcon;
-  subFolders: SubFolder[];
+  subFolders: NestedFolder[];
+  rootFileIds: number[];
+  relativePath?: string;
 }
 
-type MediaFolderTemplate = Omit<MediaFolder, "subFolders">;
+type MediaFolderTemplate = Omit<MediaFolder, "subFolders" | "rootFileIds">;
 
 const folderTemplates: MediaFolderTemplate[] = [
   {
     id: "ad-content",
     name: "Ad Content",
-    description: "Campaign-ready media assets",
-    gradient: "from-fuchsia-500 to-rose-500",
-    icon: Megaphone,
+    description: "✨ ภาพผลลัพธ์ก่อน-หลังศัลยกรรม",
+    gradient: "from-rose-500 to-pink-600",
+    icon: Sparkles,
   },
   {
     id: "customer-reviews",
-    name: "Customer Reviews",
-    description: "Testimonials & consultation highlights",
-    gradient: "from-amber-500 to-pink-500",
+    name: "Before and After",
+    description: "💬 รีวิวและประสบการณ์คนไข้จริง",
+    gradient: "from-amber-500 to-orange-500",
     icon: MessageSquareQuote,
   },
   {
     id: "branding",
     name: "Branding",
-    description: "Before/After & product visuals",
-    gradient: "from-emerald-500 to-lime-500",
-    icon: Sparkles,
+    description: "🎬 คลิปวีดีโอขั้นตอนหัตถการ",
+    gradient: "from-emerald-500 to-teal-500",
+    icon: Film,
   },
   {
     id: "presentations",
     name: "Presentations",
-    description: "Slides, events & keynote clips",
-    gradient: "from-sky-500 to-indigo-500",
+    description: "👨‍⚕️ โปรไฟล์ทีมแพทย์ผู้เชี่ยวชาญ",
+    gradient: "from-sky-500 to-blue-600",
     icon: Presentation,
   },
   {
     id: "all-footages",
     name: "All Footages",
-    description: "Training & raw recordings",
-    gradient: "from-purple-500 to-blue-500",
-    icon: Film,
+    description: "🏥 พาชมคลินิกและห้องผ่าตัด",
+    gradient: "from-violet-500 to-purple-600",
+    icon: Megaphone,
   },
   {
     id: "other-files",
     name: "Other Files",
-    description: "Miscellaneous resources",
-    gradient: "from-slate-500 to-gray-600",
+    description: "🎁 โปรโมชั่นและส่วนลดพิเศษ",
+    gradient: "from-fuchsia-500 to-pink-500",
     icon: Archive,
   },
 ];
@@ -420,10 +329,60 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "");
 
+const getPathSegments = (value: string) =>
+  value
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+const getIdFromPath = (value: string) =>
+  getPathSegments(value).map((segment) => slugify(segment)).join("-");
+
+type ApiFolderNode = {
+  id: string;
+  name: string;
+  fileIds: number[];
+  path: string;
+  children: ApiFolderNode[];
+};
+
+type MarketingApiResponse = {
+  folders: ApiFolderNode[];
+  files: FileItem[];
+};
+
+// Helper functions for nested folder operations
+const findFolderById = (folders: NestedFolder[], id: string): NestedFolder | null => {
+  for (const folder of folders) {
+    if (folder.id === id) return folder;
+    const found = findFolderById(folder.children, id);
+    if (found) return found;
+  }
+  return null;
+};
+
+const isLeafFolder = (folder: NestedFolder): boolean => {
+  return folder.children.length === 0;
+};
+
+const countAllSubFolders = (folders: NestedFolder[]): number => {
+  return folders.reduce((acc, folder) => {
+    return acc + 1 + countAllSubFolders(folder.children);
+  }, 0);
+};
+
+const getAllFileIds = (folder: NestedFolder): number[] => {
+  const ids = [...folder.fileIds];
+  folder.children.forEach(child => {
+    ids.push(...getAllFileIds(child));
+  });
+  return ids;
+};
+
 const createInitialFolders = (mediaFiles: FileItem[]): MediaFolder[] => {
   const templateMap = new Map<string, MediaFolder>();
   folderTemplates.forEach((template) => {
-    templateMap.set(template.id, { ...template, subFolders: [] });
+    templateMap.set(template.id, { ...template, subFolders: [], rootFileIds: [], relativePath: template.name });
   });
 
   const fallbackId = "other-files";
@@ -441,21 +400,47 @@ const createInitialFolders = (mediaFiles: FileItem[]): MediaFolder[] => {
         id: `${folder.id}-${slugify(subFolderName)}`,
         name: subFolderName,
         fileIds: [],
+        children: [],
+        parentId: null,
+        relativePath: `${folder.name}/${subFolderName}`,
       };
       folder.subFolders.push(subFolder);
     }
 
-    if (!subFolder.fileIds.includes(file.id)) {
+    if (subFolder && !subFolder.fileIds.includes(file.id)) {
       subFolder.fileIds.push(file.id);
     }
   });
 
   return folderTemplates.map((template) => templateMap.get(template.id)!);
 };
+
+const mapApiNodeToNested = (node: ApiFolderNode, parentId: string | null): NestedFolder => ({
+  id: node.id,
+  name: node.name,
+  fileIds: node.fileIds,
+  parentId,
+  relativePath: node.path,
+  children: node.children.map((child) => mapApiNodeToNested(child, node.id)),
+});
+
+const buildFoldersFromApi = (nodes: ApiFolderNode[]): MediaFolder[] => {
+  const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+  return folderTemplates.map((template) => {
+    const serverNode = nodeMap.get(template.id);
+    return {
+      ...template,
+      rootFileIds: serverNode?.fileIds ?? [],
+      subFolders: serverNode
+        ? serverNode.children.map((child) => mapApiNodeToNested(child, null))
+        : [],
+    };
+  });
+};
 const AllFilesGalleryPage = () => {
   const router = useRouter();
-  const [files, setFiles] = useState<FileItem[]>(mockFiles);
-  const [isLoading, setIsLoading] = useState(false);
+  const [files, setFiles] = useState<FileItem[]>(initialFiles);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list" | "masonry">("grid");
@@ -473,18 +458,82 @@ const AllFilesGalleryPage = () => {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [folders, setFolders] = useState<MediaFolder[]>(() =>
-    createInitialFolders(mockFiles)
+    createInitialFolders(initialFiles)
   );
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
-  const [activeSubFolderId, setActiveSubFolderId] = useState<string | null>(
-    null
-  );
+  // Breadcrumb path: array of folder IDs representing the navigation path
+  const [folderPath, setFolderPath] = useState<string[]>([]);
   const [isCreatingSubFolder, setIsCreatingSubFolder] = useState(false);
   const [subFolderDraftName, setSubFolderDraftName] = useState("");
   const [editingSubFolderId, setEditingSubFolderId] = useState<string | null>(
     null
   );
   const [editingSubFolderValue, setEditingSubFolderValue] = useState("");
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
+  const [editingFolderValue, setEditingFolderValue] = useState("");
+
+  // Drag and drop state
+  const [draggingFileId, setDraggingFileId] = useState<number | null>(null);
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
+
+  // Mobile and feature state
+  const [isMobile, setIsMobile] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showAIDropZone, setShowAIDropZone] = useState(true);
+  const [aiDragOver, setAIDragOver] = useState(false);
+  const [aiProcessingFiles, setAIProcessingFiles] = useState<number[]>([]);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareFileId, setShareFileId] = useState<number | null>(null);
+  const [isGlobalDropActive, setIsGlobalDropActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const isMountedRef = useRef(true);
+
+  const loadMarketingFolders = useCallback(async (signal?: AbortSignal) => {
+    if (isMountedRef.current) {
+      setIsLoading(true);
+    }
+
+    try {
+      const response = await fetch("/api/marketing-folders", { signal });
+      if (!response.ok) {
+        throw new Error(`Failed to load marketing folders: ${response.status}`);
+      }
+      const data: MarketingApiResponse = await response.json();
+      if (!isMountedRef.current) return;
+      const folderData = Array.isArray(data.folders) ? data.folders : [];
+      const fileData = Array.isArray(data.files) ? data.files : initialFiles;
+      setFiles(fileData);
+      setFolders(buildFoldersFromApi(folderData));
+    } catch (error) {
+      console.error("Unable to load marketing folders", error);
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    const controller = new AbortController();
+    loadMarketingFolders(controller.signal);
+    return () => {
+      controller.abort();
+      isMountedRef.current = false;
+    };
+  }, [loadMarketingFolders]);
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768 || 'ontouchstart' in window);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Categories สำหรับ filter
   const categories = useMemo(() => {
@@ -497,21 +546,78 @@ const AllFilesGalleryPage = () => {
     return folders.find((folder) => folder.id === activeFolderId) || null;
   }, [activeFolderId, folders]);
 
+  // Get the current nested folder based on breadcrumb path
+  const currentNestedFolder = useMemo((): NestedFolder | null => {
+    if (!activeFolder || folderPath.length === 0) return null;
+
+    let current: NestedFolder | null = null;
+    let searchIn = activeFolder.subFolders;
+
+    for (const folderId of folderPath) {
+      current = searchIn.find(f => f.id === folderId) || null;
+      if (!current) return null;
+      searchIn = current.children;
+    }
+
+    return current;
+  }, [activeFolder, folderPath]);
+
+  // Get folders to display (either root sub folders or children of current nested folder)
+  const displayFolders = useMemo((): NestedFolder[] => {
+    if (!activeFolder) return [];
+    if (folderPath.length === 0) return activeFolder.subFolders;
+    if (currentNestedFolder) return currentNestedFolder.children;
+    return [];
+  }, [activeFolder, folderPath, currentNestedFolder]);
+
+  // Check if we can upload files (only at leaf folders)
+  const canUploadFiles = useMemo((): boolean => {
+    if (!currentNestedFolder) return false;
+    return isLeafFolder(currentNestedFolder);
+  }, [currentNestedFolder]);
+
+  // Build breadcrumb items for display
+  const breadcrumbItems = useMemo(() => {
+    if (!activeFolder) return [];
+
+    const items: { id: string; name: string; isRoot?: boolean }[] = [
+      { id: activeFolder.id, name: activeFolder.name, isRoot: true }
+    ];
+
+    let searchIn = activeFolder.subFolders;
+    for (const folderId of folderPath) {
+      const folder = searchIn.find(f => f.id === folderId);
+      if (folder) {
+        items.push({ id: folder.id, name: folder.name });
+        searchIn = folder.children;
+      }
+    }
+
+    return items;
+  }, [activeFolder, folderPath]);
+
   const visibleFileIdSet = useMemo(() => {
     if (!activeFolder) {
       return new Set(files.map((file) => file.id));
     }
 
-    if (activeSubFolderId) {
-      const target = activeFolder.subFolders.find(
-        (sub) => sub.id === activeSubFolderId
-      );
-      return new Set(target ? target.fileIds : []);
+    // If we're at a nested folder, show only its files (if it's a leaf)
+    if (currentNestedFolder && isLeafFolder(currentNestedFolder)) {
+      return new Set(currentNestedFolder.fileIds);
     }
 
-    const allIds = activeFolder.subFolders.flatMap((sub) => sub.fileIds);
+    // If no folder selected or at a non-leaf folder, show no files
+    if (folderPath.length > 0) {
+      return new Set<number>();
+    }
+
+    // At root of main folder, show all files (including root-level files)
+    const allIds = [
+      ...activeFolder.rootFileIds,
+      ...activeFolder.subFolders.flatMap((sub) => getAllFileIds(sub)),
+    ];
     return new Set(allIds);
-  }, [activeFolder, activeSubFolderId, files]);
+  }, [activeFolder, currentNestedFolder, folderPath, files]);
 
   // Filtered และ Sorted files
   const filteredFiles = useMemo(() => {
@@ -594,10 +700,10 @@ const AllFilesGalleryPage = () => {
 
     if (folderId === activeFolderId) {
       setActiveFolderId(null);
-      setActiveSubFolderId(null);
+      setFolderPath([]);
     } else {
       setActiveFolderId(folderId);
-      setActiveSubFolderId(null);
+      setFolderPath([]);
     }
 
     setIsCreatingSubFolder(false);
@@ -607,11 +713,94 @@ const AllFilesGalleryPage = () => {
     setSelectedCategory("all");
   };
 
-  const handleSubFolderSelect = (subFolderId: string) => {
-    setActiveSubFolderId((prev) => (prev === subFolderId ? null : subFolderId));
+  // Navigate into a nested folder
+  const handleNestedFolderSelect = (folderId: string) => {
+    setFolderPath(prev => [...prev, folderId]);
+    setIsCreatingSubFolder(false);
+    setSubFolderDraftName("");
+    setEditingSubFolderId(null);
   };
 
-  const handleCreateSubFolder = () => {
+  // Navigate to a specific breadcrumb level
+  const handleBreadcrumbClick = (index: number) => {
+    if (index === 0) {
+      // Clicking on root folder name
+      setFolderPath([]);
+    } else {
+      // Clicking on a nested folder in breadcrumb
+      setFolderPath(prev => prev.slice(0, index));
+    }
+    setIsCreatingSubFolder(false);
+  };
+
+  // Helper to recursively add a folder to nested structure
+  const addFolderToNested = (
+    folders: NestedFolder[],
+    parentPath: string[],
+    newFolder: NestedFolder
+  ): NestedFolder[] => {
+    if (parentPath.length === 0) {
+      return [...folders, newFolder];
+    }
+
+    const [currentId, ...restPath] = parentPath;
+    return folders.map(folder => {
+      if (folder.id === currentId) {
+        return {
+          ...folder,
+          children: addFolderToNested(folder.children, restPath, newFolder)
+        };
+      }
+      return folder;
+    });
+  };
+
+  // Helper to recursively delete a folder from nested structure
+  const deleteFolderFromNested = (
+    folders: NestedFolder[],
+    targetId: string
+  ): NestedFolder[] => {
+    return folders
+      .filter(folder => folder.id !== targetId)
+      .map(folder => ({
+        ...folder,
+        children: deleteFolderFromNested(folder.children, targetId)
+      }));
+  };
+
+  // Helper to recursively update a folder name in nested structure
+  const updateFolderNameInNested = (
+    folders: NestedFolder[],
+    targetId: string,
+    newName: string
+  ): NestedFolder[] => {
+    return folders.map(folder => {
+      if (folder.id === targetId) {
+        return { ...folder, name: newName };
+      }
+      return {
+        ...folder,
+        children: updateFolderNameInNested(folder.children, targetId, newName)
+      };
+    });
+  };
+
+  const getCurrentParentPath = (): string | null => {
+    if (!activeFolder) return null;
+    const segments = [activeFolder.name];
+    let searchIn = activeFolder.subFolders;
+
+    for (const folderId of folderPath) {
+      const match = searchIn.find((item) => item.id === folderId);
+      if (!match) break;
+      segments.push(match.name);
+      searchIn = match.children;
+    }
+
+    return segments.join("/");
+  };
+
+  const handleCreateSubFolder = async () => {
     if (!activeFolderId) return;
     const trimmedName = subFolderDraftName.trim();
     if (!trimmedName) return;
@@ -619,63 +808,73 @@ const AllFilesGalleryPage = () => {
     const folder = folders.find((item) => item.id === activeFolderId);
     if (!folder) return;
 
-    const hasDuplicate = folder.subFolders.some(
+    const currentLevelFolders = folderPath.length === 0
+      ? folder.subFolders
+      : (currentNestedFolder?.children || []);
+
+    const hasDuplicate = currentLevelFolders.some(
       (sub) => sub.name.toLowerCase() === trimmedName.toLowerCase()
     );
 
     if (hasDuplicate) {
-      alert("This sub folder name is already in use.");
+      alert("This folder name is already in use at this level.");
       return;
     }
 
-    const newSubFolder: SubFolder = {
-      id: `${folder.id}-${slugify(trimmedName)}-${Date.now()}`,
-      name: trimmedName,
-      fileIds: [],
-    };
+    const parentPath = getCurrentParentPath();
+    if (!parentPath) return;
 
-    setFolders((prev) =>
-      prev.map((item) =>
-        item.id === folder.id
-          ? { ...item, subFolders: [...item.subFolders, newSubFolder] }
-          : item
-      )
-    );
+    try {
+      const response = await fetch("/api/marketing-folders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parentPath, folderName: trimmedName }),
+      });
 
-    setSubFolderDraftName("");
-    setIsCreatingSubFolder(false);
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        throw new Error(errorBody?.error || `ไม่สามารถสร้างโฟลเดอร์ได้ (รหัส ${response.status})`);
+      }
+
+      await loadMarketingFolders();
+      setSubFolderDraftName("");
+      setIsCreatingSubFolder(false);
+    } catch (error) {
+      console.error("Failed to create subfolder", error);
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("เกิดข้อผิดพลาดขณะสร้างโฟลเดอร์");
+      }
+    }
   };
 
   const handleDeleteSubFolder = (subFolderId: string) => {
     if (!activeFolderId) return;
-    const folder = folders.find((item) => item.id === activeFolderId);
-    if (!folder) return;
 
-    const target = folder.subFolders.find((sub) => sub.id === subFolderId);
-    if (!target) return;
+    // Find the folder to check if it has files or children
+    const folderToDelete = displayFolders.find(f => f.id === subFolderId);
+    if (!folderToDelete) return;
 
-    if (target.fileIds.length > 0) {
-      alert("Remove or reassign files before deleting this sub folder.");
+    if (folderToDelete.fileIds.length > 0 || folderToDelete.children.length > 0) {
+      alert("Remove all files and sub folders before deleting this folder.");
       return;
     }
 
-    setFolders((prev) =>
-      prev.map((item) =>
-        item.id === activeFolderId
-          ? {
-              ...item,
-              subFolders: item.subFolders.filter((sub) => sub.id !== subFolderId),
-            }
-          : item
-      )
-    );
+    if (!confirm(`Are you sure you want to delete "${folderToDelete.name}"?`)) return;
 
-    if (activeSubFolderId === subFolderId) {
-      setActiveSubFolderId(null);
-    }
+    setFolders((prev) =>
+      prev.map((item) => {
+        if (item.id !== activeFolderId) return item;
+        return {
+          ...item,
+          subFolders: deleteFolderFromNested(item.subFolders, subFolderId)
+        };
+      })
+    );
   };
 
-  const handleStartEditSubFolder = (subFolder: SubFolder) => {
+  const handleStartEditSubFolder = (subFolder: NestedFolder) => {
     setEditingSubFolderId(subFolder.id);
     setEditingSubFolderValue(subFolder.name);
   };
@@ -685,51 +884,393 @@ const AllFilesGalleryPage = () => {
     setEditingSubFolderValue("");
   };
 
-  const handleSaveSubFolderName = (subFolderId: string) => {
+  const handleSaveSubFolderName = async (subFolderId: string) => {
     if (!activeFolderId) return;
     const trimmedValue = editingSubFolderValue.trim();
     if (!trimmedValue) return;
 
-    const folder = folders.find((item) => item.id === activeFolderId);
-    if (!folder) return;
+    const folderToRename = displayFolders.find((sub) => sub.id === subFolderId);
+    if (!folderToRename || !folderToRename.relativePath) {
+      alert("ไม่สามารถเปลี่ยนชื่อโฟลเดอร์นี้ได้ในขณะนี้");
+      return;
+    }
 
-    const hasDuplicate = folder.subFolders.some(
+    // Check for duplicates at the current level
+    const hasDuplicate = displayFolders.some(
       (sub) =>
         sub.id !== subFolderId &&
         sub.name.toLowerCase() === trimmedValue.toLowerCase()
     );
 
     if (hasDuplicate) {
-      alert("This sub folder name is already in use.");
+      alert("This folder name is already in use at this level.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/marketing-folders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPath: folderToRename.relativePath,
+          newName: trimmedValue,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        throw new Error(errorBody?.error || `ไม่สามารถเปลี่ยนชื่อโฟลเดอร์ได้ (รหัส ${response.status})`);
+      }
+
+      const data = await response.json().catch(() => null);
+      const parentSegments = getPathSegments(folderToRename.relativePath).slice(0, -1);
+      const fallbackPath = parentSegments.length
+        ? `${parentSegments.join("/")}/${trimmedValue}`
+        : trimmedValue;
+      const newPath = data?.path || fallbackPath;
+      const newId = getIdFromPath(newPath);
+
+      await loadMarketingFolders();
+      setFolderPath((prev) => prev.map((id) => (id === subFolderId ? newId : id)));
+      setEditingSubFolderId(null);
+      setEditingSubFolderValue("");
+    } catch (error) {
+      console.error("Failed to rename folder", error);
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("เกิดข้อผิดพลาดขณะเปลี่ยนชื่อโฟลเดอร์");
+      }
+    }
+  };
+
+  // Folder edit/delete handlers
+  const handleStartEditFolder = (folder: MediaFolder) => {
+    setEditingFolderId(folder.id);
+    setEditingFolderValue(folder.name);
+  };
+
+  const handleCancelEditFolder = () => {
+    setEditingFolderId(null);
+    setEditingFolderValue("");
+  };
+
+  const handleSaveFolderName = (folderId: string) => {
+    const trimmedValue = editingFolderValue.trim();
+    if (!trimmedValue) return;
+
+    const hasDuplicate = folders.some(
+      (f) => f.id !== folderId && f.name.toLowerCase() === trimmedValue.toLowerCase()
+    );
+
+    if (hasDuplicate) {
+      alert("This folder name is already in use.");
       return;
     }
 
     setFolders((prev) =>
-      prev.map((item) => {
-        if (item.id !== activeFolderId) {
-          return item;
-        }
-
-        return {
-          ...item,
-          subFolders: item.subFolders.map((sub) =>
-            sub.id === subFolderId ? { ...sub, name: trimmedValue } : sub
-          ),
-        };
-      })
+      prev.map((folder) =>
+        folder.id === folderId ? { ...folder, name: trimmedValue } : folder
+      )
     );
 
-    setEditingSubFolderId(null);
-    setEditingSubFolderValue("");
+    setEditingFolderId(null);
+    setEditingFolderValue("");
+  };
+
+  const handleDeleteFolder = (folderId: string) => {
+    const folder = folders.find((f) => f.id === folderId);
+    if (!folder) return;
+
+    const totalFiles =
+      folder.rootFileIds.length +
+      folder.subFolders.reduce((acc, sub) => acc + getAllFileIds(sub).length, 0);
+    if (totalFiles > 0) {
+      alert("Remove or reassign all files before deleting this folder.");
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete "${folder.name}"?`)) return;
+
+    setFolders((prev) => prev.filter((f) => f.id !== folderId));
+
+    if (activeFolderId === folderId) {
+      setActiveFolderId(null);
+      setFolderPath([]);
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, fileId: number) => {
+    setDraggingFileId(fileId);
+    e.dataTransfer.setData("text/plain", fileId.toString());
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragEnd = () => {
+    setDraggingFileId(null);
+    setDragOverFolderId(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, folderId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverFolderId(folderId);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverFolderId(null);
+  };
+
+  const handleDropOnFolder = (e: React.DragEvent, folderId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.files?.length) {
+      processUploadedFiles(e.dataTransfer.files, folderId);
+      setIsGlobalDropActive(false);
+      setDragOverFolderId(null);
+      return;
+    }
+    const fileId = parseInt(e.dataTransfer.getData("text/plain"));
+
+    if (isNaN(fileId)) return;
+
+    setFolders(prev => prev.map(folder => {
+      const cleanedFolder = removeFileFromFolder(folder, fileId);
+
+      if (folder.id !== folderId) {
+        return cleanedFolder;
+      }
+
+      let updatedSubFolders = cleanedFolder.subFolders;
+
+      if (updatedSubFolders.length === 0) {
+        const newSubFolder: NestedFolder = {
+          id: `${folder.id}-default`,
+          name: "Unsorted",
+          fileIds: [fileId],
+          children: [],
+          parentId: null,
+          relativePath: null,
+        };
+        updatedSubFolders = [newSubFolder];
+      } else {
+        updatedSubFolders = addFileToFirstLeaf(updatedSubFolders, fileId);
+      }
+
+      return { ...cleanedFolder, subFolders: updatedSubFolders };
+    }));
+
+    setDraggingFileId(null);
+    setDragOverFolderId(null);
+  };
+
+  // Helper function to remove file from nested folders
+  const removeFileFromNestedFolders = (folders: NestedFolder[], fileId: number): NestedFolder[] => {
+    return folders.map(folder => ({
+      ...folder,
+      fileIds: folder.fileIds.filter(id => id !== fileId),
+      children: removeFileFromNestedFolders(folder.children, fileId)
+    }));
+  };
+
+  const removeFileFromFolder = (folder: MediaFolder, fileId: number): MediaFolder => ({
+    ...folder,
+    rootFileIds: folder.rootFileIds.filter((id) => id !== fileId),
+    subFolders: removeFileFromNestedFolders(folder.subFolders, fileId),
+  });
+
+  // Helper function to add file to first leaf folder
+  const addFileToFirstLeaf = (folders: NestedFolder[], fileId: number): NestedFolder[] => {
+    let added = false;
+    const result = folders.map(folder => {
+      if (added) return folder;
+
+      if (isLeafFolder(folder)) {
+        if (!folder.fileIds.includes(fileId)) {
+          added = true;
+          return { ...folder, fileIds: [...folder.fileIds, fileId] };
+        }
+        return folder;
+      } else {
+        const updatedChildren = addFileToFirstLeaf(folder.children, fileId);
+        if (updatedChildren !== folder.children) {
+          added = true;
+          return { ...folder, children: updatedChildren };
+        }
+        return folder;
+      }
+    });
+    return result;
+  };
+
+  const addFileToNestedFolderById = (
+    folders: NestedFolder[],
+    targetId: string,
+    fileId: number
+  ): { folders: NestedFolder[]; added: boolean } => {
+    let added = false;
+    const updated = folders.map((folder) => {
+      if (folder.id === targetId) {
+        if (folder.fileIds.includes(fileId)) return folder;
+        added = true;
+        return { ...folder, fileIds: [...folder.fileIds, fileId] };
+      }
+
+      const childResult = addFileToNestedFolderById(folder.children, targetId, fileId);
+      if (childResult.added) {
+        added = true;
+        return { ...folder, children: childResult.folders };
+      }
+      return folder;
+    });
+    return { folders: updated, added };
+  };
+
+  const insertFileIntoMediaFolders = (
+    mediaFolders: MediaFolder[],
+    targetId: string,
+    fileId: number
+  ): MediaFolder[] => {
+    let updated = false;
+    const result = mediaFolders.map((folder) => {
+      if (folder.id === targetId) {
+        if (folder.rootFileIds.includes(fileId)) return folder;
+        updated = true;
+        return { ...folder, rootFileIds: [...folder.rootFileIds, fileId] };
+      }
+
+      const nested = addFileToNestedFolderById(folder.subFolders, targetId, fileId);
+      if (nested.added) {
+        updated = true;
+        return { ...folder, subFolders: nested.folders };
+      }
+      return folder;
+    });
+    return updated ? result : mediaFolders;
+  };
+
+  // Distribute all files randomly into folders
+  const distributeFilesRandomly = () => {
+    const allFileIds = files.map(f => f.id);
+
+    setFolders(prev => {
+      // First, clear all files from folders
+      const clearedFolders = prev.map(folder => ({
+        ...folder,
+        rootFileIds: [],
+        subFolders: clearFilesFromNestedFolders(folder.subFolders)
+      }));
+
+      // Then distribute files randomly
+      const shuffledFiles = [...allFileIds].sort(() => Math.random() - 0.5);
+
+      return clearedFolders.map((folder, folderIndex) => {
+        // Calculate how many files go to this folder
+        const filesPerFolder = Math.ceil(shuffledFiles.length / clearedFolders.length);
+        const startIdx = folderIndex * filesPerFolder;
+        const endIdx = Math.min(startIdx + filesPerFolder, shuffledFiles.length);
+        const folderFileIds = shuffledFiles.slice(startIdx, endIdx);
+
+        if (folderFileIds.length === 0) return folder;
+
+        // If no subfolders, create one
+        if (folder.subFolders.length === 0) {
+          const newSubFolder: NestedFolder = {
+            id: `${folder.id}-default`,
+            name: "Unsorted",
+            fileIds: folderFileIds,
+            children: [],
+            parentId: null,
+            relativePath: null,
+          };
+          return { ...folder, subFolders: [newSubFolder] };
+        }
+
+        // Distribute to existing subfolders
+        const updatedSubFolders = distributeToSubFolders(folder.subFolders, folderFileIds);
+        return { ...folder, subFolders: updatedSubFolders };
+      });
+    });
+  };
+
+  // Helper to clear files from nested folders
+  const clearFilesFromNestedFolders = (folders: NestedFolder[]): NestedFolder[] => {
+    return folders.map(folder => ({
+      ...folder,
+      fileIds: [],
+      children: clearFilesFromNestedFolders(folder.children)
+    }));
+  };
+
+  // Helper to distribute files to subfolders
+  const distributeToSubFolders = (folders: NestedFolder[], fileIds: number[]): NestedFolder[] => {
+    if (folders.length === 0 || fileIds.length === 0) return folders;
+
+    // Find all leaf folders
+    const leafFolders: NestedFolder[] = [];
+    const findLeaves = (folderList: NestedFolder[]) => {
+      folderList.forEach(f => {
+        if (isLeafFolder(f)) leafFolders.push(f);
+        else findLeaves(f.children);
+      });
+    };
+    findLeaves(folders);
+
+    if (leafFolders.length === 0) {
+      // No leaf folders, add to first folder
+      return folders.map((f, i) => i === 0 ? { ...f, fileIds: [...f.fileIds, ...fileIds] } : f);
+    }
+
+    // Distribute files among leaf folders
+    const filesPerLeaf = Math.ceil(fileIds.length / leafFolders.length);
+    const fileAssignments = new Map<string, number[]>();
+
+    leafFolders.forEach((leaf, idx) => {
+      const startIdx = idx * filesPerLeaf;
+      const endIdx = Math.min(startIdx + filesPerLeaf, fileIds.length);
+      fileAssignments.set(leaf.id, fileIds.slice(startIdx, endIdx));
+    });
+
+    // Apply assignments
+    const applyAssignments = (folderList: NestedFolder[]): NestedFolder[] => {
+      return folderList.map(f => {
+        const assigned = fileAssignments.get(f.id);
+        if (assigned) {
+          return { ...f, fileIds: [...f.fileIds, ...assigned] };
+        }
+        return { ...f, children: applyAssignments(f.children) };
+      });
+    };
+
+    return applyAssignments(folders);
   };
 
   const getFolderFileCount = (folder: MediaFolder) =>
-    folder.subFolders.reduce((acc, sub) => acc + sub.fileIds.length, 0);
+    folder.rootFileIds.length +
+    folder.subFolders.reduce((acc, sub) => acc + getAllFileIds(sub).length, 0);
 
   const toggleFavorite = (id: number) => {
     setFiles((prev) =>
       prev.map((f) => (f.id === id ? { ...f, favorite: !f.favorite } : f))
     );
+  };
+
+  // Delete file handler with confirmation
+  const handleDeleteFile = (fileId: number) => {
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+
+    if (confirm(`คุณต้องการลบไฟล์ "${file.name}" หรือไม่?\n\nการลบไม่สามารถกู้คืนได้`)) {
+      // Remove from files
+      setFiles(prev => prev.filter(f => f.id !== fileId));
+
+      // Remove from selected files if selected
+      setSelectedFiles(prev => prev.filter(id => id !== fileId));
+
+      // Remove from folders
+      setFolders(prev => prev.map(folder => removeFileFromFolder(folder, fileId)));
+    }
   };
 
   const toggleSelect = (id: number) => {
@@ -783,10 +1324,175 @@ const AllFilesGalleryPage = () => {
     return num.toString();
   };
 
+  const processUploadedFiles = (uploadedFiles: FileList, targetFolderId?: string | null) => {
+    const destinationFolderId = targetFolderId ?? currentNestedFolder?.id ?? null;
+    Array.from(uploadedFiles).forEach((file, index) => {
+      const timestamp = Date.now();
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const storagePath = `/marketing/${timestamp}_${sanitizedName}`;
+
+      const newFile: FileItem = {
+        id: timestamp + index,
+        name: file.name,
+        type: file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : 'clip',
+        url: storagePath,
+        thumbnail: URL.createObjectURL(file),
+        size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+        date: new Date().toISOString().split('T')[0],
+        tags: ['Uploaded'],
+        favorite: false,
+        views: 0,
+        category: 'Uploads',
+      };
+      setFiles(prev => [...prev, newFile]);
+      if (destinationFolderId) {
+        setFolders(prev => insertFileIntoMediaFolders(prev, destinationFolderId, newFile.id));
+      }
+      console.log(`File would be saved to: ${storagePath}`);
+    });
+
+    setShowUploadModal(false);
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const uploadedFiles = event.target.files;
+    if (!uploadedFiles) return;
+    processUploadedFiles(uploadedFiles, currentNestedFolder?.id ?? null);
+    event.target.value = '';
+  };
+
+  const handleGlobalDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    const hasFiles = Array.from(e.dataTransfer.types || []).includes("Files");
+    if (!hasFiles) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsGlobalDropActive(true);
+    e.dataTransfer.dropEffect = "copy";
+  };
+
+  const handleGlobalDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    if (e.currentTarget !== e.target) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsGlobalDropActive(false);
+  };
+
+  const handleGlobalDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!e.dataTransfer.files?.length) {
+      setIsGlobalDropActive(false);
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    setIsGlobalDropActive(false);
+    processUploadedFiles(e.dataTransfer.files, currentNestedFolder?.id ?? null);
+  };
+
+  // Share to LINE handler
+  const shareToLine = (fileId: number) => {
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+
+    // LINE share URL format
+    const shareText = encodeURIComponent(`Check out this file: ${file.name}`);
+    const shareUrl = encodeURIComponent(window.location.href);
+
+    // Open LINE share
+    if (isMobile) {
+      // Mobile LINE app deep link
+      window.location.href = `line://msg/text/${shareText}%0A${shareUrl}`;
+    } else {
+      // Desktop LINE share
+      window.open(`https://social-plugins.line.me/lineit/share?url=${shareUrl}&text=${shareText}`, '_blank', 'width=500,height=500');
+    }
+
+    setShowShareModal(false);
+    setShareFileId(null);
+  };
+
+  // Share to other platforms
+  const shareFile = async (fileId: number, platform: 'line' | 'copy' | 'native') => {
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+
+    switch (platform) {
+      case 'line':
+        shareToLine(fileId);
+        break;
+      case 'copy':
+        await navigator.clipboard.writeText(window.location.href);
+        alert('Link copied to clipboard!');
+        break;
+      case 'native':
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: file.name,
+              text: `Check out this file: ${file.name}`,
+              url: window.location.href,
+            });
+          } catch (err) {
+            console.log('Share cancelled');
+          }
+        }
+        break;
+    }
+    setShowShareModal(false);
+  };
+
+  // AI Video Production handlers
+  const handleAIDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    setAIDragOver(true);
+  };
+
+  const handleAIDragLeave = () => {
+    setAIDragOver(false);
+  };
+
+  const handleAIDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const fileId = parseInt(e.dataTransfer.getData("text/plain"));
+
+    if (!isNaN(fileId)) {
+      // Add to AI processing queue
+      setAIProcessingFiles(prev => [...prev, fileId]);
+
+      // Simulate AI processing (in real app, this would call an API)
+      setTimeout(() => {
+        alert(`🎬 AI Video Production started for file ID: ${fileId}\n\nYour video will be ready soon!`);
+        setAIProcessingFiles(prev => prev.filter(id => id !== fileId));
+      }, 2000);
+    }
+
+    setAIDragOver(false);
+  };
+
+  // Touch-based file selection for mobile
+  const handleTouchSelect = (fileId: number) => {
+    if (isMobile) {
+      toggleSelect(fileId);
+    }
+  };
+
   return (
     <>
       <style>{customScrollbarStyle}</style>
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+      <div
+        className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden"
+        onDragOver={handleGlobalDragOver}
+        onDragEnter={handleGlobalDragOver}
+        onDragLeave={handleGlobalDragLeave}
+        onDrop={handleGlobalDrop}
+      >
+        {isGlobalDropActive && (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 transition-opacity pointer-events-none">
+            <div className="px-6 py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-purple-700 to-blue-500 text-white text-lg font-semibold pointer-events-none">
+              วางไฟล์เพื่ออัพโหลดที่นี่
+            </div>
+          </div>
+        )}
         {/* Animated Background Effects */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {/* Gradient Orbs */}
@@ -805,9 +1511,8 @@ const AllFilesGalleryPage = () => {
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
-                background: `linear-gradient(135deg, ${
-                  ["#8b5cf6", "#ec4899", "#f97316", "#06b6d4"][i % 4]
-                }, transparent)`,
+                background: `linear-gradient(135deg, ${["#8b5cf6", "#ec4899", "#f97316", "#06b6d4"][i % 4]
+                  }, transparent)`,
                 animationDelay: `${Math.random() * 5}s`,
                 animationDuration: `${5 + Math.random() * 5}s`,
               }}
@@ -815,203 +1520,384 @@ const AllFilesGalleryPage = () => {
           ))}
         </div>
 
-        <div className="relative z-10 p-6">
+        <div className="relative z-10 p-3 md:p-6">
           {/* Header Section */}
-          <div className="mb-8">
+          <div className="mb-4 md:mb-8">
             {/* Back Button */}
             <button
               onClick={() => router.push("/home")}
-              className="group flex items-center gap-3 px-5 py-2.5 mb-6 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white rounded-xl transition-all duration-300 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105"
+              className="group flex items-center gap-2 md:gap-3 px-3 md:px-5 py-2 md:py-2.5 mb-4 md:mb-6 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white rounded-xl transition-all duration-300 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 text-sm md:text-base"
             >
-              <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-              <span className="font-medium">กลับไปหน้าหลัก</span>
+              <ArrowLeft className="w-4 h-4 md:w-5 md:h-5 group-hover:-translate-x-1 transition-transform" />
+              <span className="font-medium">กลับหน้าหลัก</span>
             </button>
 
             {/* Title Section */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 md:gap-6">
               <div className="space-y-2">
-                <div className="flex items-center gap-4">
-                  <div className="p-4 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-pink-500 shadow-lg shadow-purple-500/50 animate-pulse-glow">
-                    <FolderOpen className="w-10 h-10 text-white" />
+                <div className="flex items-center gap-3 md:gap-4">
+                  <div className="p-2.5 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-pink-500 shadow-lg shadow-purple-500/50 animate-pulse-glow">
+                    <FolderOpen className="w-6 h-6 md:w-10 md:h-10 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-4xl lg:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-pink-400 to-orange-400 animate-gradient-shift">
+                    <h1 className="text-2xl md:text-4xl lg:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-pink-400 to-orange-400 animate-gradient-shift">
                       รวม File ทั้งหมด
                     </h1>
-                    <p className="text-lg text-purple-200/80 mt-1">
-                      📸 Clip รูป • วิดีโอ • ไฟล์มีเดียทั้งหมด
+                    <p className="text-sm md:text-lg text-purple-200/80 mt-1">
+                      📸 รูป • วิดีโอ • ไฟล์มีเดีย
                     </p>
                   </div>
                 </div>
               </div>
-              <UserMenu />
+              <div className="hidden md:block">
+                <UserMenu />
+              </div>
             </div>
           </div>
 
           {/* Folder Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-            {folders.map((folder) => {
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 md:gap-5 mb-6 md:mb-8">
+            {folders.map((folder, index) => {
               const Icon = folder.icon;
               const isActive = activeFolderId === folder.id;
               const fileCount = getFolderFileCount(folder);
               const subFolderCount = folder.subFolders.length;
+              const isEditing = editingFolderId === folder.id;
+              const isDragOver = dragOverFolderId === folder.id;
 
               return (
-                <button
+                <div
                   key={folder.id}
-                  onClick={() => handleFolderSelect(folder.id)}
-                  className={`glass-card rounded-2xl p-4 text-left transition-all duration-300 hover:scale-105 border ${
-                    isActive
-                      ? "border-purple-400/70 shadow-purple-500/40"
-                      : "border-white/10 hover:border-purple-300/40"
-                  }`}
+                  onDragOver={(e) => handleDragOver(e, folder.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDropOnFolder(e, folder.id)}
+                  className={`group relative glass-card rounded-2xl p-5 text-left transition-all duration-300 hover:scale-[1.03] border overflow-hidden animate-slide-up ${isActive
+                    ? "border-purple-400/80 shadow-lg shadow-purple-500/30 ring-2 ring-purple-400/50"
+                    : isDragOver
+                      ? "border-emerald-400/80 shadow-lg shadow-emerald-500/30 ring-2 ring-emerald-400/50 scale-105"
+                      : "border-white/10 hover:border-purple-300/50 hover:shadow-lg hover:shadow-purple-500/20"
+                    }`}
+                  style={{ animationDelay: `${index * 0.05}s` }}
                 >
-                  <div
-                    className={`w-12 h-12 rounded-xl bg-gradient-to-br ${folder.gradient} flex items-center justify-center mb-4 shadow-lg`}
-                  >
-                    <Icon className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="text-xl font-semibold text-white">
-                    {folder.name}
-                  </div>
-                  <p className="text-sm text-purple-200/70 mt-1">
-                    {folder.description}
-                  </p>
-                  <div className="flex items-center justify-between text-xs text-purple-100/70 mt-4">
-                    <span>{subFolderCount} sub folders</span>
-                    <span>{fileCount} files</span>
-                  </div>
-                </button>
+                  {/* Drop indicator overlay */}
+                  {isDragOver && (
+                    <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center z-30 rounded-2xl">
+                      <div className="text-emerald-300 font-semibold text-sm flex items-center gap-2">
+                        <Upload className="w-5 h-5" />
+                        วางไฟล์ที่นี่
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Glow effect on hover */}
+                  <div className={`absolute inset-0 bg-gradient-to-br ${folder.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300 ${isActive ? 'opacity-10' : ''}`} />
+
+                  {isEditing ? (
+                    <div className="relative z-10 flex flex-col gap-3 h-full">
+                      <input
+                        type="text"
+                        value={editingFolderValue}
+                        onChange={(e) => setEditingFolderValue(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSaveFolderName(folder.id)}
+                          className="flex-1 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white text-xs font-medium shadow-lg hover:shadow-green-500/50 transition-all"
+                        >
+                          บันทึก
+                        </button>
+                        <button
+                          onClick={handleCancelEditFolder}
+                          className="flex-1 px-3 py-2 rounded-xl bg-white/10 text-purple-100 text-xs font-medium hover:bg-white/20 transition-all"
+                        >
+                          ยกเลิก
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className="relative z-10 cursor-pointer"
+                      onClick={() => handleFolderSelect(folder.id)}
+                    >
+                      <div
+                        className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${folder.gradient} flex items-center justify-center mb-4 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300 ${isActive ? 'scale-110 shadow-xl' : ''}`}
+                      >
+                        <Icon className="w-7 h-7 text-white drop-shadow-md" />
+                      </div>
+                      <h3 className="text-lg font-bold text-white group-hover:text-purple-100 transition-colors">
+                        {folder.name}
+                      </h3>
+                      <p className="text-sm text-purple-200/60 mt-1 line-clamp-2">
+                        {folder.description}
+                      </p>
+                      <div className="flex items-center justify-between text-xs mt-4 pt-3 border-t border-white/10">
+                        <span className="flex items-center gap-1.5 text-purple-200/70">
+                          <FolderOpen className="w-3.5 h-3.5" />
+                          {subFolderCount}
+                        </span>
+                        <span className="flex items-center gap-1.5 text-purple-200/70">
+                          <FileVideo className="w-3.5 h-3.5" />
+                          {fileCount}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Edit & Delete buttons - show on hover */}
+                  {!isEditing && (
+                    <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartEditFolder(folder);
+                        }}
+                        className="p-1.5 rounded-lg bg-white/20 text-purple-100 hover:bg-white/30 hover:text-white transition-all"
+                        title="แก้ไขชื่อ"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteFolder(folder.id);
+                        }}
+                        className="p-1.5 rounded-lg bg-white/20 text-red-300 hover:bg-red-500/30 hover:text-red-200 transition-all"
+                        title="ลบโฟลเดอร์"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Active indicator */}
+                  {isActive && !isEditing && (
+                    <div className="absolute bottom-2 right-2 w-3 h-3 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 animate-pulse shadow-lg shadow-purple-500/50" />
+                  )}
+                </div>
               );
             })}
           </div>
 
           {activeFolder ? (
-            <div className="glass-card rounded-2xl p-5 mb-8">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-xl font-semibold text-white">
-                    {activeFolder.name} Sub Folders
-                  </h3>
-                  <p className="text-sm text-purple-200/70">
-                    Select a sub folder to filter files or create a new one to
-                    organize upcoming assets.
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => setActiveSubFolderId(null)}
-                    className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                      activeSubFolderId
-                        ? "bg-white/10 text-purple-100 hover:bg-white/20"
-                        : "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
-                    }`}
-                  >
-                    View All Files
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsCreatingSubFolder((prev) => !prev);
-                      setSubFolderDraftName("");
-                      setEditingSubFolderId(null);
-                      setEditingSubFolderValue("");
-                    }}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg"
-                  >
-                    <Plus className="w-4 h-4" />
-                    {isCreatingSubFolder ? "ยกเลิก" : "สร้างโฟลเดอร์ย่อย"}
-                  </button>
+            <div className="mb-8 space-y-5">
+              {/* Breadcrumb Navigation */}
+              <div className="glass-card rounded-2xl p-4 shadow-lg">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {breadcrumbItems.map((item, index) => (
+                      <div key={item.id} className="flex items-center gap-2">
+                        {index > 0 && (
+                          <ChevronRight className="w-4 h-4 text-purple-300/50" />
+                        )}
+                        <button
+                          onClick={() => handleBreadcrumbClick(index)}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${index === breadcrumbItems.length - 1
+                            ? "bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-white font-semibold"
+                            : "text-purple-200/70 hover:text-white hover:bg-white/10"
+                            }`}
+                        >
+                          {item.isRoot && (
+                            <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${activeFolder.gradient} flex items-center justify-center`}>
+                              {(() => {
+                                const Icon = activeFolder.icon;
+                                return <Icon className="w-3.5 h-3.5 text-white" />;
+                              })()}
+                            </div>
+                          )}
+                          <span className="text-sm">{item.name}</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Folder info */}
+                  <div className="flex items-center gap-4 text-sm text-purple-200/60">
+                    <span className="flex items-center gap-1.5">
+                      <FolderOpen className="w-4 h-4" />
+                      {displayFolders.length} โฟลเดอร์
+                    </span>
+                    {canUploadFiles && currentNestedFolder && (
+                      <span className="flex items-center gap-1.5">
+                        <FileVideo className="w-4 h-4" />
+                        {currentNestedFolder.fileIds.length} ไฟล์
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
+              {/* Create Folder Button */}
+              <div className="flex justify-end">
+                <button
+                  onClick={() => {
+                    setIsCreatingSubFolder((prev) => !prev);
+                    setSubFolderDraftName("");
+                    setEditingSubFolderId(null);
+                    setEditingSubFolderValue("");
+                  }}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all duration-200"
+                >
+                  <Plus className="w-4 h-4" />
+                  {isCreatingSubFolder ? "ยกเลิก" : "สร้างโฟลเดอร์"}
+                </button>
+              </div>
+
+              {/* Create Folder Form */}
               {isCreatingSubFolder && (
-                <div className="mt-4 flex flex-col md:flex-row gap-3">
-                  <input
-                    type="text"
-                    value={subFolderDraftName}
-                    onChange={(e) => setSubFolderDraftName(e.target.value)}
-                    placeholder="ตั้งชื่อโฟลเดอร์ย่อย"
-                    className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-purple-200/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                  <button
-                    onClick={handleCreateSubFolder}
-                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold hover:from-green-400 hover:to-emerald-500 shadow-lg"
-                  >
-                    สร้าง
-                  </button>
+                <div className="glass-card rounded-2xl p-5 border border-white/10 shadow-lg">
+                  <div className="flex flex-col md:flex-row gap-3">
+                    <input
+                      type="text"
+                      value={subFolderDraftName}
+                      onChange={(e) => setSubFolderDraftName(e.target.value)}
+                      placeholder="ตั้งชื่อโฟลเดอร์ใหม่"
+                      className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-purple-200/50 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                    />
+                    <button
+                      onClick={handleCreateSubFolder}
+                      className="px-8 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold hover:from-green-400 hover:to-emerald-500 shadow-lg shadow-green-500/30 hover:shadow-green-500/50 transition-all duration-200"
+                    >
+                      สร้าง
+                    </button>
+                  </div>
                 </div>
               )}
 
-              <div className="mt-5 flex flex-col gap-3">
-                {activeFolder.subFolders.length === 0 ? (
-                  <p className="text-sm text-purple-200/70">
-                    ยังไม่มีโฟลเดอร์ย่อยสำหรับหมวดนี้
-                  </p>
+              {/* Nested Folders Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
+                {displayFolders.length === 0 ? (
+                  <div className="glass-card rounded-2xl p-8 border-2 border-dashed border-purple-400/30 text-center col-span-full">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                      <FolderOpen className="w-8 h-8 text-purple-300/70" />
+                    </div>
+                    {canUploadFiles ? (
+                      <>
+                        <p className="text-purple-200/70 text-sm">นี่คือโฟลเดอร์ปลายทาง</p>
+                        <p className="text-emerald-300/70 text-xs mt-1">✓ สามารถอัพโหลดไฟล์ได้ที่นี่</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-purple-200/70 text-sm">ยังไม่มีโฟลเดอร์ย่อย</p>
+                        <p className="text-purple-300/50 text-xs mt-1">คลิก "สร้างโฟลเดอร์" เพื่อเริ่มต้น</p>
+                      </>
+                    )}
+                  </div>
                 ) : (
-                  activeFolder.subFolders.map((subFolder) => {
-                    const isSelected = activeSubFolderId === subFolder.id;
+                  displayFolders.map((subFolder, index) => {
                     const isEditing = editingSubFolderId === subFolder.id;
+                    const hasChildren = subFolder.children.length > 0;
+                    const isLeaf = isLeafFolder(subFolder);
 
                     return (
                       <div
                         key={subFolder.id}
-                        className={`flex flex-col md:flex-row md:items-center gap-3 p-3 rounded-2xl border transition-all ${
-                          isSelected
-                            ? "border-purple-400 bg-white/15"
-                            : "border-white/10 bg-white/5"
-                        }`}
+                        onClick={() => {
+                          if (!isEditing) {
+                            handleNestedFolderSelect(subFolder.id);
+                          }
+                        }}
+                        className={`group relative glass-card rounded-2xl p-5 border text-left transition-all duration-300 hover:scale-[1.03] cursor-pointer overflow-hidden animate-slide-up border-white/10 hover:border-purple-300/50 hover:shadow-lg hover:shadow-purple-500/20`}
+                        style={{ animationDelay: `${index * 0.05}s` }}
                       >
+                        {/* Background glow */}
+                        <div className={`absolute inset-0 bg-gradient-to-br ${activeFolder.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
+
                         {isEditing ? (
-                          <div className="flex-1 flex flex-col md:flex-row gap-3">
+                          <div className="relative z-10 flex flex-col gap-3 h-full">
                             <input
                               type="text"
                               value={editingSubFolderValue}
                               onChange={(e) =>
                                 setEditingSubFolderValue(e.target.value)
                               }
-                              className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                              className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                              onClick={(e) => e.stopPropagation()}
                             />
                             <div className="flex gap-2">
                               <button
-                                onClick={() => handleSaveSubFolderName(subFolder.id)}
-                                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white text-sm"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleSaveSubFolderName(subFolder.id);
+                                }}
+                                className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white text-sm font-medium shadow-lg shadow-green-500/30 hover:shadow-green-500/50 transition-all"
                               >
                                 บันทึก
                               </button>
                               <button
-                                onClick={handleCancelEditSubFolder}
-                                className="px-4 py-2 rounded-xl bg-white/10 text-purple-100 text-sm"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleCancelEditSubFolder();
+                                }}
+                                className="flex-1 px-4 py-2 rounded-xl bg-white/10 text-purple-100 text-sm font-medium hover:bg-white/20 transition-all"
                               >
                                 ยกเลิก
                               </button>
                             </div>
                           </div>
                         ) : (
-                          <div className="flex-1 flex items-center gap-3">
-                            <button
-                              onClick={() => handleSubFolderSelect(subFolder.id)}
-                              className="flex-1 text-left"
-                            >
-                              <div className="text-white font-semibold">
-                                {subFolder.name}
+                          <div className="relative z-10 flex flex-col h-full">
+                            <div className="flex items-start gap-3 flex-1">
+                              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${activeFolder.gradient} flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all duration-300`}>
+                                <FolderOpen className="w-5 h-5 text-white" />
                               </div>
-                              <div className="text-xs text-purple-200/70">
-                                {subFolder.fileIds.length} ไฟล์
+                              <div className="flex-1 min-w-0">
+                                <div className="text-white font-semibold truncate group-hover:text-purple-100 transition-colors">
+                                  {subFolder.name}
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-purple-200/60 mt-1">
+                                  {hasChildren && (
+                                    <span className="flex items-center gap-1">
+                                      <FolderOpen className="w-3 h-3" />
+                                      {subFolder.children.length}
+                                    </span>
+                                  )}
+                                  {isLeaf && (
+                                    <span className="flex items-center gap-1">
+                                      <FileVideo className="w-3 h-3" />
+                                      {subFolder.fileIds.length} ไฟล์
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                            </button>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleStartEditSubFolder(subFolder)}
-                                className="p-2 rounded-lg bg-white/10 text-purple-100 hover:bg-white/20"
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteSubFolder(subFolder.id)}
-                                className="p-2 rounded-lg bg-white/10 text-red-200 hover:bg-red-500/20"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                            </div>
+                            <div className="flex items-center justify-between pt-3 mt-3 border-t border-white/10">
+                              <div className="flex items-center gap-1">
+                                {isLeaf ? (
+                                  <span className="text-xs text-emerald-300/70 flex items-center gap-1">
+                                    <Check className="w-3 h-3" />
+                                    อัพโหลดได้
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-purple-200/50 flex items-center gap-1">
+                                    <ChevronRight className="w-3 h-3" />
+                                    คลิกเพื่อเข้า
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleStartEditSubFolder(subFolder);
+                                  }}
+                                  className="p-2 rounded-lg bg-white/10 text-purple-100 hover:bg-white/20 hover:text-white transition-all"
+                                  title="แก้ไขชื่อ"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleDeleteSubFolder(subFolder.id);
+                                  }}
+                                  className="p-2 rounded-lg bg-white/10 text-red-300 hover:bg-red-500/30 hover:text-red-200 transition-all"
+                                  title="ลบโฟลเดอร์"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -1022,14 +1908,171 @@ const AllFilesGalleryPage = () => {
               </div>
             </div>
           ) : (
-            <div className="glass-card rounded-2xl p-5 mb-8 text-purple-200/80 text-sm">
-              เลือกโฟลเดอร์ด้านบนเพื่อจัดการโฟลเดอร์ย่อยและแสดงไฟล์เฉพาะหมวดนั้น
+            <div className="glass-card rounded-2xl p-8 mb-8 text-center border border-white/10">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                <FolderOpen className="w-10 h-10 text-purple-300/70" />
+              </div>
+              <p className="text-purple-200/80 text-base font-medium">เลือกโฟลเดอร์ด้านบน</p>
+              <p className="text-purple-300/50 text-sm mt-1">เพื่อจัดการโฟลเดอร์ย่อยและแสดงไฟล์เฉพาะหมวดนั้น</p>
+            </div>
+          )}
+
+          {/* AI Video Production Drop Zone */}
+          {showAIDropZone && (
+            <div
+              onDragOver={handleAIDragOver}
+              onDragLeave={handleAIDragLeave}
+              onDrop={handleAIDrop}
+              className={`glass-card rounded-2xl p-4 mb-6 border-2 border-dashed transition-all duration-300 ${aiDragOver
+                ? 'ai-drop-zone-active border-emerald-400'
+                : 'ai-drop-zone border-purple-400/50'
+                }`}
+            >
+              <div className="flex items-center justify-center gap-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${aiDragOver
+                  ? 'bg-gradient-to-br from-emerald-500 to-green-600'
+                  : 'bg-gradient-to-br from-purple-500 to-pink-500'
+                  }`}>
+                  <Wand2 className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-center md:text-left">
+                  <p className={`font-semibold transition-colors ${aiDragOver ? 'text-emerald-300' : 'text-white'}`}>
+                    {aiDragOver ? '📥 วางไฟล์ที่นี่!' : '🎬 AI Video Production'}
+                  </p>
+                  <p className="text-sm text-purple-200/60">
+                    {aiDragOver ? 'ปล่อยเพื่อเริ่มสร้างวิดีโอ' : 'ลากไฟล์มาที่นี่เพื่อสร้างวิดีโอด้วย AI'}
+                  </p>
+                </div>
+                {aiProcessingFiles.length > 0 && (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 rounded-xl">
+                    <RefreshCw className="w-4 h-4 text-purple-300 animate-spin" />
+                    <span className="text-sm text-purple-200">กำลังประมวลผล {aiProcessingFiles.length} ไฟล์...</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
           {/* Control Bar */}
-          <div className="glass-card rounded-2xl p-4 mb-6">
-            <div className="flex flex-wrap items-center gap-4">
+          <div className="glass-card rounded-2xl p-3 md:p-4 mb-6 relative z-30">
+            {/* Mobile Menu Toggle */}
+            <div className="flex items-center gap-3 md:hidden mb-3">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-300" />
+                <input
+                  type="text"
+                  placeholder="ค้นหาไฟล์..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm placeholder-purple-300/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <button
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+                className="p-2.5 bg-white/10 rounded-xl text-purple-300 mobile-touch-target"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="p-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl text-white mobile-touch-target"
+              >
+                <Upload className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Mobile Menu Dropdown */}
+            {showMobileMenu && (
+              <div className="md:hidden mb-3 p-3 bg-white/5 rounded-xl space-y-3">
+                {/* View Mode */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-purple-200">มุมมอง:</span>
+                  <div className="flex items-center gap-1 p-1 bg-white/10 rounded-lg">
+                    {[
+                      { mode: "grid" as const, icon: Grid },
+                      { mode: "masonry" as const, icon: LayoutGrid },
+                      { mode: "list" as const, icon: List },
+                    ].map(({ mode, icon: Icon }) => (
+                      <button
+                        key={mode}
+                        onClick={() => setViewMode(mode)}
+                        className={`p-2 rounded-lg transition-all ${viewMode === mode
+                          ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                          : "text-purple-300"
+                          }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Type Filter */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-purple-200">ประเภท:</span>
+                  <select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value as any)}
+                    className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                  >
+                    <option value="all" className="bg-slate-800">ทุกประเภท</option>
+                    <option value="image" className="bg-slate-800">รูปภาพ</option>
+                    <option value="video" className="bg-slate-800">วิดีโอ</option>
+                    <option value="clip" className="bg-slate-800">คลิป</option>
+                  </select>
+                </div>
+
+                {/* Sort */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-purple-200">เรียงตาม:</span>
+                  <select
+                    value={`${sortBy}-${sortDirection}`}
+                    onChange={(e) => {
+                      const [sort, dir] = e.target.value.split("-");
+                      setSortBy(sort as any);
+                      setSortDirection(dir as any);
+                    }}
+                    className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                  >
+                    <option value="date-desc" className="bg-slate-800">ล่าสุด</option>
+                    <option value="date-asc" className="bg-slate-800">เก่าสุด</option>
+                    <option value="name-asc" className="bg-slate-800">A-Z</option>
+                    <option value="views-desc" className="bg-slate-800">ยอดวิว</option>
+                  </select>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                    className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm ${showFavoritesOnly
+                      ? "bg-gradient-to-r from-red-500 to-pink-500 text-white"
+                      : "bg-white/10 text-purple-300"
+                      }`}
+                  >
+                    <Heart className={`w-4 h-4 ${showFavoritesOnly ? "fill-current" : ""}`} />
+                    โปรด
+                  </button>
+                  <button
+                    onClick={selectAll}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white/10 text-purple-300 rounded-lg text-sm"
+                  >
+                    <Check className="w-4 h-4" />
+                    {selectedFiles.length > 0 ? 'ยกเลิก' : 'เลือก'}
+                  </button>
+                  <button
+                    onClick={distributeFilesRandomly}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg text-sm"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    สุ่ม
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Desktop Controls */}
+            <div className="hidden md:flex flex-wrap items-center gap-4">
               {/* Search */}
               <div className="flex-1 min-w-[250px] relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-300" />
@@ -1056,11 +2099,10 @@ const AllFilesGalleryPage = () => {
                   <button
                     key={mode}
                     onClick={() => setViewMode(mode)}
-                    className={`p-2.5 rounded-lg transition-all ${
-                      viewMode === mode
-                        ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
-                        : "text-purple-300 hover:bg-white/10"
-                    }`}
+                    className={`p-2.5 rounded-lg transition-all ${viewMode === mode
+                      ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
+                      : "text-purple-300 hover:bg-white/10"
+                      }`}
                     title={label}
                   >
                     <Icon className="w-5 h-5" />
@@ -1079,10 +2121,10 @@ const AllFilesGalleryPage = () => {
                     {filterType === "all"
                       ? "ทุกประเภท"
                       : filterType === "image"
-                      ? "รูปภาพ"
-                      : filterType === "video"
-                      ? "วิดีโอ"
-                      : "คลิป"}
+                        ? "รูปภาพ"
+                        : filterType === "video"
+                          ? "วิดีโอ"
+                          : "คลิป"}
                   </span>
                 </button>
                 {showFilterMenu && (
@@ -1111,11 +2153,10 @@ const AllFilesGalleryPage = () => {
                           setFilterType(value);
                           setShowFilterMenu(false);
                         }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                          filterType === value
-                            ? "bg-purple-500/30 text-purple-300"
-                            : "text-white/80 hover:bg-white/10"
-                        }`}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${filterType === value
+                          ? "bg-purple-500/30 text-purple-300"
+                          : "text-white/80 hover:bg-white/10"
+                          }`}
                       >
                         <Icon className="w-4 h-4" />
                         <span>{label}</span>
@@ -1148,16 +2189,14 @@ const AllFilesGalleryPage = () => {
               {/* Favorites Toggle */}
               <button
                 onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all ${
-                  showFavoritesOnly
-                    ? "bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg shadow-pink-500/30"
-                    : "bg-white/10 text-purple-300 hover:bg-white/20"
-                }`}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all ${showFavoritesOnly
+                  ? "bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg shadow-pink-500/30"
+                  : "bg-white/10 text-purple-300 hover:bg-white/20"
+                  }`}
               >
                 <Heart
-                  className={`w-4 h-4 ${
-                    showFavoritesOnly ? "fill-current" : ""
-                  }`}
+                  className={`w-4 h-4 ${showFavoritesOnly ? "fill-current" : ""
+                    }`}
                 />
                 <span className="font-medium">รายการโปรด</span>
               </button>
@@ -1214,14 +2253,26 @@ const AllFilesGalleryPage = () => {
                 </button>
               )}
 
-              <button className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-xl transition-all shadow-lg">
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-xl transition-all shadow-lg">
                 <Upload className="w-4 h-4" />
                 <span className="font-medium">อัพโหลด</span>
+              </button>
+
+              {/* Distribute Files Randomly Button */}
+              <button
+                onClick={distributeFilesRandomly}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-xl transition-all shadow-lg"
+                title="กระจายไฟล์ไปยังโฟลเดอร์แบบสุ่ม"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span className="font-medium">สุ่มไฟล์</span>
               </button>
             </div>
 
             {/* Results Info */}
-            <div className="mt-4 flex items-center justify-between text-sm text-purple-200/60">
+            <div className="mt-3 md:mt-4 flex items-center justify-between text-xs md:text-sm text-purple-200/60">
               <span>
                 แสดง {filteredFiles.length} จาก {files.length} ไฟล์
               </span>
@@ -1232,6 +2283,131 @@ const AllFilesGalleryPage = () => {
               )}
             </div>
           </div>
+
+          {/* Mobile Upload Modal */}
+          {showUploadModal && (
+            <div className="fixed inset-0 z-50 bg-black/80 flex items-end md:items-center justify-center p-4">
+              <div className="w-full max-w-md bg-slate-900 rounded-t-3xl md:rounded-3xl p-6 space-y-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-white">อัพโหลดไฟล์</h3>
+                  <button
+                    onClick={() => setShowUploadModal(false)}
+                    className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Hidden file inputs */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,video/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*,video/*"
+                  capture="environment"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+
+                {/* Upload options */}
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30 hover:border-purple-400/50 transition-all"
+                  >
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                      <FolderOpen className="w-7 h-7 text-white" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-white font-semibold">เลือกไฟล์</p>
+                      <p className="text-xs text-purple-200/60">จากอุปกรณ์</p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 hover:border-cyan-400/50 transition-all"
+                  >
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
+                      <Camera className="w-7 h-7 text-white" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-white font-semibold">ถ่ายรูป/วิดีโอ</p>
+                      <p className="text-xs text-purple-200/60">จากกล้อง</p>
+                    </div>
+                  </button>
+                </div>
+
+                <p className="text-center text-sm text-purple-200/50 pt-2">
+                  รองรับไฟล์: รูปภาพ และ วิดีโอ
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Share Modal */}
+          {showShareModal && shareFileId && (
+            <div className="fixed inset-0 z-50 bg-black/80 flex items-end md:items-center justify-center p-4">
+              <div className="w-full max-w-md bg-slate-900 rounded-t-3xl md:rounded-3xl p-6 space-y-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-white">แชร์ไฟล์</h3>
+                  <button
+                    onClick={() => {
+                      setShowShareModal(false);
+                      setShareFileId(null);
+                    }}
+                    className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  {/* LINE Share */}
+                  <button
+                    onClick={() => shareFile(shareFileId, 'line')}
+                    className="flex flex-col items-center gap-2 p-4 rounded-xl line-share-btn transition-all"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center">
+                      <Send className="w-6 h-6 text-green-500" />
+                    </div>
+                    <span className="text-white text-sm font-medium">LINE</span>
+                  </button>
+
+                  {/* Copy Link */}
+                  <button
+                    onClick={() => shareFile(shareFileId, 'copy')}
+                    className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center">
+                      <Copy className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-white text-sm font-medium">คัดลอก</span>
+                  </button>
+
+                  {/* Native Share */}
+                  {'share' in navigator && (
+                    <button
+                      onClick={() => shareFile(shareFileId, 'native')}
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center">
+                        <Share2 className="w-6 h-6 text-white" />
+                      </div>
+                      <span className="text-white text-sm font-medium">อื่นๆ</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Files Grid */}
           {isLoading ? (
@@ -1250,8 +2426,8 @@ const AllFilesGalleryPage = () => {
             </div>
           ) : viewMode === "list" ? (
             // List View
-            <div className="glass-card rounded-2xl overflow-hidden">
-              <table className="w-full">
+            <div className="glass-card rounded-2xl overflow-hidden overflow-x-auto">
+              <table className="w-full min-w-[800px]">
                 <thead>
                   <tr className="bg-purple-500/20 border-b border-purple-500/30">
                     <th className="p-4 text-left text-purple-300 font-semibold">
@@ -1295,7 +2471,10 @@ const AllFilesGalleryPage = () => {
                   {filteredFiles.map((file, index) => (
                     <tr
                       key={file.id}
-                      className="border-b border-purple-500/10 hover:bg-white/5 transition-colors group file-item"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, file.id)}
+                      onDragEnd={handleDragEnd}
+                      className={`border-b border-purple-500/10 hover:bg-white/5 transition-colors group file-item cursor-grab active:cursor-grabbing ${draggingFileId === file.id ? "opacity-50" : ""}`}
                     >
                       <td className="p-4">
                         <input
@@ -1359,16 +2538,14 @@ const AllFilesGalleryPage = () => {
                         <div className="flex items-center gap-2 file-actions">
                           <button
                             onClick={() => toggleFavorite(file.id)}
-                            className={`p-2 rounded-lg transition-colors ${
-                              file.favorite
-                                ? "bg-pink-500/20 text-pink-400"
-                                : "bg-white/10 text-purple-300 hover:bg-white/20"
-                            }`}
+                            className={`p-2 rounded-lg transition-colors ${file.favorite
+                              ? "bg-pink-500/20 text-pink-400"
+                              : "bg-white/10 text-purple-300 hover:bg-white/20"
+                              }`}
                           >
                             <Heart
-                              className={`w-4 h-4 ${
-                                file.favorite ? "fill-current" : ""
-                              }`}
+                              className={`w-4 h-4 ${file.favorite ? "fill-current" : ""
+                                }`}
                             />
                           </button>
                           <button className="p-2 rounded-lg bg-white/10 text-purple-300 hover:bg-white/20 transition-colors">
@@ -1387,18 +2564,19 @@ const AllFilesGalleryPage = () => {
           ) : (
             // Grid / Masonry View
             <div
-              className={`grid gap-6 ${
-                viewMode === "masonry"
-                  ? "columns-2 md:columns-3 lg:columns-4 xl:columns-5"
-                  : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-              }`}
+              className={`grid gap-3 md:gap-6 ${viewMode === "masonry"
+                ? "columns-2 md:columns-3 lg:columns-4 xl:columns-5"
+                : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                }`}
             >
               {filteredFiles.map((file, index) => (
                 <div
                   key={file.id}
-                  className={`image-card glass-card rounded-2xl overflow-hidden group file-item animate-bounce-in ${
-                    viewMode === "masonry" ? "break-inside-avoid mb-6" : ""
-                  }`}
+                  draggable={!isMobile}
+                  onDragStart={(e) => !isMobile && handleDragStart(e, file.id)}
+                  onDragEnd={!isMobile ? handleDragEnd : undefined}
+                  onTouchStart={() => handleTouchSelect(file.id)}
+                  className={`image-card glass-card rounded-xl md:rounded-2xl overflow-hidden group file-item animate-bounce-in ${!isMobile ? 'cursor-grab active:cursor-grabbing' : ''} ${viewMode === "masonry" ? "break-inside-avoid mb-3 md:mb-6" : ""} ${draggingFileId === file.id ? "opacity-50 scale-95" : ""} ${selectedFiles.includes(file.id) && isMobile ? 'ring-2 ring-purple-400' : ''}`}
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   {/* Image/Video Container */}
@@ -1450,22 +2628,20 @@ const AllFilesGalleryPage = () => {
 
                     {/* Selection Checkbox */}
                     <div
-                      className={`absolute top-3 left-3 transition-opacity ${
-                        selectedFiles.includes(file.id)
-                          ? "opacity-100"
-                          : "opacity-0 group-hover:opacity-100"
-                      }`}
+                      className={`absolute top-3 left-3 transition-opacity ${selectedFiles.includes(file.id)
+                        ? "opacity-100"
+                        : "opacity-0 group-hover:opacity-100"
+                        }`}
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleSelect(file.id);
                       }}
                     >
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-                          selectedFiles.includes(file.id)
-                            ? "bg-purple-500 text-white"
-                            : "bg-black/50 border-2 border-white/50 text-transparent hover:border-purple-400"
-                        }`}
+                        className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${selectedFiles.includes(file.id)
+                          ? "bg-purple-500 text-white"
+                          : "bg-black/50 border-2 border-white/50 text-transparent hover:border-purple-400"
+                          }`}
                       >
                         <Check className="w-4 h-4" />
                       </div>
@@ -1511,31 +2687,37 @@ const AllFilesGalleryPage = () => {
 
                     {/* Action Buttons */}
                     <div className="flex items-center gap-2 pt-2 file-actions">
+                      {/* Share Button (was Save) */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleFavorite(file.id);
+                          setShareFileId(file.id);
+                          setShowShareModal(true);
                         }}
-                        className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl transition-all ${
-                          file.favorite
-                            ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white"
-                            : "bg-white/10 text-purple-300 hover:bg-white/20"
-                        }`}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl transition-all mobile-touch-target bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-400 hover:to-emerald-400"
                       >
-                        <Heart
-                          className={`w-4 h-4 ${
-                            file.favorite ? "fill-current" : ""
-                          }`}
-                        />
-                        <span className="text-xs font-medium">
-                          {file.favorite ? "Saved" : "Save"}
+                        <Share2 className="w-4 h-4" />
+                        <span className="text-xs font-medium hidden sm:inline">
+                          Share
                         </span>
                       </button>
-                      <button className="p-2 rounded-xl bg-white/10 text-purple-300 hover:bg-white/20 transition-colors">
+                      {/* Download Button */}
+                      <button
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-2 rounded-xl bg-white/10 text-purple-300 hover:bg-white/20 transition-colors mobile-touch-target"
+                      >
                         <Download className="w-4 h-4" />
                       </button>
-                      <button className="p-2 rounded-xl bg-white/10 text-purple-300 hover:bg-white/20 transition-colors">
-                        <Share2 className="w-4 h-4" />
+                      {/* Delete Button (was Share/LINE) */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteFile(file.id);
+                        }}
+                        className="p-2 rounded-xl bg-white/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors mobile-touch-target"
+                        title="ลบไฟล์"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -1631,6 +2813,54 @@ const AllFilesGalleryPage = () => {
                   {lightboxIndex + 1} / {filteredFiles.length}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Mobile Floating Action Button */}
+          {isMobile && (
+            <div className="fixed bottom-6 right-6 z-40 flex flex-col gap-3">
+              {/* Selected files actions */}
+              {selectedFiles.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => {
+                      // Share all selected files
+                      if (selectedFiles.length === 1) {
+                        setShareFileId(selectedFiles[0]);
+                        setShowShareModal(true);
+                      } else {
+                        shareToLine(selectedFiles[0]);
+                      }
+                    }}
+                    className="w-14 h-14 rounded-full line-share-btn text-white shadow-lg flex items-center justify-center"
+                  >
+                    <Send className="w-6 h-6" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      selectedFiles.forEach(id => {
+                        setAIProcessingFiles(prev => [...prev, id]);
+                      });
+                      setTimeout(() => {
+                        alert(`🎬 AI Video Production started for ${selectedFiles.length} files!`);
+                        setAIProcessingFiles([]);
+                        setSelectedFiles([]);
+                      }, 2000);
+                    }}
+                    className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg flex items-center justify-center"
+                  >
+                    <Wand2 className="w-6 h-6" />
+                  </button>
+                </div>
+              )}
+
+              {/* Main upload FAB */}
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 flex items-center justify-center"
+              >
+                <Plus className="w-8 h-8" />
+              </button>
             </div>
           )}
         </div>

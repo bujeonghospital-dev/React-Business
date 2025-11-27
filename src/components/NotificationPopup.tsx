@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { CheckCircle, XCircle, X } from "lucide-react";
 
 interface NotificationPopupProps {
@@ -20,6 +20,14 @@ export const NotificationPopup = ({
   const [isVisible, setIsVisible] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
+  const handleClose = useCallback(() => {
+    setIsAnimating(false);
+    setTimeout(() => {
+      setIsVisible(false);
+      onClose();
+    }, 300);
+  }, [onClose]);
+
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
@@ -35,15 +43,7 @@ export const NotificationPopup = ({
       setIsAnimating(false);
       setTimeout(() => setIsVisible(false), 300);
     }
-  }, [isOpen]);
-
-  const handleClose = () => {
-    setIsAnimating(false);
-    setTimeout(() => {
-      setIsVisible(false);
-      onClose();
-    }, 300);
-  };
+  }, [isOpen, handleClose]);
 
   if (!isVisible) return null;
 
@@ -53,33 +53,29 @@ export const NotificationPopup = ({
     <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none">
       {/* Backdrop with blur effect */}
       <div
-        className={`absolute inset-0 backdrop-blur-sm transition-opacity duration-300 pointer-events-auto ${
-          isAnimating ? "opacity-100" : "opacity-0"
-        }`}
+        className={`absolute inset-0 backdrop-blur-sm transition-opacity duration-300 pointer-events-auto ${isAnimating ? "opacity-100" : "opacity-0"
+          }`}
         style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
         onClick={handleClose}
       />
 
       {/* Notification Card */}
       <div
-        className={`relative pointer-events-auto transform transition-all duration-300 ${
-          isAnimating
+        className={`relative pointer-events-auto transform transition-all duration-300 ${isAnimating
             ? "scale-100 opacity-100 translate-y-0"
             : "scale-95 opacity-0 -translate-y-4"
-        }`}
+          }`}
       >
         <div
-          className={`relative bg-white rounded-2xl shadow-2xl overflow-hidden w-96 ${
-            isSuccess ? "border-4 border-green-400" : "border-4 border-red-400"
-          }`}
+          className={`relative bg-white rounded-2xl shadow-2xl overflow-hidden w-96 ${isSuccess ? "border-4 border-green-400" : "border-4 border-red-400"
+            }`}
         >
           {/* Animated Background Gradient */}
           <div
-            className={`absolute inset-0 opacity-10 ${
-              isSuccess
+            className={`absolute inset-0 opacity-10 ${isSuccess
                 ? "bg-gradient-to-br from-green-400 via-emerald-400 to-teal-400"
                 : "bg-gradient-to-br from-red-400 via-rose-400 to-pink-400"
-            } animate-gradient`}
+              } animate-gradient`}
           />
 
           {/* Close Button */}
@@ -95,9 +91,8 @@ export const NotificationPopup = ({
             {/* Icon with animation */}
             <div className="flex justify-center mb-6">
               <div
-                className={`relative ${
-                  isSuccess ? "animate-success-icon" : "animate-error-icon"
-                }`}
+                className={`relative ${isSuccess ? "animate-success-icon" : "animate-error-icon"
+                  }`}
               >
                 {isSuccess ? (
                   <div className="relative">
@@ -137,9 +132,8 @@ export const NotificationPopup = ({
 
             {/* Title */}
             <h2
-              className={`text-2xl font-bold text-center mb-3 ${
-                isSuccess ? "text-green-600" : "text-red-600"
-              }`}
+              className={`text-2xl font-bold text-center mb-3 ${isSuccess ? "text-green-600" : "text-red-600"
+                }`}
             >
               {title}
             </h2>
@@ -153,9 +147,8 @@ export const NotificationPopup = ({
             <div className="mt-6">
               <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
                 <div
-                  className={`h-full ${
-                    isSuccess ? "bg-green-500" : "bg-red-500"
-                  } animate-progress`}
+                  className={`h-full ${isSuccess ? "bg-green-500" : "bg-red-500"
+                    } animate-progress`}
                 />
               </div>
             </div>
@@ -163,11 +156,10 @@ export const NotificationPopup = ({
 
           {/* Bottom decoration */}
           <div
-            className={`h-2 ${
-              isSuccess
+            className={`h-2 ${isSuccess
                 ? "bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400"
                 : "bg-gradient-to-r from-red-400 via-rose-400 to-pink-400"
-            }`}
+              }`}
           />
         </div>
       </div>

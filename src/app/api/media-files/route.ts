@@ -44,8 +44,8 @@ export async function GET(request: NextRequest) {
     console.log("🔄 Fetching media files from database...");
 
     // Build dynamic query
-    let conditions: string[] = ["m.is_active = TRUE"];
-    let params: any[] = [];
+    const conditions: string[] = ["m.is_active = TRUE"];
+    const params: any[] = [];
     let paramIndex = 1;
 
     if (type && type !== "all") {

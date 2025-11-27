@@ -1,0 +1,31 @@
+export interface Visit {
+  record_no?: string | null;
+  code?: string | null;
+  vn: string;
+  room_code?: string | null;
+  q_no?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  finished?: number | null;
+  doctor_code?: string | null;
+  emp_code?: string | null;
+  cn: string;
+  display_name?: string | null;
+  height?: number | null;
+  weight?: number | null;
+  temperature?: number | null;
+  systolic?: number | null;
+  diastolic?: number | null;
+  pulse?: number | null;
+  respiratory?: number | null;
+  cc?: string | null;
+  pi?: string | null;
+  pe?: string | null;
+  dx?: string | null;
+  note_result?: string | null;
+  status?: string | null;
+  time_in?: string | null;
+  time_out?: string | null;
+  bind_date?: string | null;
+  doc_type?: string | null;
+}

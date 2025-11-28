@@ -1,4 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+
+// Helper function to fetch video source from Facebook
+async function fetchVideoSource(
+  videoId: string,
+  accessToken: string
+): Promise<string | null> {
+  try {
+    const videoUrl = `https://graph.facebook.com/v24.0/${videoId}`;
+    const videoParams = new URLSearchParams({
+      access_token: accessToken,
+      fields: "source,picture,thumbnails",
+    });
+    const response = await fetch(`${videoUrl}?${videoParams.toString()}`);
+    if (response.ok) {
+      const videoData = await response.json();
+      return videoData.source || null;
+    }
+  } catch (error) {
+    console.log("Could not fetch video source:", error);
+  }
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const accessToken = process.env.FACEBOOK_ACCESS_TOKEN;
@@ -50,6 +73,19 @@ export async function GET(request: NextRequest) {
     }
     const data = await response.json();
     const creativeData = data.creative || null;
+
+    // Fetch video source if video_id exists
+    if (creativeData) {
+      const videoId =
+        creativeData.video_id ||
+        creativeData.object_story_spec?.video_data?.video_id;
+      if (videoId) {
+        const videoSource = await fetchVideoSource(videoId, accessToken);
+        if (videoSource) {
+          creativeData.video_source = videoSource;
+        }
+      }
+    }
     // Try to get image from effective_object_story_id if creative doesn't have thumbnail
     if (
       creativeData &&
@@ -133,4 +169,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+}

@@ -142,6 +142,7 @@ interface AdCreative {
   thumbnail_url?: string;
   image_url?: string;
   video_id?: string;
+  video_source?: string; // Direct video URL from Facebook API
   object_story_spec?: any;
   effective_object_story_id?: string;
 }
@@ -1336,7 +1337,64 @@ export default function FacebookAdsManagerPage() {
                       </div>
                     );
                   }
-                  // ถ้ามี video_id แต่ไม่มี story_id - แสดง thumbnail และปุ่มเปิดใน Facebook
+                  // ถ้ามี video_source (direct URL from Facebook) - เล่นวิดีโอโดยตรง
+                  const videoSource = creative?.video_source;
+                  if (videoSource) {
+                    return (
+                      <div className="space-y-4">
+                        {/* Video Player */}
+                        <div className="rounded-xl overflow-hidden bg-black shadow-lg">
+                          <video
+                            controls
+                            autoPlay
+                            className="w-full h-auto max-h-[60vh]"
+                            poster={thumbnailUrl}
+                            onError={(e) => {
+                              console.log("❌ [Video Error] Failed to load video, showing fallback");
+                              (e.target as HTMLVideoElement).style.display = "none";
+                              // Show fallback thumbnail
+                              const parent = (e.target as HTMLVideoElement).parentElement;
+                              if (parent && thumbnailUrl) {
+                                parent.innerHTML = `
+                                  <div class="relative">
+                                    <img src="${thumbnailUrl}" alt="Video thumbnail" class="w-full h-auto" />
+                                    <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40">
+                                      <span class="text-white text-4xl">⚠️ วิดีโอไม่สามารถเล่นได้</span>
+                                    </div>
+                                  </div>
+                                `;
+                              }
+                            }}
+                          >
+                            <source src={videoSource} type="video/mp4" />
+                            เบราว์เซอร์ของคุณไม่รองรับการเล่นวิดีโอ
+                          </video>
+                        </div>
+                        {/* Open in Facebook Buttons */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <a
+                            href={`https://www.facebook.com/reel/${videoId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium shadow-lg text-sm sm:text-base"
+                          >
+                            <span>🎬</span>
+                            <span>ดูเป็น Reel</span>
+                          </a>
+                          <a
+                            href={`https://www.facebook.com/watch/?v=${videoId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 px-6 py-3 bg-gray-700 hover:bg-gray-800 text-white rounded-lg transition-colors font-medium shadow-lg text-sm sm:text-base"
+                          >
+                            <span>▶️</span>
+                            <span>ดูเป็น Video</span>
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  }
+                  // ถ้ามี video_id แต่ไม่มี video_source - แสดง thumbnail และปุ่มเปิดใน Facebook
                   if (videoId && thumbnailUrl) {
                     return (
                       <div className="space-y-4">

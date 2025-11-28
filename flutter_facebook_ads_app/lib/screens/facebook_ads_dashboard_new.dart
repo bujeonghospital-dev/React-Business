@@ -14,7 +14,7 @@ import '../widgets/phone_leads_card.dart';
 import '../widgets/inbox_stats_card.dart';
 import '../widgets/facebook_spending_card.dart';
 import '../widgets/language_switcher.dart';
-import 'video_player_demo_screen.dart';
+import '../widgets/video_gallery_widget.dart';
 
 class FacebookAdsDashboardNew extends StatefulWidget {
   const FacebookAdsDashboardNew({Key? key}) : super(key: key);
@@ -496,37 +496,6 @@ class _FacebookAdsDashboardNewState extends State<FacebookAdsDashboardNew>
                           ),
                         ),
                         const Spacer(),
-                        // Video Player Demo Button
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const VideoPlayerDemoScreen(),
-                                ),
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.red[50],
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: Colors.red[200]!,
-                                ),
-                              ),
-                              child: Icon(
-                                Icons.play_circle_fill,
-                                color: Colors.red[600],
-                                size: 24,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
                         // Language Switcher
                         const LanguageSwitcher(
                           size: 'small',
@@ -568,6 +537,19 @@ class _FacebookAdsDashboardNewState extends State<FacebookAdsDashboardNew>
                     child: TopAdSetTable(
                       insights: _insights,
                       phoneLeads: _phoneLeads,
+                    ),
+                  ),
+
+                  // Video Gallery Section
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: VideoGalleryWidget(
+                      insights: _insights,
+                      adCreatives: _adCreatives,
+                      isLoading: _isCreativesLoading,
+                      title: 'Video Ads',
+                      maxItems: 10,
                     ),
                   ),
 

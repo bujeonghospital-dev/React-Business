@@ -156,7 +156,7 @@ interface CRMRecord {
   star_flag: string;
   note: string | null;
   hasCustomerProfile?: boolean;
-  customerCN?: string;
+  customerIdAll?: string;
   surgery_date?: string;
   consult_date?: string;
   displayDate?: string;

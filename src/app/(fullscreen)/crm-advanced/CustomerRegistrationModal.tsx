@@ -90,8 +90,22 @@ type SectionNavItem = {
   requiresAdvanced?: boolean;
 };
 
+interface OPDServiceGroup {
+  groupcode: string;
+  groupname: string;
+}
+
+interface OPDServiceItem {
+  itemcode: string;
+  itemname: string;
+  saleprice: number;
+}
+
 const inputClass =
   "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500";
+
+const compactInputClass =
+  "w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500";
 
 const labelClass = "block text-sm font-semibold text-gray-700";
 
@@ -196,6 +210,52 @@ function matchesAdministrativeName(
   );
 }
 
+interface SelectedServiceEntry {
+  id: string;
+  itemcode: string;
+  itemname: string;
+  salesprice: number;
+  chargePrice: string;
+  chargePercent: string;
+  discountPrice: string;
+  discountPercent: string;
+}
+
+const currencyFormatter = new Intl.NumberFormat("th-TH", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const formatCurrencyDisplay = (value: number) =>
+  Number.isFinite(value) ? currencyFormatter.format(value) : "0.00";
+
+const formatDecimalInputValue = (value: number) =>
+  Number.isFinite(value) ? value.toFixed(2) : "";
+
+const parseMonetaryInputValue = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return 0;
+  }
+  const numeric = Number(trimmed);
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const normalizeSalepriceValue = (value: number | string | null | undefined) => {
+  if (value === null || value === undefined) {
+    return 0;
+  }
+  const numeric = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const calculateServiceEntryTotal = (entry: SelectedServiceEntry) => {
+  const baseAmount = Number.isFinite(entry.salesprice) ? entry.salesprice : 0;
+  const chargeAmount = parseMonetaryInputValue(entry.chargePrice);
+  const discountAmount = parseMonetaryInputValue(entry.discountPrice);
+  return baseAmount + chargeAmount - discountAmount;
+};
+
 export default function CustomerRegistrationModal({
   visible,
   loading,
@@ -225,6 +285,17 @@ export default function CustomerRegistrationModal({
   const [selectedSubdistrictId, setSelectedSubdistrictId] = useState<number | null>(null);
   const [baselineForm, setBaselineForm] = useState<CustomerFormData | null>(null);
   const previousFormIdentityRef = useRef<string | null>(null);
+  const [opdGroups, setOpdGroups] = useState<OPDServiceGroup[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [groupsError, setGroupsError] = useState<string | null>(null);
+  const [selectedOpdGroupCode, setSelectedOpdGroupCode] = useState<string>("");
+  const [groupServiceItems, setGroupServiceItems] = useState<OPDServiceItem[]>([]);
+  const [serviceDrawerVisible, setServiceDrawerVisible] = useState(false);
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [serviceError, setServiceError] = useState<string | null>(null);
+  const [serviceSearchTerm, setServiceSearchTerm] = useState("");
+  const [selectedServices, setSelectedServices] = useState<SelectedServiceEntry[]>([]);
+  const latestServiceFetchGroupRef = useRef<string | null>(null);
 
   const basicSectionRef = useRef<HTMLDivElement | null>(null);
   const documentsSectionRef = useRef<HTMLDivElement | null>(null);
@@ -235,6 +306,244 @@ export default function CustomerRegistrationModal({
     setFrontPreview(form?.idcardFrontImage || "");
     setBackPreview(form?.idcardBackImage || "");
   }, [form?.idcardFrontImage, form?.idcardBackImage]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchGroups = async () => {
+      setGroupsLoading(true);
+      setGroupsError(null);
+      try {
+        const response = await fetch("/api/b-item-groups");
+        const result = await response.json();
+        if (!response.ok || result.success === false) {
+          throw new Error(result.error || "ไม่พบกลุ่มขาย OPD");
+        }
+        if (cancelled) {
+          return;
+        }
+        setOpdGroups(Array.isArray(result.data) ? result.data : []);
+      } catch (error: any) {
+        if (cancelled) {
+          return;
+        }
+        setGroupsError(error?.message || "ไม่สามารถโหลดกลุ่มขาย OPD ได้");
+      } finally {
+        if (cancelled) {
+          return;
+        }
+        setGroupsLoading(false);
+      }
+    };
+
+    fetchGroups();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const loadServicesForGroup = async (groupCode: string) => {
+    if (!groupCode) {
+      setGroupServiceItems([]);
+      return;
+    }
+    latestServiceFetchGroupRef.current = groupCode;
+    setServicesLoading(true);
+    setServiceError(null);
+    setGroupServiceItems([]);
+    try {
+      const response = await fetch(
+        `/api/b-item-services?groupCode=${encodeURIComponent(groupCode)}`
+      );
+      const result = await response.json();
+      if (!response.ok || result.success === false) {
+        throw new Error(result.error || "ไม่พบรายการบริการ");
+      }
+      if (latestServiceFetchGroupRef.current !== groupCode) {
+        return;
+      }
+      const normalizedItems = Array.isArray(result.data)
+        ? result.data.map((item) => ({
+          ...item,
+          saleprice: normalizeSalepriceValue(item.saleprice),
+        }))
+        : [];
+      setGroupServiceItems(normalizedItems as OPDServiceItem[]);
+    } catch (error: any) {
+      if (latestServiceFetchGroupRef.current !== groupCode) {
+        return;
+      }
+      setServiceError(error?.message || "ไม่สามารถโหลดรายการบริการได้");
+    } finally {
+      if (latestServiceFetchGroupRef.current === groupCode) {
+        setServicesLoading(false);
+      }
+    }
+  };
+
+  const handleGroupSelect = (groupCode: string) => {
+    setSelectedOpdGroupCode(groupCode);
+    setServiceSearchTerm("");
+    setServiceError(null);
+    if (!groupCode) {
+      setGroupServiceItems([]);
+      setServiceDrawerVisible(false);
+      return;
+    }
+    loadServicesForGroup(groupCode);
+    setServiceDrawerVisible(true);
+  };
+
+  const handleOpenServiceDrawer = () => {
+    setServiceDrawerVisible(true);
+    setServiceError(null);
+    if (selectedOpdGroupCode) {
+      loadServicesForGroup(selectedOpdGroupCode);
+    }
+  };
+
+  const handleCloseServiceDrawer = () => {
+    setServiceDrawerVisible(false);
+    setServiceSearchTerm("");
+    setServiceError(null);
+  };
+
+  const updateSelectedServiceEntry = (
+    id: string,
+    updater: (entry: SelectedServiceEntry) => SelectedServiceEntry
+  ) => {
+    setSelectedServices((current) =>
+      current.map((entry) => (entry.id === id ? updater(entry) : entry))
+    );
+  };
+
+  const handleChargePriceChange = (id: string, value: string) => {
+    updateSelectedServiceEntry(id, (entry) => {
+      const trimmed = value.trim();
+      const numeric = Number(trimmed);
+      const hasValue = trimmed.length > 0 && Number.isFinite(numeric);
+      const nextPercent =
+        hasValue && entry.salesprice > 0
+          ? formatDecimalInputValue((numeric / entry.salesprice) * 100)
+          : "";
+      return {
+        ...entry,
+        chargePrice: value,
+        chargePercent: nextPercent,
+      };
+    });
+  };
+
+  const handleChargePercentChange = (id: string, value: string) => {
+    updateSelectedServiceEntry(id, (entry) => {
+      const trimmed = value.trim();
+      const numeric = Number(trimmed);
+      const hasValue = trimmed.length > 0 && Number.isFinite(numeric);
+      const nextPrice =
+        hasValue && entry.salesprice > 0
+          ? formatDecimalInputValue((entry.salesprice * numeric) / 100)
+          : "";
+      return {
+        ...entry,
+        chargePrice: nextPrice,
+        chargePercent: value,
+      };
+    });
+  };
+
+  const handleDiscountPriceChange = (id: string, value: string) => {
+    updateSelectedServiceEntry(id, (entry) => {
+      const trimmed = value.trim();
+      const numeric = Number(trimmed);
+      const hasValue = trimmed.length > 0 && Number.isFinite(numeric);
+      const nextPercent =
+        hasValue && entry.salesprice > 0
+          ? formatDecimalInputValue((numeric / entry.salesprice) * 100)
+          : "";
+      return {
+        ...entry,
+        discountPrice: value,
+        discountPercent: nextPercent,
+      };
+    });
+  };
+
+  const handleDiscountPercentChange = (id: string, value: string) => {
+    updateSelectedServiceEntry(id, (entry) => {
+      const trimmed = value.trim();
+      const numeric = Number(trimmed);
+      const hasValue = trimmed.length > 0 && Number.isFinite(numeric);
+      const nextPrice =
+        hasValue && entry.salesprice > 0
+          ? formatDecimalInputValue((entry.salesprice * numeric) / 100)
+          : "";
+      return {
+        ...entry,
+        discountPrice: nextPrice,
+        discountPercent: value,
+      };
+    });
+  };
+
+  const handleAddService = (item: OPDServiceItem) => {
+    setSelectedServices((current) => {
+      if (current.some((entry) => entry.itemcode === item.itemcode)) {
+        return current;
+      }
+      return [
+        ...current,
+        {
+          id: `${item.itemcode}-${Date.now()}`,
+          itemcode: item.itemcode,
+          itemname: item.itemname,
+          salesprice: normalizeSalepriceValue(item.saleprice),
+          chargePrice: "",
+          chargePercent: "",
+          discountPrice: "",
+          discountPercent: "",
+        },
+      ];
+    });
+  };
+
+  const handleRemoveServiceEntry = (id: string) => {
+    setSelectedServices((current) => current.filter((entry) => entry.id !== id));
+  };
+
+  const selectedOpdGroup = useMemo(
+    () => opdGroups.find((group) => group.groupcode === selectedOpdGroupCode) ?? null,
+    [opdGroups, selectedOpdGroupCode]
+  );
+
+  const selectedServicesTotals = useMemo(
+    () =>
+      selectedServices.reduce(
+        (acc, entry) => {
+          const baseAmount = Number.isFinite(entry.salesprice) ? entry.salesprice : 0;
+          const chargeAmount = parseMonetaryInputValue(entry.chargePrice);
+          const discountAmount = parseMonetaryInputValue(entry.discountPrice);
+          const netAmount = baseAmount + chargeAmount - discountAmount;
+          acc.baseTotal += baseAmount;
+          acc.chargeTotal += chargeAmount;
+          acc.discountTotal += discountAmount;
+          acc.netTotal += netAmount;
+          return acc;
+        },
+        { baseTotal: 0, chargeTotal: 0, discountTotal: 0, netTotal: 0 }
+      ),
+    [selectedServices]
+  );
+
+  const filteredServiceItems = useMemo(() => {
+    if (!serviceSearchTerm.trim()) {
+      return groupServiceItems;
+    }
+    const lowerTerm = serviceSearchTerm.trim().toLowerCase();
+    return groupServiceItems.filter(
+      (item) =>
+        item.itemname.toLowerCase().includes(lowerTerm) ||
+        item.itemcode.toLowerCase().includes(lowerTerm)
+    );
+  }, [groupServiceItems, serviceSearchTerm]);
 
   const formIdentity = useMemo(
     () => `${form?.cn ?? ""}::${form?.code ?? ""}`,
@@ -838,6 +1147,29 @@ export default function CustomerRegistrationModal({
                 </svg>
                 คืนค่าจากฐานข้อมูล
               </button>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleOpenServiceDrawer}
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:from-emerald-600 hover:to-teal-600"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                บริการ/ขาย
+                {selectedServices.length > 0 && (
+                  <span className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/30 text-xs font-bold">
+                    {selectedServices.length}
+                  </span>
+                )}
+              </button>
+              {groupsLoading && (
+                <span className="text-xs text-gray-500">กำลังโหลดกลุ่ม...</span>
+              )}
+              {groupsError && (
+                <span className="text-xs text-red-500">{groupsError}</span>
+              )}
             </div>
           </div>
         </div>
@@ -1549,7 +1881,294 @@ export default function CustomerRegistrationModal({
             </div>
           </form>
         </div>
+
       </div>
+
+      {/* OPD Service Popup Modal */}
+      {serviceDrawerVisible && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div
+            className="relative w-full max-w-6xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-8 py-5 text-white">
+              <div>
+                <h2 className="text-2xl font-bold">บริการ OPD</h2>
+                <p className="mt-1 text-sm text-white/80">
+                  เลือกบริการและกำหนด Charge / Discount
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseServiceDrawer}
+                className="rounded-full bg-white/20 p-2 transition hover:bg-white/30"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Group selector */}
+            <div className="border-b bg-gray-50 px-8 py-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <label className="text-sm font-semibold text-gray-700">กลุ่มบริการ:</label>
+                <select
+                  className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  value={selectedOpdGroupCode}
+                  onChange={(e) => handleGroupSelect(e.target.value)}
+                >
+                  <option value="">เลือกกลุ่มบริการ</option>
+                  {opdGroups.map((group) => (
+                    <option key={group.groupcode} value={group.groupcode}>
+                      {group.groupname}
+                    </option>
+                  ))}
+                </select>
+                {selectedServices.length > 0 && (
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-700">
+                    เลือกแล้ว {selectedServices.length} รายการ
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Two-column content */}
+            <div className="grid max-h-[65vh] grid-cols-1 gap-0 md:grid-cols-2">
+              {/* Left: Selected services */}
+              <div className="flex flex-col border-r border-gray-200 bg-gradient-to-br from-blue-50 to-indigo-50 max-h-[65vh]">
+                <div className="border-b bg-white/80 px-6 py-4">
+                  <h3 className="text-lg font-bold text-gray-800">
+                    📝 บริการที่เลือก
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    {selectedServices.length} รายการ
+                    {selectedOpdGroup && ` · ${selectedOpdGroup.groupname}`}
+                  </p>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4">
+                  {selectedServices.length === 0 ? (
+                    <div className="flex h-full flex-col items-center justify-center text-center">
+                      <div className="mb-3 text-5xl">📂</div>
+                      <p className="text-sm text-gray-500">
+                        ยังไม่มีบริการที่เลือก
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        เลือกจากรายการทางขวามือ
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-3">
+                        {selectedServices.map((entry) => (
+                          <div
+                            key={entry.id}
+                            className="rounded-2xl border border-white bg-white p-4 shadow-md transition hover:shadow-lg"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <p className="font-semibold text-gray-800">
+                                  {entry.itemname}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  รหัส {entry.itemcode} · ราคา {formatCurrencyDisplay(entry.salesprice)}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveServiceEntry(entry.id)}
+                                className="ml-2 rounded-full bg-red-100 p-1.5 text-red-600 transition hover:bg-red-200"
+                              >
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+
+                            <div className="mt-3 grid grid-cols-2 gap-3">
+                              <div className="rounded-xl bg-emerald-50 p-3">
+                                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                                  Charge
+                                </p>
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    placeholder="บาท"
+                                    value={entry.chargePrice}
+                                    onChange={(e) => handleChargePriceChange(entry.id, e.target.value)}
+                                    className="w-full rounded-lg border border-emerald-200 bg-white px-2 py-1.5 text-sm focus:border-emerald-400 focus:outline-none"
+                                  />
+                                  <input
+                                    type="text"
+                                    placeholder="%"
+                                    value={entry.chargePercent}
+                                    onChange={(e) => handleChargePercentChange(entry.id, e.target.value)}
+                                    className="w-16 rounded-lg border border-emerald-200 bg-white px-2 py-1.5 text-center text-sm focus:border-emerald-400 focus:outline-none"
+                                  />
+                                </div>
+                              </div>
+                              <div className="rounded-xl bg-rose-50 p-3">
+                                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-rose-700">
+                                  Discount
+                                </p>
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    placeholder="บาท"
+                                    value={entry.discountPrice}
+                                    onChange={(e) => handleDiscountPriceChange(entry.id, e.target.value)}
+                                    className="w-full rounded-lg border border-rose-200 bg-white px-2 py-1.5 text-sm focus:border-rose-400 focus:outline-none"
+                                  />
+                                  <input
+                                    type="text"
+                                    placeholder="%"
+                                    value={entry.discountPercent}
+                                    onChange={(e) => handleDiscountPercentChange(entry.id, e.target.value)}
+                                    className="w-16 rounded-lg border border-rose-200 bg-white px-2 py-1.5 text-center text-sm focus:border-rose-400 focus:outline-none"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                            <div className="mt-3 flex items-center justify-between rounded-2xl border border-indigo-100 bg-indigo-50/40 px-3 py-2 text-sm font-semibold text-indigo-600">
+                              <span>ยอดสุทธิ</span>
+                              <span>{formatCurrencyDisplay(calculateServiceEntryTotal(entry))}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 rounded-2xl border border-dashed border-indigo-200 bg-white/80 px-4 py-3 text-sm text-gray-600 shadow-inner">
+                        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          <span>สรุปยอด</span>
+                          <span>{selectedServices.length} รายการ</span>
+                        </div>
+                        <div className="mt-2 space-y-1">
+                          <div className="flex justify-between">
+                            <span>รวมราคาพื้นฐาน</span>
+                            <span className="font-semibold text-gray-700">
+                              {formatCurrencyDisplay(selectedServicesTotals.baseTotal)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>รวมค่า Charge</span>
+                            <span className="font-semibold text-gray-700">
+                              {formatCurrencyDisplay(selectedServicesTotals.chargeTotal)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>รวมส่วนลด</span>
+                            <span className="font-semibold text-gray-700">
+                              {formatCurrencyDisplay(selectedServicesTotals.discountTotal)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-base font-semibold text-indigo-600">
+                            <span>ยอดสุทธิทั้งหมด</span>
+                            <span>{formatCurrencyDisplay(selectedServicesTotals.netTotal)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Right: Available services */}
+              <div className="flex flex-col bg-white max-h-[65vh]">
+                <div className="border-b px-6 py-4">
+                  <h3 className="text-lg font-bold text-gray-800">
+                    📜 รายการบริการ
+                  </h3>
+                  {selectedOpdGroup && (
+                    <p className="text-xs text-gray-500">{selectedOpdGroup.groupname}</p>
+                  )}
+                </div>
+                <div className="px-6 py-3">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="🔍 ค้นหาบริการ..."
+                      value={serviceSearchTerm}
+                      onChange={(e) => setServiceSearchTerm(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                    />
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto px-6 pb-4">
+                  {servicesLoading && (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600"></div>
+                    </div>
+                  )}
+                  {serviceError && (
+                    <p className="py-4 text-center text-sm text-red-600">{serviceError}</p>
+                  )}
+                  {!servicesLoading && !serviceError && filteredServiceItems.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <div className="mb-2 text-4xl">💭</div>
+                      <p className="text-sm text-gray-500">ไม่พบรายการบริการ</p>
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    {filteredServiceItems.map((item) => {
+                      const alreadyAdded = selectedServices.some(
+                        (entry) => entry.itemcode === item.itemcode
+                      );
+                      return (
+                        <div
+                          key={item.itemcode}
+                          className={`flex items-center justify-between rounded-xl border px-4 py-3 transition ${alreadyAdded
+                            ? "border-emerald-200 bg-emerald-50"
+                            : "border-gray-100 bg-gray-50 hover:border-indigo-200 hover:bg-indigo-50"
+                            }`}
+                        >
+                          <div>
+                            <p className="font-medium text-gray-800">{item.itemname}</p>
+                            <p className="text-xs text-gray-500">ราคา
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {formatCurrencyDisplay(item.saleprice)}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleAddService(item)}
+                            disabled={alreadyAdded}
+                            className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${alreadyAdded
+                              ? "bg-emerald-200 text-emerald-700"
+                              : "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow hover:shadow-md"
+                              }`}
+                          >
+                            {alreadyAdded ? "✓ เลือกแล้ว" : "เพิ่ม"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between border-t bg-gray-50 px-8 py-4">
+              <p className="text-sm text-gray-600">
+                เลือกแล้ว <span className="font-bold text-indigo-600">{selectedServices.length}</span> รายการ
+                <span className="mx-2 hidden text-xs text-gray-400 md:inline">·</span>
+                <span className="mr-1">ยอดสุทธิ</span>
+                <span className="font-bold text-indigo-600">
+                  {formatCurrencyDisplay(selectedServicesTotals.netTotal)}
+                </span>
+              </p>
+              <button
+                type="button"
+                onClick={handleCloseServiceDrawer}
+                className="rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-2.5 font-semibold text-white shadow-lg transition hover:from-indigo-700 hover:to-purple-700"
+              >
+                เสร็จสิ้น
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

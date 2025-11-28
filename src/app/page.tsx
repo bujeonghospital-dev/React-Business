@@ -1,5 +1,4 @@
 import ScaledCanvas from "../components/ScaledCanvas";
-import React, { useState } from "react";
 import Video from "@/components/Home/Video";
 import Aboutus from "@/components/Home/AboutUs";
 import Dedicated from "@/components/Home/Detail";
@@ -28,4 +27,4 @@ export default function Home() {
     </ScaledCanvas>
   );
 }
-// *ALL
+// *ALL

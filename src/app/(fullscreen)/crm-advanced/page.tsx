@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { Appointment } from "@/types/appointment";
 import CustomerRegistrationModal, {
   CustomerFormData,
   LeadSummary,
@@ -86,7 +87,7 @@ const getLegacyCustomerName = (appointment: Appointment): string => {
   return "-";
 };
 
-const getLegacyDateParts = (dateTime: string | null) => {
+const getLegacyDateParts = (dateTime: string | null | undefined) => {
   if (!dateTime) {
     return { dateLabel: "-", timeLabel: "-" };
   }
@@ -112,7 +113,7 @@ const getLegacyDateParts = (dateTime: string | null) => {
   };
 };
 
-const formatLegacyPhoneNumber = (phone: string | null): string => {
+const formatLegacyPhoneNumber = (phone: string | null | undefined): string => {
   if (!phone) {
     return "-";
   }
@@ -123,6 +124,17 @@ const formatLegacyPhoneNumber = (phone: string | null): string => {
   }
 
   return phone.trim();
+};
+
+const sanitizeProductName = (product: string | null | undefined): string => {
+  if (!product) {
+    return "-";
+  }
+  const trimmed = product.trim();
+  if (!trimmed || trimmed.toLowerCase() === "null" || trimmed.toLowerCase() === "undefined") {
+    return "-";
+  }
+  return trimmed;
 };
 
 interface CRMRecord {
@@ -1081,7 +1093,7 @@ export default function CRMAdvancedPage() {
     return hours * 60 + minutes;
   };
 
-  const parseLegacyDateValue = (value: string | null): number => {
+  const parseLegacyDateValue = (value: string | null | undefined): number => {
     if (!value) {
       return Number.MAX_SAFE_INTEGER;
     }

@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`📡 Fetching CRM advanced data from database...`);
 
-    // สร้าง SQL query และเชื่อมกับ n_customer เพื่อเช็กว่า cn มีข้อมูลแล้วหรือยัง
+    // สร้าง SQL query และเชื่อมกับ n_customer เพื่อเช็กว่า n_customer.id_all มีข้อมูลแล้วหรือยัง
     let query = `
       SELECT 
         bl.id,
@@ -59,9 +59,9 @@ export async function GET(request: NextRequest) {
         bl.note,
         bl.surgery_date,
         bl.consult_date,
-        nc.cn AS customer_cn
+        nc.id_all AS customer_id_all
       FROM "BJH-Server"."bjh_all_leads" bl
-      LEFT JOIN "BJH-Server".n_customer nc ON nc.cn = bl.id::text
+      LEFT JOIN "BJH-Server".n_customer nc ON nc.id_all = bl.id::text
       WHERE 
         1=1
     `;
@@ -182,8 +182,8 @@ export async function GET(request: NextRequest) {
             note: row.note || "",
             surgery_date: formatDate(row.surgery_date),
             consult_date: formatDate(row.consult_date),
-            hasCustomerProfile: Boolean(row.customer_cn),
-            customerCN: row.customer_cn || "",
+            hasCustomerProfile: Boolean(row.customer_id_all),
+            customerIdAll: row.customer_id_all || "",
             // เพิ่ม field สำหรับแสดงในปฏิทิน
             displayDate:
               formatDate(row.surgery_date) ||

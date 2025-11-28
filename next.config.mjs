@@ -1,4 +1,9 @@
 /** @type {import('next').NextConfig} */
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const POLICY_FILENAME_TH =
   "ข้อบังคับเกี่ยวกับการทำงาน ฉบับปรับปรุง ปี 2568.pdf";
@@ -8,6 +13,9 @@ const ASCII_FALLBACK = "policy-2568.pdf";
 const isDev = process.env.NODE_ENV !== "production";
 
 const nextConfig = {
+  turbopack: {
+    root: __dirname,
+  },
   images: { unoptimized: true },
 
   ...(isDev

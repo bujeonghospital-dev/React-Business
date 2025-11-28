@@ -175,6 +175,15 @@ export async function GET() {
   }
 }
 
+const isDirectoryEmpty = async (dirPath: string) => {
+  try {
+    const entries = await fs.readdir(dirPath);
+    return entries.length === 0;
+  } catch {
+    return false;
+  }
+};
+
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
@@ -278,5 +287,40 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Error creating marketing folder", error);
     return NextResponse.json({ error: "Unable to create folder." }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const rawPath = typeof body.path === "string" ? body.path : "";
+    const normalized = normalizeSegments(rawPath);
+
+    if (normalized.length === 0) {
+      return NextResponse.json({ error: "Folder path is required." }, { status: 400 });
+    }
+
+    if (normalized.some((segment) => segment.includes(".."))) {
+      return NextResponse.json({ error: "Invalid folder path." }, { status: 400 });
+    }
+
+    const targetDir = path.join(marketingRoot, ...normalized);
+    if (!isInsideMarketingRoot(targetDir)) {
+      return NextResponse.json({ error: "Path is outside marketing assets." }, { status: 400 });
+    }
+
+    if (!(await pathExists(targetDir))) {
+      return NextResponse.json({ error: "Folder not found." }, { status: 404 });
+    }
+
+    if (!(await isDirectoryEmpty(targetDir))) {
+      return NextResponse.json({ error: "Folder must be empty before deleting." }, { status: 409 });
+    }
+
+    await fs.rmdir(targetDir);
+    return NextResponse.json({ success: true, path: normalized.join("/") }, { status: 200 });
+  } catch (error) {
+    console.error("Error deleting marketing folder", error);
+    return NextResponse.json({ error: "Unable to delete folder." }, { status: 500 });
   }
 }

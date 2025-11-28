@@ -428,8 +428,10 @@ const buildFoldersFromApi = (nodes: ApiFolderNode[]): MediaFolder[] => {
   const nodeMap = new Map(nodes.map((node) => [node.id, node]));
   return folderTemplates.map((template) => {
     const serverNode = nodeMap.get(template.id);
+    const relativePath = serverNode?.path ?? template.relativePath ?? template.name;
     return {
       ...template,
+      relativePath,
       rootFileIds: serverNode?.fileIds ?? [],
       subFolders: serverNode
         ? serverNode.children.map((child) => mapApiNodeToNested(child, null))
@@ -849,11 +851,10 @@ const AllFilesGalleryPage = () => {
     }
   };
 
-  const handleDeleteSubFolder = (subFolderId: string) => {
+  const handleDeleteSubFolder = async (subFolderId: string) => {
     if (!activeFolderId) return;
 
-    // Find the folder to check if it has files or children
-    const folderToDelete = displayFolders.find(f => f.id === subFolderId);
+    const folderToDelete = displayFolders.find((f) => f.id === subFolderId);
     if (!folderToDelete) return;
 
     if (folderToDelete.fileIds.length > 0 || folderToDelete.children.length > 0) {
@@ -863,15 +864,34 @@ const AllFilesGalleryPage = () => {
 
     if (!confirm(`Are you sure you want to delete "${folderToDelete.name}"?`)) return;
 
-    setFolders((prev) =>
-      prev.map((item) => {
-        if (item.id !== activeFolderId) return item;
-        return {
-          ...item,
-          subFolders: deleteFolderFromNested(item.subFolders, subFolderId)
-        };
-      })
-    );
+    const targetPath = folderToDelete.relativePath;
+    if (!targetPath) {
+      alert("ไม่สามารถลบโฟลเดอร์นี้ได้ในขณะนี้");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/marketing-folders", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: targetPath }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        throw new Error(errorBody?.error || `ไม่สามารถลบโฟลเดอร์ได้ (รหัส ${response.status})`);
+      }
+
+      await loadMarketingFolders();
+      setFolderPath((prev) => prev.filter((id) => id !== subFolderId));
+    } catch (error) {
+      console.error("Failed to delete subfolder", error);
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("เกิดข้อผิดพลาดขณะลบโฟลเดอร์");
+      }
+    }
   };
 
   const handleStartEditSubFolder = (subFolder: NestedFolder) => {
@@ -1022,13 +1042,31 @@ const AllFilesGalleryPage = () => {
     setDragOverFolderId(null);
   };
 
-  const handleDropOnFolder = (e: React.DragEvent, folderId: string) => {
+  const handleDropOnFolder = async (e: React.DragEvent, folderId: string) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.dataTransfer.files?.length) {
-      processUploadedFiles(e.dataTransfer.files, folderId);
+      const targetFolder = folders.find((folder) => folder.id === folderId);
+      const targetPath = targetFolder?.relativePath ?? targetFolder?.name ?? null;
       setIsGlobalDropActive(false);
+      setDraggingFileId(null);
       setDragOverFolderId(null);
+
+      if (!targetPath) {
+        alert("เลือกโฟลเดอร์ปลายทางก่อนอัปโหลดไฟล์");
+        return;
+      }
+
+      try {
+        await processUploadedFiles(e.dataTransfer.files, targetPath);
+      } catch (error) {
+        console.error("Failed to upload files via folder drop", error);
+        if (error instanceof Error) {
+          alert(error.message);
+        } else {
+          alert("เกิดข้อผิดพลาดขณะอัปโหลดไฟล์");
+        }
+      }
       return;
     }
     const fileId = parseInt(e.dataTransfer.getData("text/plain"));
@@ -1102,52 +1140,6 @@ const AllFilesGalleryPage = () => {
       }
     });
     return result;
-  };
-
-  const addFileToNestedFolderById = (
-    folders: NestedFolder[],
-    targetId: string,
-    fileId: number
-  ): { folders: NestedFolder[]; added: boolean } => {
-    let added = false;
-    const updated = folders.map((folder) => {
-      if (folder.id === targetId) {
-        if (folder.fileIds.includes(fileId)) return folder;
-        added = true;
-        return { ...folder, fileIds: [...folder.fileIds, fileId] };
-      }
-
-      const childResult = addFileToNestedFolderById(folder.children, targetId, fileId);
-      if (childResult.added) {
-        added = true;
-        return { ...folder, children: childResult.folders };
-      }
-      return folder;
-    });
-    return { folders: updated, added };
-  };
-
-  const insertFileIntoMediaFolders = (
-    mediaFolders: MediaFolder[],
-    targetId: string,
-    fileId: number
-  ): MediaFolder[] => {
-    let updated = false;
-    const result = mediaFolders.map((folder) => {
-      if (folder.id === targetId) {
-        if (folder.rootFileIds.includes(fileId)) return folder;
-        updated = true;
-        return { ...folder, rootFileIds: [...folder.rootFileIds, fileId] };
-      }
-
-      const nested = addFileToNestedFolderById(folder.subFolders, targetId, fileId);
-      if (nested.added) {
-        updated = true;
-        return { ...folder, subFolders: nested.folders };
-      }
-      return folder;
-    });
-    return updated ? result : mediaFolders;
   };
 
   // Distribute all files randomly into folders
@@ -1257,19 +1249,35 @@ const AllFilesGalleryPage = () => {
   };
 
   // Delete file handler with confirmation
-  const handleDeleteFile = (fileId: number) => {
+  const handleDeleteFile = async (fileId: number) => {
     const file = files.find(f => f.id === fileId);
     if (!file) return;
 
-    if (confirm(`คุณต้องการลบไฟล์ "${file.name}" หรือไม่?\n\nการลบไม่สามารถกู้คืนได้`)) {
-      // Remove from files
-      setFiles(prev => prev.filter(f => f.id !== fileId));
+    if (!confirm(`คุณต้องการลบไฟล์ "${file.name}" หรือไม่?\n\nการลบไม่สามารถกู้คืนได้`)) return;
 
-      // Remove from selected files if selected
-      setSelectedFiles(prev => prev.filter(id => id !== fileId));
+    try {
+      const response = await fetch("/api/marketing-files", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filePath: file.url }),
+      });
 
-      // Remove from folders
-      setFolders(prev => prev.map(folder => removeFileFromFolder(folder, fileId)));
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        throw new Error(
+          errorBody?.error || `ไม่สามารถลบไฟล์ได้ (รหัส ${response.status})`
+        );
+      }
+
+      await loadMarketingFolders();
+      setSelectedFiles((prev) => prev.filter((id) => id !== fileId));
+    } catch (error) {
+      console.error("Failed to delete file", error);
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("เกิดข้อผิดพลาดขณะลบไฟล์");
+      }
     }
   };
 
@@ -1324,41 +1332,55 @@ const AllFilesGalleryPage = () => {
     return num.toString();
   };
 
-  const processUploadedFiles = (uploadedFiles: FileList, targetFolderId?: string | null) => {
-    const destinationFolderId = targetFolderId ?? currentNestedFolder?.id ?? null;
-    Array.from(uploadedFiles).forEach((file, index) => {
-      const timestamp = Date.now();
-      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const storagePath = `/marketing/${timestamp}_${sanitizedName}`;
+  const processUploadedFiles = async (uploadedFiles: FileList, targetFolderPath: string) => {
+    if (!uploadedFiles.length) return;
 
-      const newFile: FileItem = {
-        id: timestamp + index,
-        name: file.name,
-        type: file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : 'clip',
-        url: storagePath,
-        thumbnail: URL.createObjectURL(file),
-        size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-        date: new Date().toISOString().split('T')[0],
-        tags: ['Uploaded'],
-        favorite: false,
-        views: 0,
-        category: 'Uploads',
-      };
-      setFiles(prev => [...prev, newFile]);
-      if (destinationFolderId) {
-        setFolders(prev => insertFileIntoMediaFolders(prev, destinationFolderId, newFile.id));
-      }
-      console.log(`File would be saved to: ${storagePath}`);
+    const formData = new FormData();
+    Array.from(uploadedFiles).forEach((file) => {
+      formData.append("files", file);
+    });
+    formData.append("folderPath", targetFolderPath);
+
+    const response = await fetch("/api/marketing-files", {
+      method: "POST",
+      body: formData,
     });
 
-    setShowUploadModal(false);
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => null);
+      throw new Error(
+        errorBody?.error || `ไม่สามารถอัปโหลดไฟล์ได้ (รหัส ${response.status})`
+      );
+    }
+
+    await loadMarketingFolders();
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFiles = event.target.files;
-    if (!uploadedFiles) return;
-    processUploadedFiles(uploadedFiles, currentNestedFolder?.id ?? null);
-    event.target.value = '';
+    if (!uploadedFiles?.length) return;
+
+    const targetPath =
+      currentNestedFolder?.relativePath ?? activeFolder?.relativePath ?? null;
+    if (!targetPath) {
+      alert("กรุณาเปิดโฟลเดอร์ก่อนอัปโหลดไฟล์");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      await processUploadedFiles(uploadedFiles, targetPath);
+      setShowUploadModal(false);
+    } catch (error) {
+      console.error("Failed to upload files", error);
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("เกิดข้อผิดพลาดขณะอัปโหลดไฟล์");
+      }
+    } finally {
+      event.target.value = "";
+    }
   };
 
   const handleGlobalDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -1377,7 +1399,7 @@ const AllFilesGalleryPage = () => {
     setIsGlobalDropActive(false);
   };
 
-  const handleGlobalDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleGlobalDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     if (!e.dataTransfer.files?.length) {
       setIsGlobalDropActive(false);
       return;
@@ -1385,7 +1407,25 @@ const AllFilesGalleryPage = () => {
     e.preventDefault();
     e.stopPropagation();
     setIsGlobalDropActive(false);
-    processUploadedFiles(e.dataTransfer.files, currentNestedFolder?.id ?? null);
+    setDragOverFolderId(null);
+
+    const targetPath =
+      currentNestedFolder?.relativePath ?? activeFolder?.relativePath ?? null;
+    if (!targetPath) {
+      alert("กรุณาเปิดโฟลเดอร์ก่อนอัปโหลดไฟล์");
+      return;
+    }
+
+    try {
+      await processUploadedFiles(e.dataTransfer.files, targetPath);
+    } catch (error) {
+      console.error("Failed to upload files via drop", error);
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("เกิดข้อผิดพลาดขณะอัปโหลดไฟล์");
+      }
+    }
   };
 
   // Share to LINE handler
@@ -1484,7 +1524,7 @@ const AllFilesGalleryPage = () => {
         onDragOver={handleGlobalDragOver}
         onDragEnter={handleGlobalDragOver}
         onDragLeave={handleGlobalDragLeave}
-        onDrop={handleGlobalDrop}
+        onDrop={(e) => void handleGlobalDrop(e)}
       >
         {isGlobalDropActive && (
           <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 transition-opacity pointer-events-none">
@@ -1570,7 +1610,7 @@ const AllFilesGalleryPage = () => {
                   key={folder.id}
                   onDragOver={(e) => handleDragOver(e, folder.id)}
                   onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDropOnFolder(e, folder.id)}
+                  onDrop={(e) => void handleDropOnFolder(e, folder.id)}
                   className={`group relative glass-card rounded-2xl p-5 text-left transition-all duration-300 hover:scale-[1.03] border overflow-hidden animate-slide-up ${isActive
                     ? "border-purple-400/80 shadow-lg shadow-purple-500/30 ring-2 ring-purple-400/50"
                     : isDragOver

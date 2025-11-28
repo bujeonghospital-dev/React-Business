@@ -1,0 +1,129 @@
+{
+  "app": {
+    "title": "Facebook Ads Manager",
+    "version": "เวอร์ชัน"
+  },
+  "common": {
+    "loading": "กำลังโหลด...",
+    "please_wait": "กรุณารอสักครู่",
+    "error": "เกิดข้อผิดพลาด",
+    "try_again": "ลองอีกครั้ง",
+    "cancel": "ยกเลิก",
+    "confirm": "ยืนยัน",
+    "save": "บันทึก",
+    "delete": "ลบ",
+    "edit": "แก้ไข",
+    "search": "ค้นหา",
+    "filter": "กรอง",
+    "refresh": "รีเฟรช",
+    "no_data": "ไม่มีข้อมูล",
+    "all": "ทั้งหมด"
+  },
+  "navigation": {
+    "back_to_home": "กลับหน้าหลัก",
+    "home": "หน้าหลัก",
+    "dashboard": "แดชบอร์ด",
+    "settings": "ตั้งค่า",
+    "profile": "โปรไฟล์"
+  },
+  "language": {
+    "title": "ภาษา",
+    "thai": "ไทย",
+    "english": "English",
+    "switch_language": "เปลี่ยนภาษา"
+  },
+  "date": {
+    "today": "วันนี้",
+    "yesterday": "เมื่อวาน",
+    "last_7_days": "7 วันที่ผ่านมา",
+    "last_14_days": "14 วันที่ผ่านมา",
+    "last_30_days": "30 วันที่ผ่านมา",
+    "this_month": "เดือนนี้",
+    "last_month": "เดือนที่แล้ว",
+    "custom": "กำหนดเอง",
+    "select_date": "เลือกวันที่",
+    "start_date": "วันเริ่มต้น",
+    "end_date": "วันสิ้นสุด"
+  },
+  "ads": {
+    "campaigns": "แคมเปญ",
+    "ad_sets": "กลุ่มโฆษณา",
+    "ads": "โฆษณา",
+    "ad_name": "ชื่อโฆษณา",
+    "ad_image": "รูปโฆษณา",
+    "campaign_name": "ชื่อแคมเปญ",
+    "adset_name": "ชื่อกลุ่มโฆษณา"
+  },
+  "metrics": {
+    "spent": "จ่ายเงิน",
+    "total_spent": "ยอดใช้จ่ายทั้งหมด",
+    "new_inbox": "ข้อความใหม่",
+    "total_inbox": "ข้อความทั้งหมด",
+    "phone_leads": "ชื่อ-เบอร์",
+    "cost_per_lead": "เงินหมุน",
+    "cost_per_inbox": "เงินหมุน Inbox",
+    "thruplay": "ThruPlay",
+    "impressions": "การแสดงผล",
+    "reach": "การเข้าถึง",
+    "clicks": "คลิก",
+    "ctr": "CTR",
+    "cpm": "CPM",
+    "cpc": "CPC"
+  },
+  "facebook": {
+    "balance": "ยอดคงเหลือ Facebook",
+    "spending": "ค่าใช้จ่าย Facebook",
+    "daily_budget": "งบประมาณรายวัน",
+    "lifetime_budget": "งบประมาณตลอดอายุ"
+  },
+  "top_performers": {
+    "top_ads": "โฆษณายอดเยี่ยม",
+    "top_ads_subtitle": "นักเตะยอดเยี่ยม",
+    "top_adsets": "กลุ่มโฆษณายอดเยี่ยม",
+    "top_adsets_subtitle": "พื้นที่ลูกค้ายอดเยี่ยม",
+    "rank": "อันดับ"
+  },
+  "funnel": {
+    "tof": "TOF",
+    "tof_full": "Top of Funnel",
+    "mof": "MOF",
+    "mof_full": "Middle of Funnel",
+    "bof": "BOF",
+    "bof_full": "Bottom of Funnel"
+  },
+  "daily_summary": {
+    "title": "สรุปรายวัน",
+    "date": "วันที่",
+    "daily_report": "รายงานประจำวัน"
+  },
+  "sort": {
+    "sort_by": "เรียงตาม",
+    "by_leads": "ตามลีด",
+    "by_phone": "ตามเบอร์โทร",
+    "by_cost": "ตามราคา",
+    "by_thruplay": "ตาม ThruPlay"
+  },
+  "limit": {
+    "top_5": "Top 5",
+    "top_10": "Top 10",
+    "top_15": "Top 15",
+    "top_20": "Top 20",
+    "top_30": "Top 30",
+    "all": "ทั้งหมด"
+  },
+  "status": {
+    "active": "เปิดใช้งาน",
+    "paused": "หยุดชั่วคราว",
+    "deleted": "ลบแล้ว",
+    "archived": "เก็บถาวร"
+  },
+  "messages": {
+    "loading_data": "กำลังโหลดข้อมูล...",
+    "loading_images": "กำลังโหลดรูปภาพ...",
+    "data_updated": "อัปเดตข้อมูลแล้ว",
+    "connection_error": "ไม่สามารถเชื่อมต่อได้",
+    "no_ads_found": "ไม่พบโฆษณา",
+    "no_adsets_found": "ไม่พบกลุ่มโฆษณา",
+    "no_campaigns_found": "ไม่พบแคมเปญ"
+  }
+}

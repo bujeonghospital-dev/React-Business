@@ -183,19 +183,22 @@ class FacebookAdsService {
     }
   }
 
-  // Fetch Facebook Balance - Direct Facebook API call
+  // BJH API URL (direct - will need CORS proxy when deployed)
+  static const String bjhApiUrl = 'https://app.bjhbangkok.com/api';
+
+  // Facebook Graph API credentials
+  static const String _fbAccessToken =
+      'EAAPb1ZBYCiNcBPzNxxSUntCZCTVHyl5AkAZBIiwCmDzrWKMLU4VEHJxRve7oqUDSaMs8om9pdVWFLzUdeTbTvkGPuTeuQ4KvGFizMy3VsSid8vgmjZB8OMoLySRmXxyAUpAwyyhSqOO8tSZAU6IYpxarsXBbZCDzFdy8u279HxSXtyWMpIolRtjJEWLdmfU5SwZCsP5';
+  static const String _fbAccountId = 'act_454323590676166';
+
+  // Fetch Facebook Balance - Direct Facebook Graph API (CORS enabled for browsers)
   Future<double> fetchFacebookBalance() async {
     try {
-      const accessToken =
-          'EAAPb1ZBYCiNcBPzNxxSUntCZCTVHyl5AkAZBIiwCmDzrWKMLU4VEHJxRve7oqUDSaMs8om9pdVWFLzUdeTbTvkGPuTeuQ4KvGFizMy3VsSid8vgmjZB8OMoLySRmXxyAUpAwyyhSqOO8tSZAU6IYpxarsXBbZCDzFdy8u279HxSXtyWMpIolRtjJEWLdmfU5SwZCsP5';
-      const accountId = 'act_454323590676166';
-
       final url =
-          'https://graph.facebook.com/v24.0/$accountId?fields=account_id,name,balance,amount_spent,currency,funding_source_details&access_token=$accessToken';
-      print('🔍 Fetching Facebook Balance from Facebook API');
+          'https://graph.facebook.com/v24.0/$_fbAccountId?fields=account_id,name,balance,amount_spent,currency,funding_source_details&access_token=$_fbAccessToken';
+      print('🔍 Fetching Facebook Balance from Facebook Graph API');
 
       final response = await http.get(Uri.parse(url));
-
       print('📊 Balance Response Status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
@@ -230,39 +233,22 @@ class FacebookAdsService {
     }
   }
 
-  // Fetch Phone Count - Use Google Sheets film data
+  // Fetch Phone Count - Use Railway API (CORS enabled)
   Future<int> fetchPhoneCount() async {
     try {
-      // Use Railway API for film-data which has today's phone leads
-      final url = '$baseUrl/film-data';
+      // Use Railway API endpoint (CORS enabled)
+      final url = '$baseUrl/google-sheets-data?date_preset=today';
       print('🔍 Fetching Phone Count from: $url');
 
       final response = await http.get(Uri.parse(url));
-
       print('📞 Phone Count Response Status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        if (data['success'] == true && data['data'] != null) {
-          // Count today's entries
-          final today = DateTime.now();
-          final todayStr = '${today.day}/${today.month}/${today.year}';
-
-          final List<dynamic> entries = data['data'];
-          int count = 0;
-
-          for (var entry in entries) {
-            // Check if entry date matches today
-            final entryDate = entry['วันที่โทร'] ?? entry['date'] ?? '';
-            if (entryDate.toString().contains(todayStr) ||
-                entryDate.toString().contains(
-                    '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}')) {
-              count++;
-            }
-          }
-
-          print('✅ Phone Count: $count');
-          return count;
+        if (data['success'] == true) {
+          final total = data['total'] ?? 0;
+          print('✅ Phone Count (Today): $total');
+          return total is int ? total : int.tryParse(total.toString()) ?? 0;
         }
       }
 
@@ -271,6 +257,51 @@ class FacebookAdsService {
     } catch (e) {
       print('❌ Error fetching Phone Count: $e');
       return 0;
+    }
+  }
+
+  // Fetch Phone Leads by Date (for table display) - Use Railway API
+  Future<Map<String, int>> fetchPhoneLeadsByDate() async {
+    try {
+      // Use Railway API endpoint (CORS enabled)
+      final url = '$baseUrl/google-sheets-data?date_preset=last_30d';
+      print('🔍 Fetching Phone Leads by Date from: $url');
+
+      final response = await http.get(Uri.parse(url));
+      print('📞 Phone Leads Response Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          final Map<String, int> phoneByDate = {};
+          final List<dynamic> entries = data['data'];
+
+          // Parse date from each entry and count per day
+          for (var entry in entries) {
+            final dateStr = entry['วันที่โทร']?.toString() ??
+                entry['date']?.toString() ??
+                '';
+            if (dateStr.isNotEmpty) {
+              // Convert DD/MM/YYYY to YYYY-MM-DD
+              final parts = dateStr.split('/');
+              if (parts.length == 3) {
+                final formattedDate =
+                    '${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}';
+                phoneByDate[formattedDate] =
+                    (phoneByDate[formattedDate] ?? 0) + 1;
+              }
+            }
+          }
+
+          print('✅ Phone Leads by Date: $phoneByDate');
+          return phoneByDate;
+        }
+      }
+
+      return {};
+    } catch (e) {
+      print('❌ Error fetching Phone Leads by Date: $e');
+      return {};
     }
   }
 

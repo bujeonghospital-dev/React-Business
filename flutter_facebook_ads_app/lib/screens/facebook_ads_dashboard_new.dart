@@ -4,11 +4,17 @@ import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'dart:async';
 import '../models/ad_insight.dart';
 import '../services/facebook_ads_service.dart';
-import '../widgets/performance_card.dart';
+import '../services/language_service.dart';
 import '../widgets/date_range_picker.dart' as custom_picker;
 import '../widgets/daily_summary_table.dart';
-import '../widgets/top_ads_section.dart';
+import '../widgets/top_ads_table.dart';
+import '../widgets/top_adset_table.dart';
 import '../widgets/ad_preview_modal.dart';
+import '../widgets/phone_leads_card.dart';
+import '../widgets/inbox_stats_card.dart';
+import '../widgets/facebook_spending_card.dart';
+import '../widgets/language_switcher.dart';
+import 'video_player_demo_screen.dart';
 
 class FacebookAdsDashboardNew extends StatefulWidget {
   const FacebookAdsDashboardNew({Key? key}) : super(key: key);
@@ -29,6 +35,7 @@ class _FacebookAdsDashboardNewState extends State<FacebookAdsDashboardNew>
   Map<String, AdCreative> _adCreatives = {};
   Map<String, int> _phoneLeads = {};
   List<DailySummary> _dailySummaries = [];
+  Map<String, int> _phoneLeadsByDate = {}; // Phone leads by date for table
 
   // Loading states
   bool _isLoading = true;
@@ -122,6 +129,7 @@ class _FacebookAdsDashboardNewState extends State<FacebookAdsDashboardNew>
           endDate: _dateRange == 'custom' ? _formatDate(_customDateEnd!) : null,
         ),
         _service.fetchDailySummaryData(),
+        _service.fetchPhoneLeadsByDate(), // Fetch phone leads by date
       ]);
 
       print('📦 All data fetched!');
@@ -130,6 +138,7 @@ class _FacebookAdsDashboardNewState extends State<FacebookAdsDashboardNew>
       print('📊 Google Sheets: ${results[2]}');
       print('📈 Google Ads: ${results[3]}');
       print('📅 Daily Summaries: ${(results[4] as List).length} items');
+      print('📞 Phone Leads by Date: ${(results[5] as Map).length} days');
 
       setState(() {
         _insights = insights;
@@ -138,6 +147,7 @@ class _FacebookAdsDashboardNewState extends State<FacebookAdsDashboardNew>
         _googleSheetsData = results[2] as int;
         _googleAdsData = results[3] as int;
         _dailySummaries = results[4] as List<DailySummary>;
+        _phoneLeadsByDate = results[5] as Map<String, int>;
         _isLoading = false;
       });
 
@@ -209,6 +219,53 @@ class _FacebookAdsDashboardNewState extends State<FacebookAdsDashboardNew>
 
   int _getTotalInbox() {
     return _insights.fold(0, (sum, ad) => sum + ad.totalMessagingConnection);
+  }
+
+  // Get inbox data as list of maps for InboxStatsCard
+  List<Map<String, dynamic>> _getInboxByDateList() {
+    Map<String, Map<String, int>> dailyInbox = {};
+    for (var summary in _dailySummaries) {
+      final date = summary.date;
+      dailyInbox[date] ??= {'new': 0, 'total': 0};
+      dailyInbox[date]!['new'] =
+          (dailyInbox[date]!['new'] ?? 0) + summary.newInbox;
+      dailyInbox[date]!['total'] =
+          (dailyInbox[date]!['total'] ?? 0) + summary.totalInbox;
+    }
+
+    final sortedDates = dailyInbox.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    return sortedDates.skip(1).take(10).map((date) {
+      final d = DateTime.tryParse(date);
+      final formattedDate = d != null ? '${d.day}/${d.month}' : date;
+      return {
+        'date': formattedDate,
+        'newInbox': dailyInbox[date]!['new'] ?? 0,
+        'totalInbox': dailyInbox[date]!['total'] ?? 0,
+      };
+    }).toList();
+  }
+
+  // Get spend data as list of maps for FacebookSpendingCard
+  List<Map<String, dynamic>> _getSpendByDateList() {
+    Map<String, double> dailySpend = {};
+    for (var summary in _dailySummaries) {
+      final date = summary.date;
+      dailySpend[date] = (dailySpend[date] ?? 0) + summary.totalSpend;
+    }
+
+    final sortedDates = dailySpend.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    return sortedDates.skip(1).take(7).map((date) {
+      final d = DateTime.tryParse(date);
+      final formattedDate = d != null ? '${d.day}/${d.month}' : date;
+      return {
+        'date': formattedDate,
+        'spent': dailySpend[date] ?? 0.0,
+      };
+    }).toList();
   }
 
   void _showDatePicker() {
@@ -398,54 +455,83 @@ class _FacebookAdsDashboardNewState extends State<FacebookAdsDashboardNew>
                         horizontal: 12, vertical: 12),
                     child: Row(
                       children: [
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => Navigator.of(context).pop(),
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 10),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Colors.blue[500]!,
-                                    Colors.blue[600]!
+                        Flexible(
+                          flex: 0,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => Navigator.of(context).pop(),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.blue[500]!,
+                                      Colors.blue[600]!
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.blue.withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
                                   ],
                                 ),
-                                borderRadius: BorderRadius.circular(8),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.blue.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    '←',
-                                    style: TextStyle(
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.arrow_back,
                                       color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
+                                      size: 18,
                                     ),
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Back to Home',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),
+                        ),
+                        const Spacer(),
+                        // Video Player Demo Button
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const VideoPlayerDemoScreen(),
+                                ),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.red[50],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.red[200]!,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.play_circle_fill,
+                                color: Colors.red[600],
+                                size: 24,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Language Switcher
+                        const LanguageSwitcher(
+                          size: 'small',
+                          showLabels: true,
+                          enableParticles: true,
                         ),
                       ],
                     ),
@@ -462,28 +548,26 @@ class _FacebookAdsDashboardNewState extends State<FacebookAdsDashboardNew>
                   const SizedBox(height: 16),
                   _buildDailySummarySection(),
 
-                  // Top Ads Section
+                  // TOP 20 Ads Table
                   const SizedBox(height: 16),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: TopAdsSection(
+                    child: TopAdsTable(
                       insights: _insights,
                       adCreatives: _adCreatives,
                       phoneLeads: _phoneLeads,
-                      sortBy: _topAdsSortBy,
-                      limit: _topAdsLimit,
                       isCreativesLoading: _isCreativesLoading,
-                      onSortChanged: (sortBy) {
-                        setState(() {
-                          _topAdsSortBy = sortBy;
-                        });
-                      },
-                      onLimitChanged: (limit) {
-                        setState(() {
-                          _topAdsLimit = limit;
-                        });
-                      },
                       onAdTap: _showAdPreview,
+                    ),
+                  ),
+
+                  // TOP 20 Ad Set Table
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: TopAdSetTable(
+                      insights: _insights,
+                      phoneLeads: _phoneLeads,
                     ),
                   ),
 
@@ -626,105 +710,330 @@ class _FacebookAdsDashboardNewState extends State<FacebookAdsDashboardNew>
   Widget _buildPerformanceCardsSection() {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
-    final cardHeight = isMobile ? 100.0 : 140.0;
+    final isTablet = screenWidth >= 600 && screenWidth < 900;
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16),
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // First Row: Total Spend + New/Total Inbox
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: cardHeight,
-                  child: PerformanceCard(
-                    title: '💰 Total Spend',
-                    value: _formatCurrency(_getTotalSpend()),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.blue[500]!,
-                        Colors.blue[600]!,
-                        Colors.blue[700]!
-                      ],
-                    ),
+          // 3-Column Layout like page.tsx
+          if (isMobile)
+            // Mobile: Stack vertically
+            Column(
+              children: [
+                // Facebook Spending Card
+                FacebookSpendingCard(
+                  facebookBalance: _facebookBalance,
+                  totalSpend: _getTotalSpend(),
+                  spendByDate: _getSpendByDateList(),
+                ),
+                const SizedBox(height: 12),
+                // New Inbox Stats Card
+                InboxStatsCard(
+                  newInbox: _getTotalNewInbox(),
+                  totalInbox: _getTotalInbox(),
+                  inboxByDate: _getInboxByDateList(),
+                ),
+                const SizedBox(height: 12),
+                // New Phone Leads Card
+                PhoneLeadsCard(
+                  phoneCount: _phoneCount,
+                  phoneLeadsByDate: _phoneLeadsByDate,
+                ),
+              ],
+            )
+          else
+            // Tablet/Desktop: 3 columns
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Facebook Spending Card
+                Expanded(
+                  child: FacebookSpendingCard(
+                    facebookBalance: _facebookBalance,
+                    totalSpend: _getTotalSpend(),
+                    spendByDate: _getSpendByDateList(),
                   ),
                 ),
-              ),
-              SizedBox(width: isMobile ? 8 : 12),
-              Expanded(
-                child: SizedBox(
-                  height: cardHeight,
-                  child: PerformanceCard(
-                    title: '💬 New / Total Inbox',
-                    value:
-                        '${_formatNumber(_getTotalNewInbox())} / ${_formatNumber(_getTotalInbox())}',
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.teal[500]!,
-                        Colors.teal[600]!,
-                        Colors.cyan[600]!
-                      ],
-                    ),
-                    isSmallText: true,
+                const SizedBox(width: 12),
+                // New Inbox Stats Card
+                Expanded(
+                  child: InboxStatsCard(
+                    newInbox: _getTotalNewInbox(),
+                    totalInbox: _getTotalInbox(),
+                    inboxByDate: _getInboxByDateList(),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 12),
+                // New Phone Leads Card
+                Expanded(
+                  child: PhoneLeadsCard(
+                    phoneCount: _phoneCount,
+                    phoneLeadsByDate: _phoneLeadsByDate,
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricCardWithTable({
+    required String title1,
+    required String value1,
+    String? title2,
+    String? value2,
+    required Gradient gradient,
+    required List<List<String>> tableData,
+    required List<String> tableHeaders,
+    required Color tableColor,
+  }) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(isMobile ? 16 : 24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
-          SizedBox(height: isMobile ? 8 : 16),
-          // Second Row: FB Balance + Phone Leads
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: cardHeight,
-                  child: PerformanceCard(
-                    title: '💵 FB Balance',
-                    value: _formatCurrency(_facebookBalance),
-                    subtitle: 'Facebook Balance',
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        const Color(0xFF00C853),
-                        const Color(0xFF00E676),
-                        Colors.green[700]!,
-                      ],
+        ],
+      ),
+      child: Column(
+        children: [
+          // Gradient Card
+          Container(
+            padding: EdgeInsets.all(isMobile ? 16 : 24),
+            decoration: BoxDecoration(
+              gradient: gradient,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(isMobile ? 16 : 24),
+                topRight: Radius.circular(isMobile ? 16 : 24),
+              ),
+            ),
+            child: title2 != null
+                ? Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Text(
+                              title1,
+                              style: TextStyle(
+                                fontSize: isMobile ? 11 : 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                value1,
+                                style: TextStyle(
+                                  fontSize: isMobile ? 18 : 26,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Text(
+                              title2,
+                              style: TextStyle(
+                                fontSize: isMobile ? 11 : 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                value2!,
+                                style: TextStyle(
+                                  fontSize: isMobile ? 18 : 26,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      Text(
+                        title1,
+                        style: TextStyle(
+                          fontSize: isMobile ? 14 : 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        value1,
+                        style: TextStyle(
+                          fontSize: isMobile ? 28 : 36,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+          // Table
+          Container(
+            constraints: BoxConstraints(maxHeight: isMobile ? 100 : 120),
+            decoration: BoxDecoration(
+              color: tableColor.withOpacity(0.05),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(isMobile ? 16 : 24),
+                bottomRight: Radius.circular(isMobile ? 16 : 24),
+              ),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  // Header
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 8 : 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: tableColor.withOpacity(0.1),
+                    ),
+                    child: Row(
+                      children: tableHeaders
+                          .map((h) => Expanded(
+                                child: Text(
+                                  h,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 10 : 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ))
+                          .toList(),
                     ),
                   ),
-                ),
+                  // Data Rows
+                  ...tableData.take(5).map((row) => Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 8 : 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(color: Colors.grey[200]!),
+                          ),
+                        ),
+                        child: Row(
+                          children: row
+                              .asMap()
+                              .entries
+                              .map((entry) => Expanded(
+                                    child: Text(
+                                      entry.value,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: isMobile ? 10 : 12,
+                                        fontWeight: entry.key == 0
+                                            ? FontWeight.normal
+                                            : FontWeight.w600,
+                                        color: entry.key == 0
+                                            ? Colors.grey[700]
+                                            : tableColor.withOpacity(0.85),
+                                      ),
+                                    ),
+                                  ))
+                              .toList(),
+                        ),
+                      )),
+                ],
               ),
-              SizedBox(width: isMobile ? 8 : 12),
-              Expanded(
-                child: SizedBox(
-                  height: cardHeight,
-                  child: PerformanceCard(
-                    title: '📞 Phone Leads',
-                    value: _formatNumber(_phoneCount),
-                    subtitle: 'Phone Leads Today',
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.purple[500]!,
-                        Colors.purple[600]!,
-                        Colors.indigo[700]!,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),
     );
+  }
+
+  List<List<String>> _buildSpendTableData() {
+    Map<String, double> dailySpend = {};
+    for (var summary in _dailySummaries) {
+      final date = summary.date;
+      dailySpend[date] = (dailySpend[date] ?? 0) + summary.totalSpend;
+    }
+
+    final sortedDates = dailySpend.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    return sortedDates.skip(1).take(10).map((date) {
+      final d = DateTime.tryParse(date);
+      final formattedDate = d != null ? '${d.day}/${d.month}' : date;
+      return [formattedDate, _formatCurrency(dailySpend[date]!)];
+    }).toList();
+  }
+
+  List<List<String>> _buildInboxTableData() {
+    Map<String, Map<String, int>> dailyInbox = {};
+    for (var summary in _dailySummaries) {
+      final date = summary.date;
+      dailyInbox[date] ??= {'new': 0, 'total': 0};
+      dailyInbox[date]!['new'] =
+          (dailyInbox[date]!['new'] ?? 0) + summary.newInbox;
+      dailyInbox[date]!['total'] =
+          (dailyInbox[date]!['total'] ?? 0) + summary.totalInbox;
+    }
+
+    final sortedDates = dailyInbox.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    return sortedDates.skip(1).take(10).map((date) {
+      final d = DateTime.tryParse(date);
+      final formattedDate = d != null ? '${d.day}/${d.month}' : date;
+      return [
+        formattedDate,
+        '${dailyInbox[date]!['new']}',
+        '${dailyInbox[date]!['total']}',
+      ];
+    }).toList();
+  }
+
+  List<List<String>> _buildPhoneTableData() {
+    if (_phoneLeadsByDate.isEmpty) {
+      return [
+        ['Today', '$_phoneCount'],
+      ];
+    }
+
+    // Sort dates descending
+    final sortedDates = _phoneLeadsByDate.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    return sortedDates.take(10).map((date) {
+      final d = DateTime.tryParse(date);
+      final formattedDate = d != null ? '${d.day}/${d.month}' : date;
+      return [formattedDate, '${_phoneLeadsByDate[date]}'];
+    }).toList();
   }
 
   Widget _buildDailySummarySection() {
@@ -735,6 +1044,7 @@ class _FacebookAdsDashboardNewState extends State<FacebookAdsDashboardNew>
       padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16),
       child: DailySummaryTable(
         summaries: _dailySummaries,
+        phoneLeadsByDate: _phoneLeadsByDate,
       ),
     );
   }
@@ -757,65 +1067,6 @@ class _FacebookAdsDashboardNewState extends State<FacebookAdsDashboardNew>
       ),
       child: Column(
         children: [
-          // Header with Gradient - Matching page.tsx
-          Container(
-            padding: EdgeInsets.all(isMobile ? 16 : 24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.blue[600]!,
-                  Colors.indigo[600]!,
-                  Colors.purple[600]!,
-                ],
-              ),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(isMobile ? 16 : 24),
-                topRight: Radius.circular(isMobile ? 16 : 24),
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '📋 Report - Last 30 Days',
-                    style: TextStyle(
-                      fontSize: isMobile ? 16 : 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (isMobile)
-                  Text(
-                    '👉 Scroll',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.white.withOpacity(0.75),
-                    ),
-                  ),
-                if (!isMobile) const SizedBox(width: 12),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${_insights.length} items',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
           // View Mode Tabs - Matching page.tsx
           Container(
             padding: EdgeInsets.all(isMobile ? 12 : 16),

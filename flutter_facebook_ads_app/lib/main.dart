@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'screens/facebook_ads_dashboard_new.dart';
+import 'services/language_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize easy_localization
+  await EasyLocalization.ensureInitialized();
+
+  // Initialize language service
+  await LanguageService.instance.initialize();
 
   // Set portrait orientation only
   SystemChrome.setPreferredOrientations([
@@ -21,7 +30,15 @@ void main() {
     ),
   );
 
-  runApp(const FacebookAdsManagerApp());
+  runApp(
+    EasyLocalization(
+      supportedLocales: AppLocales.supportedLocales,
+      path: AppLocales.translationsPath,
+      fallbackLocale: AppLocales.fallbackLocale,
+      startLocale: LanguageService.instance.currentLocale,
+      child: const FacebookAdsManagerApp(),
+    ),
+  );
 }
 
 class FacebookAdsManagerApp extends StatelessWidget {
@@ -29,9 +46,23 @@ class FacebookAdsManagerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Set context for language service to enable easy_localization integration
+    LanguageService.instance.setContext(context);
+
     return MaterialApp(
       title: 'Facebook Ads Manager',
       debugShowCheckedModeBanner: false,
+
+      // Localization configuration
+      localizationsDelegates: [
+        ...context.localizationDelegates,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: context.supportedLocales,
+      locale: context.locale,
+
       theme: ThemeData(
         primarySwatch: Colors.blue,
         primaryColor: const Color(0xFF1877F2),

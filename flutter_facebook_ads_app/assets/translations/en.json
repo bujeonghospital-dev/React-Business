@@ -1,0 +1,129 @@
+{
+  "app": {
+    "title": "Facebook Ads Manager",
+    "version": "Version"
+  },
+  "common": {
+    "loading": "Loading...",
+    "please_wait": "Please wait",
+    "error": "An error occurred",
+    "try_again": "Try Again",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "filter": "Filter",
+    "refresh": "Refresh",
+    "no_data": "No data available",
+    "all": "All"
+  },
+  "navigation": {
+    "back_to_home": "Back to Home",
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "profile": "Profile"
+  },
+  "language": {
+    "title": "Language",
+    "thai": "ไทย",
+    "english": "English",
+    "switch_language": "Switch Language"
+  },
+  "date": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "last_7_days": "Last 7 Days",
+    "last_14_days": "Last 14 Days",
+    "last_30_days": "Last 30 Days",
+    "this_month": "This Month",
+    "last_month": "Last Month",
+    "custom": "Custom",
+    "select_date": "Select Date",
+    "start_date": "Start Date",
+    "end_date": "End Date"
+  },
+  "ads": {
+    "campaigns": "Campaigns",
+    "ad_sets": "Ad Sets",
+    "ads": "Ads",
+    "ad_name": "Ad Name",
+    "ad_image": "Ad Image",
+    "campaign_name": "Campaign Name",
+    "adset_name": "Ad Set Name"
+  },
+  "metrics": {
+    "spent": "Spent",
+    "total_spent": "Total Spent",
+    "new_inbox": "New Inbox",
+    "total_inbox": "Total Inbox",
+    "phone_leads": "Phone Leads",
+    "cost_per_lead": "Cost/Lead",
+    "cost_per_inbox": "Cost/Inbox",
+    "thruplay": "ThruPlay",
+    "impressions": "Impressions",
+    "reach": "Reach",
+    "clicks": "Clicks",
+    "ctr": "CTR",
+    "cpm": "CPM",
+    "cpc": "CPC"
+  },
+  "facebook": {
+    "balance": "Facebook Balance",
+    "spending": "Facebook Spending",
+    "daily_budget": "Daily Budget",
+    "lifetime_budget": "Lifetime Budget"
+  },
+  "top_performers": {
+    "top_ads": "Top Ads",
+    "top_ads_subtitle": "Best Performers",
+    "top_adsets": "Top Ad Sets",
+    "top_adsets_subtitle": "Best Locations",
+    "rank": "Rank"
+  },
+  "funnel": {
+    "tof": "TOF",
+    "tof_full": "Top of Funnel",
+    "mof": "MOF",
+    "mof_full": "Middle of Funnel",
+    "bof": "BOF",
+    "bof_full": "Bottom of Funnel"
+  },
+  "daily_summary": {
+    "title": "Daily Summary",
+    "date": "Date",
+    "daily_report": "Daily Report"
+  },
+  "sort": {
+    "sort_by": "Sort By",
+    "by_leads": "By Leads",
+    "by_phone": "By Phone",
+    "by_cost": "By Cost",
+    "by_thruplay": "By ThruPlay"
+  },
+  "limit": {
+    "top_5": "Top 5",
+    "top_10": "Top 10",
+    "top_15": "Top 15",
+    "top_20": "Top 20",
+    "top_30": "Top 30",
+    "all": "All"
+  },
+  "status": {
+    "active": "Active",
+    "paused": "Paused",
+    "deleted": "Deleted",
+    "archived": "Archived"
+  },
+  "messages": {
+    "loading_data": "Loading data...",
+    "loading_images": "Loading images...",
+    "data_updated": "Data updated",
+    "connection_error": "Connection error",
+    "no_ads_found": "No ads found",
+    "no_adsets_found": "No ad sets found",
+    "no_campaigns_found": "No campaigns found"
+  }
+}

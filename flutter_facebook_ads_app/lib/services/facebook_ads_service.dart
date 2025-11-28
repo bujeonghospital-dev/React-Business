@@ -83,9 +83,13 @@ class FacebookAdsService {
   Future<AdCreative?> fetchAdCreative(String adId) async {
     try {
       // Use Next.js API for creative data since Railway doesn't have this endpoint
-      final url = '$nextApiUrl/facebook-ads-creative?ad_id=$adId';
-      print('🖼️ Fetching creative for ad: $adId from: $url');
-      final response = await http.get(Uri.parse(url));
+      // Build URI properly to avoid encoding issues
+      final uri =
+          Uri.https('tpp-thanakon.store', '/api/facebook-ads-creative', {
+        'ad_id': adId,
+      });
+      print('🖼️ Fetching creative for ad: $adId from: $uri');
+      final response = await http.get(uri);
 
       if (response.statusCode != 200) {
         print(

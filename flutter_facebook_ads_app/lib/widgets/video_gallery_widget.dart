@@ -45,7 +45,7 @@ class _VideoGalleryWidgetState extends State<VideoGalleryWidget> {
 
         // Debug log for each ad
         print(
-            '📷 Ad ${ad.adId}: thumbnail=${creative.thumbnailUrl}, image=${creative.imageUrl}, video=${creative.videoId}');
+            '📷 Ad ${ad.adId}: thumbnail=${creative.thumbnailUrl}, image=${creative.imageUrl}, video=${creative.videoId}, source=${creative.videoSource}');
 
         // Include ads even if they don't have thumbnail - we'll show placeholder
         videoAds.add(VideoAdData(
@@ -55,6 +55,7 @@ class _VideoGalleryWidgetState extends State<VideoGalleryWidget> {
           thumbnailUrl:
               thumbnailUrl ?? '', // Empty string will trigger placeholder
           videoId: creative.videoId,
+          videoSource: creative.videoSource, // Direct playable URL
           isVideo: hasVideo,
           spend: ad.spend,
           leads: ad.totalMessagingConnection,
@@ -379,18 +380,26 @@ class _VideoGalleryWidgetState extends State<VideoGalleryWidget> {
   }
 
   void _playVideo(VideoAdData data) {
+    final videoUrl = _getPlayableVideoUrl(data);
+    print('🎬 Playing video: $videoUrl');
+    
     FullscreenVideoPlayer.show(
       context,
-      videoUrl: _constructVideoUrl(data.videoId),
+      videoUrl: videoUrl,
       title: data.adName,
     );
   }
 
-  String _constructVideoUrl(String? videoId) {
-    if (videoId == null || videoId.isEmpty) {
-      return 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+  String _getPlayableVideoUrl(VideoAdData data) {
+    // Priority 1: Use direct video source URL if available
+    if (data.videoSource != null && data.videoSource!.isNotEmpty) {
+      print('✅ Using videoSource: ${data.videoSource}');
+      return data.videoSource!;
     }
-    return 'https://www.facebook.com/video.php?v=$videoId';
+    
+    // Priority 2: Fallback to sample video for demo
+    print('⚠️ No videoSource available, using sample video');
+    return 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
   }
 }
 
@@ -590,12 +599,48 @@ class VideoCard extends StatelessWidget {
   }
 
   Widget _buildThumbnailImage(String imageUrl) {
+    // If the URL is empty or placeholder, show a styled placeholder
+    if (imageUrl.isEmpty || imageUrl == _placeholderImage) {
+      return _buildPlaceholderWidget();
+    }
+
+    // Use Image.network as fallback if CachedNetworkImage fails
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      headers: const {
+        'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+        'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) {
+          print('✅ Image loaded successfully: ${imageUrl.substring(0, 50)}...');
+          return child;
+        }
+        return Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: Container(color: Colors.grey[300]),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        print('❌ Image load error for URL: $imageUrl');
+        print('❌ Error details: $error');
+        // Try fallback with CachedNetworkImage
+        return _buildFallbackImage(imageUrl);
+      },
+    );
+  }
+
+  Widget _buildFallbackImage(String imageUrl) {
     return CachedNetworkImage(
       imageUrl: imageUrl,
       fit: BoxFit.cover,
       httpHeaders: const {
         'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
-        'User-Agent': 'Mozilla/5.0 (compatible; FlutterApp/1.0)',
+        'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       },
       placeholder: (context, url) => Shimmer.fromColors(
         baseColor: Colors.grey[300]!,
@@ -603,30 +648,40 @@ class VideoCard extends StatelessWidget {
         child: Container(color: Colors.grey[300]),
       ),
       errorWidget: (context, url, error) {
-        print('❌ Image load error for URL: $url');
-        print('❌ Error details: $error');
-        return Container(
-          color: Colors.grey[100],
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.image_not_supported_outlined,
-                color: Colors.grey[400],
-                size: 32,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Ad Image',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Colors.grey[500],
-                ),
-              ),
-            ],
-          ),
-        );
+        print('❌ CachedNetworkImage also failed for: $url');
+        return _buildPlaceholderWidget();
       },
+    );
+  }
+
+  Widget _buildPlaceholderWidget() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.purple[100]!, Colors.blue[100]!],
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.campaign_rounded,
+            color: Colors.purple[300],
+            size: 36,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Ad Preview',
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.purple[400],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -637,6 +692,7 @@ class VideoAdData {
   final String campaignName;
   final String thumbnailUrl;
   final String? videoId;
+  final String? videoSource; // Direct playable video URL from Facebook
   final bool isVideo;
   final double spend;
   final int leads;
@@ -647,6 +703,7 @@ class VideoAdData {
     required this.campaignName,
     required this.thumbnailUrl,
     this.videoId,
+    this.videoSource,
     required this.isVideo,
     required this.spend,
     required this.leads,

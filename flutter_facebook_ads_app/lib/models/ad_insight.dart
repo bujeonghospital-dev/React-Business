@@ -27,6 +27,7 @@ class AdCreative {
   final String? thumbnailUrl;
   final String? imageUrl;
   final String? videoId;
+  final String? videoSource; // Direct playable video URL
   final dynamic objectStorySpec;
   final String? effectiveObjectStoryId;
 
@@ -35,6 +36,7 @@ class AdCreative {
     this.thumbnailUrl,
     this.imageUrl,
     this.videoId,
+    this.videoSource,
     this.objectStorySpec,
     this.effectiveObjectStoryId,
   });
@@ -72,11 +74,16 @@ class AdCreative {
       }
     }
 
+    // Get video source URL for direct playback
+    String? videoSource = json['video_source'];
+    print('   - video_source: $videoSource');
+
     return AdCreative(
       id: json['id']?.toString() ?? '',
       thumbnailUrl: json['thumbnail_url'],
       imageUrl: imageUrl,
       videoId: json['video_id'],
+      videoSource: videoSource,
       objectStorySpec: json['object_story_spec'],
       effectiveObjectStoryId: json['effective_object_story_id'],
     );
@@ -88,6 +95,7 @@ class AdCreative {
       'thumbnail_url': thumbnailUrl,
       'image_url': imageUrl,
       'video_id': videoId,
+      'video_source': videoSource,
       'object_story_spec': objectStorySpec,
       'effective_object_story_id': effectiveObjectStoryId,
     };

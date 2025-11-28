@@ -95,6 +95,13 @@ class _TopAdsTableState extends State<TopAdsTable> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 
+    // Debug: Log creatives count
+    debugPrint(
+        '[TopAdsTable] Building with ${widget.adCreatives.length} creatives');
+    debugPrint(
+        '[TopAdsTable] isCreativesLoading: ${widget.isCreativesLoading}');
+    debugPrint('[TopAdsTable] topAds count: ${topAds.length}');
+
     if (topAds.isEmpty) {
       return Container(
         decoration: BoxDecoration(
@@ -315,6 +322,21 @@ class _TopAdsTableState extends State<TopAdsTable> {
                 final costPerConnection = ad.getCostPerAction(
                     'onsite_conversion.total_messaging_connection');
                 final thruPlay = _getThruPlay(ad);
+
+                // Debug logging for thumbnail URLs
+                if (index < 5) {
+                  debugPrint('[TopAdsTable] Row $index - adId: ${ad.adId}');
+                  debugPrint(
+                      '[TopAdsTable] Row $index - creative found: ${creative != null}');
+                  if (creative != null) {
+                    debugPrint(
+                        '[TopAdsTable] Row $index - thumbnailUrl: ${creative.thumbnailUrl}');
+                    debugPrint(
+                        '[TopAdsTable] Row $index - imageUrl: ${creative.imageUrl}');
+                  }
+                  debugPrint(
+                      '[TopAdsTable] Row $index - final thumbnailUrl: $thumbnailUrl');
+                }
 
                 return Material(
                   color: Colors.transparent,
@@ -549,35 +571,61 @@ class _TopAdsTableState extends State<TopAdsTable> {
 
   Widget _buildThumbnail(String? thumbnailUrl, bool isMobile) {
     final size = isMobile ? 40.0 : 48.0;
+
+    // Check if URL is valid and not empty
+    final validUrl = thumbnailUrl != null &&
+        thumbnailUrl.isNotEmpty &&
+        (thumbnailUrl.startsWith('http://') ||
+            thumbnailUrl.startsWith('https://'));
+
+    // Nice placeholder widget for when no image is available
+    Widget buildPlaceholder({bool isError = false}) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isError
+                ? [Colors.orange[100]!, Colors.orange[200]!]
+                : [Colors.blue[50]!, Colors.blue[100]!],
+          ),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Center(
+          child: Icon(
+            isError ? Icons.image_not_supported_outlined : Icons.campaign,
+            size: size * 0.5,
+            color: isError ? Colors.orange[400] : Colors.blue[400],
+          ),
+        ),
+      );
+    }
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(6),
-      child: thumbnailUrl != null
+      child: validUrl
           ? CachedNetworkImage(
               imageUrl: thumbnailUrl,
               width: size,
               height: size,
               fit: BoxFit.cover,
+              httpHeaders: const {
+                'Accept': 'image/*',
+                'User-Agent': 'Flutter App',
+              },
               placeholder: (context, url) => Shimmer.fromColors(
                 baseColor: Colors.grey[300]!,
                 highlightColor: Colors.grey[100]!,
                 child:
                     Container(width: size, height: size, color: Colors.white),
               ),
-              errorWidget: (context, url, error) => Container(
-                width: size,
-                height: size,
-                color: Colors.grey[200],
-                child: Icon(Icons.image,
-                    size: size * 0.5, color: Colors.grey[400]),
-              ),
+              errorWidget: (context, url, error) {
+                return buildPlaceholder(isError: true);
+              },
             )
-          : Container(
-              width: size,
-              height: size,
-              color: Colors.grey[200],
-              child: Icon(Icons.image_outlined,
-                  size: size * 0.5, color: Colors.grey[400]),
-            ),
+          : buildPlaceholder(),
     );
   }
 }

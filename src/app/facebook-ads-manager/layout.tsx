@@ -19,4 +19,4 @@ export default function FacebookAdsManagerLayout({
   children: React.ReactNode;
 }) {
   return <>{children}</>;
-}
+}

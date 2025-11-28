@@ -362,7 +362,7 @@ export default function CustomerRegistrationModal({
         return;
       }
       const normalizedItems = Array.isArray(result.data)
-        ? result.data.map((item) => ({
+        ? result.data.map((item: OPDServiceItem) => ({
           ...item,
           saleprice: normalizeSalepriceValue(item.saleprice),
         }))

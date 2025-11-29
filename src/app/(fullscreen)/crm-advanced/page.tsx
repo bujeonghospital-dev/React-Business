@@ -155,9 +155,21 @@ interface CRMRecord {
   proposedAmount: number;
   star_flag: string;
   note: string | null;
+  hasCustomerProfile?: boolean;
+  customerIdAll?: string;
   surgery_date?: string;
   consult_date?: string;
   displayDate?: string;
+}
+
+interface ItemGroup {
+  groupcode: string;
+  groupname: string;
+}
+
+interface ItemService {
+  itemcode: string;
+  itemname: string;
 }
 
 interface HREmployee {
@@ -258,6 +270,15 @@ export default function CRMAdvancedPage() {
   const [editingAttendance, setEditingAttendance] =
     useState<HRAttendance | null>(null);
   const [noteModalRecord, setNoteModalRecord] = useState<CRMRecord | null>(null);
+  const [itemGroups, setItemGroups] = useState<ItemGroup[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [groupsError, setGroupsError] = useState<string | null>(null);
+  const [selectedGroupForServices, setSelectedGroupForServices] =
+    useState<ItemGroup | null>(null);
+  const [groupServiceItems, setGroupServiceItems] = useState<ItemService[]>([]);
+  const [serviceModalVisible, setServiceModalVisible] = useState(false);
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [serviceError, setServiceError] = useState<string | null>(null);
 
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [customerForm, setCustomerForm] = useState<CustomerFormData | null>(
@@ -855,6 +876,68 @@ export default function CRMAdvancedPage() {
     setSelectedDateRecords([]);
     setSelectedDateStr("");
   };
+
+  const needsItemGroupSection =
+    showPopup && selectedDateRecords.some((record) => record.hasCustomerProfile);
+
+  const fetchItemGroups = async () => {
+    setGroupsLoading(true);
+    setGroupsError(null);
+    try {
+      const response = await fetch("/api/b-item-groups");
+      const result = await response.json();
+      if (!response.ok || result.success === false) {
+        throw new Error(result.error || "ไม่พบกลุ่มบริการ");
+      }
+      setItemGroups(Array.isArray(result.data) ? result.data : []);
+    } catch (error: any) {
+      console.error("Error loading item groups:", error);
+      setGroupsError(error?.message || "ไม่สามารถโหลดกลุ่มบริการได้");
+    } finally {
+      setGroupsLoading(false);
+    }
+  };
+
+  const openGroupServiceModal = async (group: ItemGroup) => {
+    setSelectedGroupForServices(group);
+    setGroupServiceItems([]);
+    setServiceError(null);
+    setServiceModalVisible(true);
+    setServicesLoading(true);
+    try {
+      const response = await fetch(
+        `/api/b-item-services?groupCode=${encodeURIComponent(group.groupcode)}`
+      );
+      const result = await response.json();
+      if (!response.ok || result.success === false) {
+        throw new Error(result.error || "ไม่พบรายการบริการ");
+      }
+      setGroupServiceItems(Array.isArray(result.data) ? result.data : []);
+    } catch (error: any) {
+      console.error("Error loading item services:", error);
+      setServiceError(error?.message || "ไม่สามารถโหลดรายการบริการได้");
+    } finally {
+      setServicesLoading(false);
+    }
+  };
+
+  const closeServiceModal = () => {
+    setServiceModalVisible(false);
+    setServicesLoading(false);
+    setGroupServiceItems([]);
+    setSelectedGroupForServices(null);
+    setServiceError(null);
+  };
+
+  useEffect(() => {
+    if (!needsItemGroupSection) {
+      return;
+    }
+    if (itemGroups.length > 0 || groupsLoading) {
+      return;
+    }
+    fetchItemGroups();
+  }, [needsItemGroupSection, itemGroups.length, groupsLoading]);
 
   const openNoteModal = (record: CRMRecord) => {
     const noteValue = record.note?.trim();
@@ -2170,6 +2253,11 @@ export default function CRMAdvancedPage() {
                               <span className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-full text-xs font-bold shadow-lg transform hover:scale-105 transition-transform">
                                 {record.status}
                               </span>
+                              {record.status.trim() === "นัดพร้อมทำ" && record.hasCustomerProfile && (
+                                <div className="mt-2 inline-flex items-center justify-center rounded-full bg-emerald-500/90 text-white text-xs font-semibold px-4 py-2 shadow-lg">
+                                  เปิด OPD แล้ว
+                                </div>
+                              )}
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
                               <button
@@ -2644,6 +2732,11 @@ export default function CRMAdvancedPage() {
                       <span className="inline-block px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full text-xs font-bold">
                         {record.status}
                       </span>
+                      {record.status.trim() === "นัดพร้อมทำ" && record.hasCustomerProfile && (
+                        <div className="mt-1 inline-flex items-center justify-center rounded-full bg-emerald-500/90 text-white text-xs font-semibold px-4 py-2 shadow-lg">
+                          เปิด OPD แล้ว
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -2760,6 +2853,42 @@ export default function CRMAdvancedPage() {
               <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-4 border-2 border-purple-300">
                 <div className="flex justify-between items-center">
                   <div>
+
+                    {needsItemGroupSection && (
+                      <div className="mt-4 bg-white/80 border border-gray-200 rounded-2xl p-4 shadow-inner space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-gray-700">
+                              เลือกบริการจาก Item Group
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              กลุ่มบริการจากตาราง b_itemgroup
+                            </p>
+                          </div>
+                          {groupsLoading && (
+                            <span className="text-xs text-slate-500">กำลังโหลด...</span>
+                          )}
+                        </div>
+                        {groupsError && (
+                          <p className="text-xs text-red-600">{groupsError}</p>
+                        )}
+                        <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+                          {!groupsLoading && itemGroups.length === 0 && (
+                            <p className="text-xs text-gray-500">ไม่พบกลุ่มบริการ</p>
+                          )}
+                          {itemGroups.map((group) => (
+                            <button
+                              type="button"
+                              key={group.groupcode}
+                              onClick={() => openGroupServiceModal(group)}
+                              className="flex-1 min-w-[160px] whitespace-nowrap rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:shadow-lg transition"
+                            >
+                              {group.groupname}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <p className="text-sm text-gray-600 font-medium">
                       รวมทั้งหมด
                     </p>
@@ -3424,6 +3553,81 @@ export default function CRMAdvancedPage() {
               <button
                 onClick={() => setShowAttendancePopup(false)}
                 className="px-6 py-3 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white rounded-lg font-bold shadow-lg transition-all"
+              >
+                ปิด
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {serviceModalVisible && selectedGroupForServices && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={closeServiceModal}
+        >
+          <div
+            className="bg-gradient-to-br from-white to-indigo-50 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 rounded-t-2xl flex justify-between items-center text-white">
+              <div>
+                <h2 className="text-2xl font-bold">
+                  บริการในกลุ่ม {selectedGroupForServices.groupname}
+                </h2>
+                <p className="text-xs text-white/80 mt-1">
+                  ข้อมูลจาก b_itemservice (groupcode = {selectedGroupForServices.groupcode})
+                </p>
+              </div>
+              <button
+                onClick={closeServiceModal}
+                className="bg-white/20 hover:bg-white/30 p-2 rounded-lg transition-all"
+              >
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {servicesLoading && (
+                <p className="text-sm text-slate-500">กำลังโหลดรายการ...</p>
+              )}
+              {serviceError && (
+                <p className="text-sm text-red-600">{serviceError}</p>
+              )}
+              {!servicesLoading && !serviceError && groupServiceItems.length === 0 && (
+                <p className="text-sm text-gray-500">ไม่พบรายการบริการในกลุ่มนี้</p>
+              )}
+              {!servicesLoading && groupServiceItems.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {groupServiceItems.map((item) => (
+                    <div
+                      key={item.itemcode}
+                      className="border border-gray-200 rounded-xl p-3 bg-white shadow-sm"
+                    >
+                      <p className="text-xs text-gray-500">{item.itemcode}</p>
+                      <p className="text-sm font-semibold text-gray-800">
+                        {item.itemname}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="bg-gray-100 p-4 rounded-b-2xl flex justify-end">
+              <button
+                onClick={closeServiceModal}
+                className="px-6 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg font-semibold shadow-lg transition-all"
               >
                 ปิด
               </button>

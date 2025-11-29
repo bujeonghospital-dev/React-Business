@@ -42,24 +42,26 @@ export async function GET(request: NextRequest) {
 
     console.log(`📡 Fetching CRM advanced data from database...`);
 
-    // สร้าง SQL query
+    // สร้าง SQL query และเชื่อมกับ n_customer เพื่อเช็กว่า n_customer.id_all มีข้อมูลแล้วหรือยัง
     let query = `
       SELECT 
-        id,
-        appointment_time,
-        status,
-        customer_name,
-        phone,
-        interested_product,
-        doctor,
-        contact_staff,
-        proposed_amount,
-        star_flag,
-        country,
-        note,
-        surgery_date,
-        consult_date
-      FROM "BJH-Server"."bjh_all_leads"
+        bl.id,
+        bl.appointment_time,
+        bl.status,
+        bl.customer_name,
+        bl.phone,
+        bl.interested_product,
+        bl.doctor,
+        bl.contact_staff,
+        bl.proposed_amount,
+        bl.star_flag,
+        bl.country,
+        bl.note,
+        bl.surgery_date,
+        bl.consult_date,
+        nc.id_all AS customer_id_all
+      FROM "BJH-Server"."bjh_all_leads" bl
+      LEFT JOIN "BJH-Server".n_customer nc ON nc.id_all = bl.id::text
       WHERE 
         1=1
     `;
@@ -70,11 +72,11 @@ export async function GET(request: NextRequest) {
     // Filter by month and year if provided (for calendar view)
     if (month && year) {
       query += ` AND (
-        (status = 'นัด Consult' AND consult_date IS NOT NULL AND EXTRACT(MONTH FROM consult_date::date) = $${paramIndex} AND EXTRACT(YEAR FROM consult_date::date) = $${
+        (bl.status = 'นัด Consult' AND bl.consult_date IS NOT NULL AND EXTRACT(MONTH FROM bl.consult_date::date) = $${paramIndex} AND EXTRACT(YEAR FROM bl.consult_date::date) = $${
         paramIndex + 1
       })
         OR 
-        (status = 'นัดพร้อมทำ' AND surgery_date IS NOT NULL AND EXTRACT(MONTH FROM surgery_date::date) = $${paramIndex} AND EXTRACT(YEAR FROM surgery_date::date) = $${
+        (bl.status = 'นัดพร้อมทำ' AND bl.surgery_date IS NOT NULL AND EXTRACT(MONTH FROM bl.surgery_date::date) = $${paramIndex} AND EXTRACT(YEAR FROM bl.surgery_date::date) = $${
         paramIndex + 1
       })
       )`;
@@ -84,9 +86,9 @@ export async function GET(request: NextRequest) {
     // Filter by specific date (when clicking on calendar day)
     else if (startDate && startDate === endDate) {
       query += ` AND (
-        (status = 'นัด Consult' AND consult_date::date = $${paramIndex}::date)
+        (bl.status = 'นัด Consult' AND bl.consult_date::date = $${paramIndex}::date)
         OR 
-        (status = 'นัดพร้อมทำ' AND surgery_date::date = $${paramIndex}::date)
+        (bl.status = 'นัดพร้อมทำ' AND bl.surgery_date::date = $${paramIndex}::date)
       )`;
       params.push(startDate);
       paramIndex += 1;
@@ -94,11 +96,11 @@ export async function GET(request: NextRequest) {
     // Filter by date range if provided (for table view)
     else if (startDate && endDate) {
       query += ` AND (
-        (status = 'นัด Consult' AND consult_date::date BETWEEN $${paramIndex}::date AND $${
+        (bl.status = 'นัด Consult' AND bl.consult_date::date BETWEEN $${paramIndex}::date AND $${
         paramIndex + 1
       }::date)
         OR 
-        (status = 'นัดพร้อมทำ' AND surgery_date::date BETWEEN $${paramIndex}::date AND $${
+        (bl.status = 'นัดพร้อมทำ' AND bl.surgery_date::date BETWEEN $${paramIndex}::date AND $${
         paramIndex + 1
       }::date)
       )`;
@@ -108,19 +110,19 @@ export async function GET(request: NextRequest) {
     // No date filter - get all records with consult_date or surgery_date
     else {
       query += ` AND (
-        (status = 'นัด Consult' AND consult_date IS NOT NULL)
+        (bl.status = 'นัด Consult' AND bl.consult_date IS NOT NULL)
         OR 
-        (status = 'นัดพร้อมทำ' AND surgery_date IS NOT NULL)
+        (bl.status = 'นัดพร้อมทำ' AND bl.surgery_date IS NOT NULL)
       )`;
     }
 
     // Order by date according to status
     query += ` ORDER BY 
       CASE 
-        WHEN status = 'นัด Consult' THEN consult_date::date
-        WHEN status = 'นัดพร้อมทำ' THEN surgery_date::date
+        WHEN bl.status = 'นัด Consult' THEN bl.consult_date::date
+        WHEN bl.status = 'นัดพร้อมทำ' THEN bl.surgery_date::date
       END ASC,
-      appointment_time ASC
+      bl.appointment_time ASC
     `;
 
     // Execute query
@@ -180,6 +182,8 @@ export async function GET(request: NextRequest) {
             note: row.note || "",
             surgery_date: formatDate(row.surgery_date),
             consult_date: formatDate(row.consult_date),
+            hasCustomerProfile: Boolean(row.customer_id_all),
+            customerIdAll: row.customer_id_all || "",
             // เพิ่ม field สำหรับแสดงในปฏิทิน
             displayDate:
               formatDate(row.surgery_date) ||

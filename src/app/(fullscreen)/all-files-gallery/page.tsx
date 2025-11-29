@@ -1830,43 +1830,39 @@ const AllFilesGalleryPage = () => {
   };
 
   // Generate video share URL for LINE inline playback
-  const generateVideoShareUrl = async (file: FileItem): Promise<string> => {
-    // For videos, create a special share URL that includes proper meta tags
+  // URL format: https://app.bjhbangkok.com/all-files-gallery/video/{base64url-encoded-path}
+  const generateVideoShareUrl = (file: FileItem): string => {
     if (file.type === 'video' || file.type === 'clip') {
-      try {
-        const response = await fetch('/api/share-video', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            videoPath: file.url,
-            videoName: file.name,
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          return data.shareUrl;
-        }
-      } catch (error) {
-        console.error('Error generating share URL:', error);
+      // Extract the path from the URL (remove domain if present)
+      let videoPath = file.url;
+      const baseUrl = window.location.origin;
+      if (videoPath.startsWith(baseUrl)) {
+        videoPath = videoPath.substring(baseUrl.length);
       }
+      if (!videoPath.startsWith('/')) {
+        videoPath = '/' + videoPath;
+      }
+
+      // Encode path as base64url for the video ID
+      const videoId = btoa(videoPath)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+
+      return `${baseUrl}/all-files-gallery/video/${videoId}`;
     }
-    // Fallback to current page URL
     return window.location.href;
   };
 
   // Share to LINE handler with video support
-  const shareToLine = async (fileId: number) => {
+  const shareToLine = (fileId: number) => {
     const file = files.find(f => f.id === fileId);
     if (!file) return;
 
     // For videos, use special share URL for inline playback
-    let shareUrl: string;
-    if (file.type === 'video' || file.type === 'clip') {
-      shareUrl = await generateVideoShareUrl(file);
-    } else {
-      shareUrl = window.location.href;
-    }
+    const shareUrl = (file.type === 'video' || file.type === 'clip')
+      ? generateVideoShareUrl(file)
+      : window.location.href;
 
     const shareText = encodeURIComponent(`📹 ${file.name} - BJH Bangkok`);
     const encodedUrl = encodeURIComponent(shareUrl);
@@ -1895,7 +1891,7 @@ const AllFilesGalleryPage = () => {
 
     // Get proper share URL for videos
     const shareUrl = (file.type === 'video' || file.type === 'clip')
-      ? await generateVideoShareUrl(file)
+      ? generateVideoShareUrl(file)
       : window.location.href;
 
     switch (platform) {

@@ -1,0 +1,5 @@
+# Video Thumbnails Directory
+
+This directory stores auto-generated video thumbnails for the marketing file gallery.
+
+Thumbnails are generated client-side from the first frame of video files and stored here for future use.

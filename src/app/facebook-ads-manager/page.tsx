@@ -142,6 +142,7 @@ interface AdCreative {
   thumbnail_url?: string;
   image_url?: string;
   video_id?: string;
+  video_source?: string; // Direct video URL from Facebook API
   object_story_spec?: any;
   effective_object_story_id?: string;
 }
@@ -261,11 +262,7 @@ export default function FacebookAdsManagerPage() {
     },
     [insights, topAdsPhoneLeads]
   );
-  // Helper function to check if local video exists
-  const getLocalVideoPath = (videoId: string | undefined): string | null => {
-    if (!videoId) return null;
-    return `/images/video/${videoId}.mp4`;
-  };
+
   // Re-parse Facebook SDK when modal opens
   useEffect(() => {
     if (showVideoModal && typeof window !== "undefined" && window.FB) {
@@ -1340,24 +1337,47 @@ export default function FacebookAdsManagerPage() {
                       </div>
                     );
                   }
-                  // ถ้ามี video_id แต่ไม่มี story_id - แสดง thumbnail และปุ่มเปิดใน Facebook
-                  if (videoId && thumbnailUrl) {
+                  // ลองใช้ local video file ก่อน (จาก /images/video/{video_id}.mp4)
+                  const localVideoPath = videoId ? `/images/video/${videoId}.mp4` : null;
+                  const videoSource = creative?.video_source;
+
+                  // ถ้ามี videoId - ลองเล่นจาก local ก่อน
+                  if (videoId) {
                     return (
                       <div className="space-y-4">
-                        {/* Video Thumbnail */}
-                        <div className="rounded-xl overflow-hidden bg-gray-100 shadow-lg relative">
-                          <img
-                            src={thumbnailUrl}
-                            alt={selectedAdForPreview.ad_name}
-                            className="w-full h-auto"
+                        {/* Video Player - ลองจาก local ก่อน */}
+                        <div className="rounded-xl overflow-hidden bg-black shadow-lg">
+                          <video
+                            controls
+                            autoPlay
+                            className="w-full h-auto max-h-[60vh]"
+                            poster={thumbnailUrl}
                             onError={(e) => {
-                              (e.target as HTMLImageElement).style.display =
-                                "none";
+                              console.log("❌ [Video Error] Local video not found, trying Facebook source");
+                              const videoEl = e.target as HTMLVideoElement;
+                              // ถ้า local ไม่มี ลองใช้ video_source จาก Facebook
+                              if (videoSource && videoEl.src !== videoSource) {
+                                videoEl.src = videoSource;
+                              } else {
+                                // ถ้าทั้ง local และ Facebook ไม่ได้ แสดง fallback
+                                videoEl.style.display = "none";
+                                const parent = videoEl.parentElement;
+                                if (parent && thumbnailUrl) {
+                                  parent.innerHTML = `
+                                    <div class="relative">
+                                      <img src="${thumbnailUrl}" alt="Video thumbnail" class="w-full h-auto" />
+                                      <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40">
+                                        <span class="text-white text-4xl">⚠️ วิดีโอไม่สามารถเล่นได้</span>
+                                      </div>
+                                    </div>
+                                  `;
+                                }
+                              }
                             }}
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
-                            <div className="text-white text-6xl">▶️</div>
-                          </div>
+                          >
+                            <source src={localVideoPath || videoSource || ''} type="video/mp4" />
+                            เบราว์เซอร์ของคุณไม่รองรับการเล่นวิดีโอ
+                          </video>
                         </div>
                         {/* Open in Facebook Buttons */}
                         <div className="grid grid-cols-2 gap-3">
@@ -1379,14 +1399,6 @@ export default function FacebookAdsManagerPage() {
                             <span>▶️</span>
                             <span>ดูเป็น Video</span>
                           </a>
-                        </div>
-                        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-                          <p className="text-blue-700 text-sm font-medium">
-                            📹 Video ID: {videoId}
-                          </p>
-                          <p className="text-blue-600 text-xs mt-1">
-                            คลิกปุ่มด้านบนเพื่อเปิดดูวิดีโอใน Facebook
-                          </p>
                         </div>
                       </div>
                     );
@@ -2361,75 +2373,74 @@ export default function FacebookAdsManagerPage() {
                                 const videoId =
                                   creative?.object_story_spec?.video_data
                                     ?.video_id || creative?.video_id;
-                                const localVideoPath = videoId
-                                  ? `/images/video/${videoId}.mp4`
-                                  : null;
                                 const thumbnailUrl =
                                   creative?.thumbnail_url ||
                                   creative?.image_url;
-                                // แสดงวิดีโอจาก local ก่อน (ถ้ามี)
-                                if (localVideoPath) {
+                                const localVideoPath = videoId ? `/images/video/${videoId}.mp4` : null;
+
+                                // ถ้ามี videoId - แสดง video preview ที่เล่นอัตโนมัติ 3 วิ เมื่อ hover
+                                if (videoId && localVideoPath) {
                                   return (
-                                    <div className="w-20 h-20 flex-shrink-0">
+                                    <div className="w-20 h-20 flex-shrink-0 relative overflow-hidden rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                                      {/* Video Preview - เล่นอัตโนมัติ loop ไม่เกิน 3 วิ */}
                                       <video
                                         src={localVideoPath}
-                                        className="w-full h-full object-cover rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                                        autoPlay
-                                        loop
+                                        className="w-full h-full object-cover"
                                         muted
+                                        loop
                                         playsInline
+                                        autoPlay
                                         onLoadedMetadata={(e) => {
                                           const video = e.currentTarget;
-                                          // เล่น 3 วินาทีแรก แล้ววนลูป
-                                          video.addEventListener(
-                                            "timeupdate",
-                                            function (this: HTMLVideoElement) {
-                                              if (this.currentTime >= 3) {
-                                                this.currentTime = 0;
-                                              }
+                                          // จำกัดให้เล่นแค่ 3 วินาทีแรก
+                                          video.currentTime = 0;
+                                          const checkTime = () => {
+                                            if (video.currentTime >= 3) {
+                                              video.currentTime = 0;
                                             }
-                                          );
+                                          };
+                                          video.addEventListener('timeupdate', checkTime);
                                         }}
                                         onError={(e) => {
-                                          console.error(
-                                            `❌ [Video Error] Failed to load: ${localVideoPath}`
-                                          );
-                                          // ถ้าไม่มีวิดีโอ ให้แสดงรูปภาพแทน
-                                          e.currentTarget.style.display =
-                                            "none";
-                                          if (thumbnailUrl) {
-                                            const img =
-                                              document.createElement("img");
+                                          // ถ้าโหลดวิดีโอไม่ได้ แสดง thumbnail แทน
+                                          const video = e.currentTarget;
+                                          video.style.display = 'none';
+                                          const parent = video.parentElement;
+                                          if (parent && thumbnailUrl) {
+                                            const img = document.createElement('img');
                                             img.src = thumbnailUrl;
-                                            img.alt = "Ad preview";
-                                            img.className =
-                                              "w-full h-full object-cover rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow";
-                                            e.currentTarget.parentElement?.appendChild(
-                                              img
-                                            );
+                                            img.className = 'w-full h-full object-cover';
+                                            img.alt = 'Ad preview';
+                                            parent.appendChild(img);
                                           }
                                         }}
                                       />
+                                      {/* Play icon overlay */}
+                                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <span className="text-white text-2xl drop-shadow-lg">▶️</span>
+                                      </div>
                                     </div>
                                   );
                                 }
-                                // ถ้าไม่มีวิดีโอ ให้แสดงรูปภาพ
+
+                                // แสดง thumbnail พร้อม play icon สำหรับวิดีโอ
                                 if (thumbnailUrl) {
                                   return (
-                                    <div className="w-20 h-20 flex-shrink-0">
+                                    <div className="w-20 h-20 flex-shrink-0 relative">
                                       <img
                                         src={thumbnailUrl}
                                         alt="Ad preview"
                                         className="w-full h-full object-cover rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                                         onError={(e) => {
-                                          console.error(
-                                            "Image load error for ad:",
-                                            ad.ad_id
-                                          );
                                           e.currentTarget.src =
                                             "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23e5e7eb'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%239ca3af' font-size='12'%3ENo Image%3C/text%3E%3C/svg%3E";
                                         }}
                                       />
+                                      {videoId && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg">
+                                          <span className="text-white text-2xl">▶️</span>
+                                        </div>
+                                      )}
                                     </div>
                                   );
                                 }

@@ -54,6 +54,11 @@ import {
   Info,
 } from "lucide-react";
 import UserMenu from "@/components/UserMenu";
+import {
+  FileProgressContainer,
+  useFileProgress,
+  type FileProgressItem,
+} from "@/components/FileProgress";
 
 // Custom scrollbar styles
 const customScrollbarStyle = `
@@ -332,6 +337,7 @@ interface FileItem {
   views: number;
   duration?: string;
   category: string;
+  needsThumbnailGeneration?: boolean;
 }
 
 // Initial empty files - users will upload files to /public/marketing/
@@ -369,7 +375,7 @@ const folderTemplates: MediaFolderTemplate[] = [
     icon: Sparkles,
   },
   {
-    id: "customer-reviews",
+    id: "before-and-after",
     name: "Before and After",
     description: "💬 รีวิวและประสบการณ์คนไข้จริง",
     gradient: "from-amber-500 to-orange-500",
@@ -409,10 +415,10 @@ const categoryFolderMap: Record<string, MediaFolderTemplate["id"]> = {
   "Promo Clips": "ad-content",
   "Social Media": "ad-content",
   Marketing: "ad-content",
-  "Before/After": "branding",
+  "Before/After": "before-and-after",
   Products: "branding",
-  Testimonials: "customer-reviews",
-  Consultations: "customer-reviews",
+  Testimonials: "before-and-after",
+  Consultations: "before-and-after",
   Events: "presentations",
   "Surgery Videos": "all-footages",
   Training: "all-footages",
@@ -606,6 +612,188 @@ const AllFilesGalleryPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const isMountedRef = useRef(true);
+  const thumbnailGenerationRef = useRef<Set<number>>(new Set());
+
+  // File progress tracking for upload/download animations
+  const {
+    items: progressItems,
+    uploadFile: trackUpload,
+    downloadFile: trackDownload,
+    cancelTransfer,
+    dismissItem,
+    clearCompleted,
+    updateItem,
+  } = useFileProgress({
+    onUploadComplete: (id) => {
+      console.log("Upload complete:", id);
+      loadMarketingFolders();
+    },
+    onDownloadComplete: (id) => {
+      console.log("Download complete:", id);
+    },
+    onError: (id, error) => {
+      console.error("Transfer error:", id, error);
+    },
+  });
+
+  // Generate video thumbnail using canvas
+  const generateVideoThumbnail = useCallback(async (file: FileItem): Promise<string | null> => {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.crossOrigin = 'anonymous';
+      video.muted = true;
+      video.preload = 'metadata';
+
+      const cleanup = () => {
+        video.removeEventListener('loadeddata', handleLoadedData);
+        video.removeEventListener('error', handleError);
+        video.removeEventListener('loadedmetadata', handleMetadata);
+        video.src = '';
+        video.load();
+      };
+
+      const handleError = () => {
+        console.warn(`Failed to load video for thumbnail: ${file.name}`);
+        cleanup();
+        resolve(null);
+      };
+
+      const handleMetadata = () => {
+        // Seek to 1 second or 10% of video duration for a better frame
+        const seekTime = Math.min(1, video.duration * 0.1);
+        video.currentTime = seekTime;
+      };
+
+      const handleLoadedData = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          // Use reasonable dimensions for thumbnail
+          canvas.width = 640;
+          canvas.height = 360;
+          const ctx = canvas.getContext('2d');
+
+          if (!ctx) {
+            cleanup();
+            resolve(null);
+            return;
+          }
+
+          // Calculate aspect ratio to maintain proportions
+          const videoAspect = video.videoWidth / video.videoHeight;
+          const canvasAspect = canvas.width / canvas.height;
+
+          let drawWidth = canvas.width;
+          let drawHeight = canvas.height;
+          let offsetX = 0;
+          let offsetY = 0;
+
+          if (videoAspect > canvasAspect) {
+            drawHeight = canvas.width / videoAspect;
+            offsetY = (canvas.height - drawHeight) / 2;
+          } else {
+            drawWidth = canvas.height * videoAspect;
+            offsetX = (canvas.width - drawWidth) / 2;
+          }
+
+          // Fill background with dark color
+          ctx.fillStyle = '#1e1b4b';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // Draw video frame
+          ctx.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
+
+          // Convert to blob and upload
+          canvas.toBlob(async (blob) => {
+            if (!blob) {
+              cleanup();
+              resolve(null);
+              return;
+            }
+
+            try {
+              const formData = new FormData();
+              formData.append('videoPath', file.url);
+              formData.append('thumbnail', blob, 'thumbnail.jpg');
+
+              const response = await fetch('/api/video-thumbnail', {
+                method: 'POST',
+                body: formData,
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                cleanup();
+                resolve(data.thumbnailUrl);
+              } else {
+                cleanup();
+                resolve(null);
+              }
+            } catch (error) {
+              console.error('Failed to upload thumbnail:', error);
+              cleanup();
+              resolve(null);
+            }
+          }, 'image/jpeg', 0.85);
+        } catch (error) {
+          console.error('Failed to generate thumbnail:', error);
+          cleanup();
+          resolve(null);
+        }
+      };
+
+      video.addEventListener('loadedmetadata', handleMetadata);
+      video.addEventListener('loadeddata', handleLoadedData);
+      video.addEventListener('error', handleError);
+
+      // Set timeout to prevent hanging
+      setTimeout(() => {
+        if (!video.videoWidth) {
+          cleanup();
+          resolve(null);
+        }
+      }, 10000);
+
+      video.src = file.url;
+      video.load();
+    });
+  }, []);
+
+  // Generate thumbnails for videos that need them
+  useEffect(() => {
+    const videosNeedingThumbnails = files.filter(
+      (file) =>
+        (file.type === 'video' || file.type === 'clip') &&
+        file.needsThumbnailGeneration &&
+        !thumbnailGenerationRef.current.has(file.id)
+    );
+
+    if (videosNeedingThumbnails.length === 0) return;
+
+    const generateThumbnails = async () => {
+      for (const file of videosNeedingThumbnails) {
+        if (!isMountedRef.current) break;
+
+        // Mark as being processed
+        thumbnailGenerationRef.current.add(file.id);
+
+        const thumbnailUrl = await generateVideoThumbnail(file);
+
+        if (thumbnailUrl && isMountedRef.current) {
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === file.id
+                ? { ...f, thumbnail: thumbnailUrl, needsThumbnailGeneration: false }
+                : f
+            )
+          );
+        }
+      }
+    };
+
+    // Start thumbnail generation with a small delay to not block initial render
+    const timeoutId = setTimeout(generateThumbnails, 500);
+    return () => clearTimeout(timeoutId);
+  }, [files, generateVideoThumbnail]);
 
   const loadMarketingFolders = useCallback(async (signal?: AbortSignal) => {
     if (isMountedRef.current) {
@@ -1524,6 +1712,26 @@ const AllFilesGalleryPage = () => {
     return num.toString();
   };
 
+  // Upload files with progress animation
+  const processUploadedFilesWithProgress = async (uploadedFiles: FileList, targetFolderPath: string) => {
+    if (!uploadedFiles.length) return;
+
+    const filesArray = Array.from(uploadedFiles);
+
+    // Upload each file with progress tracking
+    for (const file of filesArray) {
+      await trackUpload(file, {
+        url: "/api/marketing-files",
+        method: "POST",
+        fieldName: "files",
+        additionalData: {
+          folderPath: targetFolderPath,
+        },
+      });
+    }
+  };
+
+  // Legacy upload without progress (kept for compatibility)
   const processUploadedFiles = async (uploadedFiles: FileList, targetFolderPath: string) => {
     if (!uploadedFiles.length) return;
 
@@ -1561,7 +1769,8 @@ const AllFilesGalleryPage = () => {
     }
 
     try {
-      await processUploadedFiles(uploadedFiles, targetPath);
+      // Use progress tracking for upload
+      await processUploadedFilesWithProgress(uploadedFiles, targetPath);
       setShowUploadModal(false);
     } catch (error) {
       console.error("Failed to upload files", error);
@@ -1672,6 +1881,36 @@ const AllFilesGalleryPage = () => {
     setShowShareModal(false);
   };
 
+  // Download file handler with progress animation
+  const handleDownloadFile = async (fileId: number) => {
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+
+    try {
+      // Parse file size string to number (e.g., "2.5 MB" -> 2621440)
+      const parseSizeToBytes = (sizeStr: string): number => {
+        const match = sizeStr.match(/([\d.]+)\s*(B|KB|MB|GB)/i);
+        if (!match) return 0;
+        const value = parseFloat(match[1]);
+        const unit = match[2].toUpperCase();
+        const multipliers: Record<string, number> = { B: 1, KB: 1024, MB: 1024 * 1024, GB: 1024 * 1024 * 1024 };
+        return Math.round(value * (multipliers[unit] || 1));
+      };
+
+      // Use progress tracking for download
+      await trackDownload(
+        file.url,
+        file.name,
+        parseSizeToBytes(file.size),
+        { saveAs: true }
+      );
+    } catch (error) {
+      console.error('Download error:', error);
+      // Fallback: open in new tab
+      window.open(file.url, '_blank');
+    }
+  };
+
   // AI Video Production handlers
   const handleAIDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -1708,6 +1947,91 @@ const AllFilesGalleryPage = () => {
     }
   };
 
+  // Video placeholder fallback
+  const VIDEO_PLACEHOLDER = "/images/video-placeholder.svg";
+
+  // Thumbnail component with video poster extraction
+  const ThumbnailImage = ({ file, className, alt }: { file: FileItem; className: string; alt: string }) => {
+    const [imgSrc, setImgSrc] = useState(file.thumbnail);
+    const [hasError, setHasError] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    const isVideoType = file.type === 'video' || file.type === 'clip';
+
+    useEffect(() => {
+      setImgSrc(file.thumbnail);
+      setHasError(false);
+      setIsLoading(true);
+    }, [file.thumbnail]);
+
+    const handleError = () => {
+      setHasError(true);
+      setImgSrc(VIDEO_PLACEHOLDER);
+      setIsLoading(false);
+    };
+
+    const handleLoad = () => {
+      setIsLoading(false);
+    };
+
+    const handleVideoLoad = () => {
+      setIsLoading(false);
+      // Seek to 1 second for better thumbnail
+      if (videoRef.current) {
+        videoRef.current.currentTime = 1;
+      }
+    };
+
+    // สำหรับวิดีโอ - แสดง video element โดยตรงเพื่อดึงเฟรมแรก
+    if (isVideoType) {
+      return (
+        <div className="relative w-full h-full bg-gradient-to-br from-slate-800 to-purple-900 overflow-hidden">
+          <video
+            ref={videoRef}
+            src={file.url}
+            muted
+            playsInline
+            preload="metadata"
+            onLoadedData={handleVideoLoad}
+            onError={() => setIsLoading(false)}
+            className={`${className} w-full h-full object-cover`}
+            style={{ pointerEvents: 'none' }}
+          />
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-800 to-purple-900">
+              <div className="w-8 h-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+          {/* Play icon overlay */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="p-3 rounded-full bg-black/40 backdrop-blur-sm">
+              <Play className="w-6 h-6 text-white fill-white" />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // สำหรับรูปภาพ
+    return (
+      <div className="relative w-full h-full">
+        {isLoading && (
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-purple-900 animate-pulse flex items-center justify-center">
+            <div className="w-8 h-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+        <img
+          src={imgSrc}
+          alt={alt}
+          className={`${className} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
+          onError={handleError}
+          onLoad={handleLoad}
+        />
+      </div>
+    );
+  };
+
   return (
     <>
       <style>{customScrollbarStyle}</style>
@@ -1735,18 +2059,38 @@ const AllFilesGalleryPage = () => {
           {/* Grid Pattern */}
           <div className="absolute inset-0 bg-[linear-gradient(rgba(139,92,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(139,92,246,0.03)_1px,transparent_1px)] bg-[size:100px_100px]" />
 
-          {/* Floating Particles */}
-          {[...Array(20)].map((_, i) => (
+          {/* Floating Particles - ใช้ค่าคงที่เพื่อหลีกเลี่ยง hydration mismatch */}
+          {[
+            { left: 5, top: 10, color: '#8b5cf6', delay: 0, duration: 6 },
+            { left: 15, top: 80, color: '#ec4899', delay: 1, duration: 7 },
+            { left: 25, top: 30, color: '#f97316', delay: 2, duration: 8 },
+            { left: 35, top: 60, color: '#06b6d4', delay: 3, duration: 9 },
+            { left: 45, top: 20, color: '#8b5cf6', delay: 4, duration: 6 },
+            { left: 55, top: 90, color: '#ec4899', delay: 0.5, duration: 7 },
+            { left: 65, top: 40, color: '#f97316', delay: 1.5, duration: 8 },
+            { left: 75, top: 70, color: '#06b6d4', delay: 2.5, duration: 9 },
+            { left: 85, top: 15, color: '#8b5cf6', delay: 3.5, duration: 6 },
+            { left: 95, top: 55, color: '#ec4899', delay: 4.5, duration: 7 },
+            { left: 10, top: 45, color: '#f97316', delay: 0.8, duration: 8 },
+            { left: 20, top: 75, color: '#06b6d4', delay: 1.8, duration: 9 },
+            { left: 30, top: 5, color: '#8b5cf6', delay: 2.8, duration: 6 },
+            { left: 40, top: 85, color: '#ec4899', delay: 3.8, duration: 7 },
+            { left: 50, top: 35, color: '#f97316', delay: 4.2, duration: 8 },
+            { left: 60, top: 65, color: '#06b6d4', delay: 0.3, duration: 9 },
+            { left: 70, top: 25, color: '#8b5cf6', delay: 1.3, duration: 6 },
+            { left: 80, top: 95, color: '#ec4899', delay: 2.3, duration: 7 },
+            { left: 90, top: 50, color: '#f97316', delay: 3.3, duration: 8 },
+            { left: 98, top: 8, color: '#06b6d4', delay: 4.8, duration: 9 },
+          ].map((particle, i) => (
             <div
               key={i}
               className="absolute w-2 h-2 rounded-full animate-float"
               style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                background: `linear-gradient(135deg, ${["#8b5cf6", "#ec4899", "#f97316", "#06b6d4"][i % 4]
-                  }, transparent)`,
-                animationDelay: `${Math.random() * 5}s`,
-                animationDuration: `${5 + Math.random() * 5}s`,
+                left: `${particle.left}%`,
+                top: `${particle.top}%`,
+                background: `linear-gradient(135deg, ${particle.color}, transparent)`,
+                animationDelay: `${particle.delay}s`,
+                animationDuration: `${particle.duration}s`,
               }}
             />
           ))}
@@ -1944,8 +2288,8 @@ const AllFilesGalleryPage = () => {
                         <button
                           onClick={() => handleBreadcrumbClick(index)}
                           className={`px-2 sm:px-3 py-1 rounded-lg text-sm transition-all ${index === breadcrumbItems.length - 1
-                              ? "bg-purple-500/30 text-white font-medium"
-                              : "text-purple-200/70 hover:text-white hover:bg-white/10"
+                            ? "bg-purple-500/30 text-white font-medium"
+                            : "text-purple-200/70 hover:text-white hover:bg-white/10"
                             }`}
                         >
                           {item.name}
@@ -2846,11 +3190,11 @@ const AllFilesGalleryPage = () => {
                       </td>
                       <td className="p-4">
                         <div
-                          className="w-16 h-12 rounded-lg overflow-hidden cursor-pointer hover:scale-110 transition-transform"
+                          className="relative w-16 h-12 rounded-lg overflow-hidden cursor-pointer hover:scale-110 transition-transform"
                           onClick={() => openLightbox(index)}
                         >
-                          <img
-                            src={file.thumbnail}
+                          <ThumbnailImage
+                            file={file}
                             alt={file.name}
                             className="w-full h-full object-cover"
                           />
@@ -2908,7 +3252,11 @@ const AllFilesGalleryPage = () => {
                                 }`}
                             />
                           </button>
-                          <button className="p-2 rounded-lg bg-white/10 text-purple-300 hover:bg-white/20 transition-colors">
+                          <button
+                            onClick={() => handleDownloadFile(file.id)}
+                            className="p-2 rounded-lg bg-white/10 text-purple-300 hover:bg-white/20 transition-colors"
+                            title="ดาวน์โหลด"
+                          >
                             <Download className="w-4 h-4" />
                           </button>
                           <button className="p-2 rounded-lg bg-white/10 text-purple-300 hover:bg-white/20 transition-colors">
@@ -2944,8 +3292,8 @@ const AllFilesGalleryPage = () => {
                     className="relative aspect-[4/3] overflow-hidden cursor-pointer"
                     onClick={() => openLightbox(index)}
                   >
-                    <img
-                      src={file.thumbnail}
+                    <ThumbnailImage
+                      file={file}
                       alt={file.name}
                       className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
                     />
@@ -3063,8 +3411,12 @@ const AllFilesGalleryPage = () => {
                       </button>
                       {/* Download Button */}
                       <button
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-white/10 text-purple-300 hover:bg-white/20 transition-colors mobile-touch-target"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadFile(file.id);
+                        }}
+                        className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-400 hover:to-cyan-400 transition-colors mobile-touch-target"
+                        title="ดาวน์โหลด"
                       >
                         <Download className="w-3 h-3 sm:w-4 sm:h-4" />
                       </button>
@@ -3104,6 +3456,15 @@ const AllFilesGalleryPage = () => {
                   <X className="w-6 h-6" />
                 </button>
 
+                {/* Download Button in Lightbox */}
+                <button
+                  onClick={() => handleDownloadFile(filteredFiles[lightboxIndex].id)}
+                  className="absolute top-4 right-20 p-3 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-400 hover:to-cyan-400 transition-colors z-50"
+                  title="ดาวน์โหลด"
+                >
+                  <Download className="w-6 h-6" />
+                </button>
+
                 {/* Navigation */}
                 <button
                   onClick={() =>
@@ -3128,11 +3489,21 @@ const AllFilesGalleryPage = () => {
 
                 {/* Main Content */}
                 <div className="max-w-6xl max-h-[85vh] rounded-2xl overflow-hidden shadow-2xl">
-                  <img
-                    src={filteredFiles[lightboxIndex].thumbnail}
-                    alt={filteredFiles[lightboxIndex].name}
-                    className="max-w-full max-h-[85vh] object-contain"
-                  />
+                  {(filteredFiles[lightboxIndex].type === 'video' || filteredFiles[lightboxIndex].type === 'clip') ? (
+                    <video
+                      src={filteredFiles[lightboxIndex].url}
+                      poster={filteredFiles[lightboxIndex].thumbnail !== VIDEO_PLACEHOLDER ? filteredFiles[lightboxIndex].thumbnail : undefined}
+                      controls
+                      autoPlay
+                      className="max-w-full max-h-[85vh] object-contain"
+                    />
+                  ) : (
+                    <img
+                      src={filteredFiles[lightboxIndex].thumbnail}
+                      alt={filteredFiles[lightboxIndex].name}
+                      className="max-w-full max-h-[85vh] object-contain"
+                    />
+                  )}
                 </div>
 
                 {/* Info Bar */}
@@ -3222,6 +3593,15 @@ const AllFilesGalleryPage = () => {
             </button>
           </div>
         </div>
+
+        {/* File Progress Container - Upload/Download animations */}
+        <FileProgressContainer
+          items={progressItems}
+          onCancel={cancelTransfer}
+          onDismiss={dismissItem}
+          onClearAll={clearCompleted}
+          position="bottom-right"
+        />
       </div>
     </>
   );

@@ -1860,8 +1860,8 @@ const AllFilesGalleryPage = () => {
   };
 
   // Generate video share URL for LINE inline playback
-  // URL format: https://app.bjhbangkok.com/all-files-gallery/video/{base64url-encoded-path}
-  const generateVideoShareUrl = (file: FileItem): string => {
+  const generateVideoShareUrl = async (file: FileItem): Promise<{ shareUrl: string; needsTranscoding: boolean; fileSizeMB?: number }> => {
+    // For videos, create a special share URL that includes proper meta tags
     if (file.type === 'video' || file.type === 'clip') {
       // Extract the path from the URL (remove domain if present)
       let videoPath = file.url;
@@ -1873,15 +1873,76 @@ const AllFilesGalleryPage = () => {
         videoPath = '/' + videoPath;
       }
 
-      // Encode path as base64url for the video ID
-      const videoId = btoa(videoPath)
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
+      try {
+        const response = await fetch('/api/share-video', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ videoPath }),
+        });
 
-      return `${baseUrl}/all-files-gallery/video/${videoId}`;
+        if (response.ok) {
+          const data = await response.json();
+          return {
+            shareUrl: data.shareUrl,
+            needsTranscoding: data.needsTranscoding || false,
+            fileSizeMB: data.fileSizeMB
+          };
+        }
+      } catch (error) {
+        console.error('Error generating share URL:', error);
+      }
     }
-    return window.location.href;
+    // Fallback to current page URL
+    return { shareUrl: window.location.href, needsTranscoding: false };
+  };
+
+  // Transcode video for LINE compatibility
+  const transcodeForLine = async (file: FileItem): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/transcode-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoPath: file.url }),
+      });
+
+      if (!response.ok) return false;
+
+      const data = await response.json();
+
+      if (data.status === 'completed') {
+        return true;
+      }
+
+      // Poll for completion if processing
+      if (data.status === 'processing') {
+        const jobId = data.jobId;
+        let attempts = 0;
+        const maxAttempts = 60; // 5 minutes max
+
+        while (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 5000)); // Check every 5 seconds
+
+          const statusResponse = await fetch(`/api/transcode-video?jobId=${jobId}`);
+          const statusData = await statusResponse.json();
+
+          if (statusData.status === 'completed') {
+            return true;
+          }
+
+          if (statusData.status === 'error') {
+            console.error('Transcoding error:', statusData.error);
+            return false;
+          }
+
+          attempts++;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Transcode error:', error);
+      return false;
+    }
   };
 
   // Share to LINE handler with video support
@@ -1890,9 +1951,24 @@ const AllFilesGalleryPage = () => {
     if (!file) return;
 
     // For videos, use special share URL for inline playback
-    const shareUrl = (file.type === 'video' || file.type === 'clip')
-      ? generateVideoShareUrl(file)
-      : window.location.href;
+    let shareUrl: string;
+    if (file.type === 'video' || file.type === 'clip') {
+      const result = await generateVideoShareUrl(file);
+      shareUrl = result.shareUrl;
+
+      // If file is large, trigger transcoding in background (don't wait)
+      if (result.needsTranscoding) {
+        console.log(`Video ${file.name} (${result.fileSizeMB}MB) may need transcoding for optimal LINE playback`);
+        // Start transcoding in background - don't block sharing
+        transcodeForLine(file).then(success => {
+          if (success) {
+            console.log('Transcoding completed for:', file.name);
+          }
+        });
+      }
+    } else {
+      shareUrl = window.location.href;
+    }
 
     const shareText = encodeURIComponent(`📹 ${file.name} - BJH Bangkok`);
     const encodedUrl = encodeURIComponent(shareUrl);
@@ -1920,9 +1996,11 @@ const AllFilesGalleryPage = () => {
     if (!file) return;
 
     // Get proper share URL for videos
-    const shareUrl = (file.type === 'video' || file.type === 'clip')
-      ? generateVideoShareUrl(file)
-      : window.location.href;
+    const shareResult = (file.type === 'video' || file.type === 'clip')
+      ? await generateVideoShareUrl(file)
+      : { shareUrl: window.location.href, needsTranscoding: false };
+
+    const shareUrl = shareResult.shareUrl;
 
     switch (platform) {
       case 'line':

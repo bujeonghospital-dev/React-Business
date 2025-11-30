@@ -1,9 +1,17 @@
 "use client";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type {
   FileProgressItem,
   FileProgressStatus,
 } from "./FileProgressAnimation";
+
+// Import loading context to suppress loading overlay during file transfers
+let setSuppressLoading: ((suppress: boolean) => void) | null = null;
+
+// Hook to connect with LoadingContext
+export const setLoadingContextSuppressor = (fn: (suppress: boolean) => void) => {
+  setSuppressLoading = fn;
+};
 
 interface UseFileProgressOptions {
   onUploadComplete?: (id: string, response?: unknown) => void;
@@ -27,6 +35,16 @@ interface DownloadOptions {
 export const useFileProgress = (options: UseFileProgressOptions = {}) => {
   const [items, setItems] = useState<FileProgressItem[]>([]);
   const abortControllers = useRef<Map<string, AbortController>>(new Map());
+
+  // Suppress loading overlay when there are active transfers
+  useEffect(() => {
+    const hasActiveTransfers = items.some(
+      (item) => item.status === "uploading" || item.status === "downloading"
+    );
+    if (setSuppressLoading) {
+      setSuppressLoading(hasActiveTransfers);
+    }
+  }, [items]);
 
   // Generate unique ID
   const generateId = () =>

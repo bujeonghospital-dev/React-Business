@@ -58,7 +58,9 @@ import {
   FileProgressContainer,
   useFileProgress,
   type FileProgressItem,
+  setLoadingContextSuppressor,
 } from "@/components/FileProgress";
+import { useLoading } from "@/components/LoadingContext";
 
 // Custom scrollbar styles
 const customScrollbarStyle = `
@@ -323,7 +325,7 @@ const customScrollbarStyle = `
   }
 `;
 
-// File interface - files will be stored in /public/marketing/
+// File interface - files will be stored in /public/images/video/
 interface FileItem {
   id: number;
   name: string;
@@ -340,7 +342,7 @@ interface FileItem {
   needsThumbnailGeneration?: boolean;
 }
 
-// Initial empty files - users will upload files to /public/marketing/
+// Initial empty files - users will upload files to /public/images/video/
 const initialFiles: FileItem[] = [];
 
 // Recursive nested folder structure
@@ -542,10 +544,19 @@ const buildFoldersFromApi = (nodes: ApiFolderNode[]): MediaFolder[] => {
 };
 const AllFilesGalleryPage = () => {
   const router = useRouter();
+  const { setSuppressLoading } = useLoading();
   const [files, setFiles] = useState<FileItem[]>(initialFiles);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Connect LoadingContext suppressor to FileProgress hook
+  useEffect(() => {
+    setLoadingContextSuppressor(setSuppressLoading);
+    return () => {
+      setLoadingContextSuppressor(() => { });
+    };
+  }, [setSuppressLoading]);
   const [viewMode, setViewMode] = useState<"grid" | "list" | "masonry">("grid");
   const [filterType, setFilterType] = useState<
     "all" | "image" | "video" | "clip"
@@ -875,11 +886,21 @@ const AllFilesGalleryPage = () => {
     return [];
   }, [activeFolder, folderPath, currentNestedFolder]);
 
-  // Check if we can upload files (only at leaf folders)
+  // Check if we can upload files (at leaf folders OR at main folder root with no subfolders)
   const canUploadFiles = useMemo((): boolean => {
-    if (!currentNestedFolder) return false;
-    return isLeafFolder(currentNestedFolder);
-  }, [currentNestedFolder]);
+    // Case 1: We're inside a nested folder - check if it's a leaf
+    if (currentNestedFolder) {
+      return isLeafFolder(currentNestedFolder);
+    }
+
+    // Case 2: We're at the root of a main folder (no nested folder selected)
+    // Allow upload if the main folder has no subfolders (it's essentially a leaf)
+    if (activeFolder && folderPath.length === 0) {
+      return activeFolder.subFolders.length === 0;
+    }
+
+    return false;
+  }, [currentNestedFolder, activeFolder, folderPath]);
 
   // Build breadcrumb items for display
   const breadcrumbItems = useMemo(() => {
@@ -1992,7 +2013,6 @@ const AllFilesGalleryPage = () => {
   const ThumbnailImage = ({ file, className, alt }: { file: FileItem; className: string; alt: string }) => {
     const [imgSrc, setImgSrc] = useState(file.thumbnail);
     const [hasError, setHasError] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
     const videoRef = useRef<HTMLVideoElement>(null);
 
     const isVideoType = file.type === 'video' || file.type === 'clip';
@@ -2000,21 +2020,14 @@ const AllFilesGalleryPage = () => {
     useEffect(() => {
       setImgSrc(file.thumbnail);
       setHasError(false);
-      setIsLoading(true);
     }, [file.thumbnail]);
 
     const handleError = () => {
       setHasError(true);
       setImgSrc(VIDEO_PLACEHOLDER);
-      setIsLoading(false);
-    };
-
-    const handleLoad = () => {
-      setIsLoading(false);
     };
 
     const handleVideoLoad = () => {
-      setIsLoading(false);
       // Seek to 1 second for better thumbnail
       if (videoRef.current) {
         videoRef.current.currentTime = 1;
@@ -2032,15 +2045,9 @@ const AllFilesGalleryPage = () => {
             playsInline
             preload="metadata"
             onLoadedData={handleVideoLoad}
-            onError={() => setIsLoading(false)}
             className={`${className} w-full h-full object-cover`}
             style={{ pointerEvents: 'none' }}
           />
-          {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-800 to-purple-900">
-              <div className="w-8 h-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
           {/* Play icon overlay */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="p-3 rounded-full bg-black/40 backdrop-blur-sm">
@@ -2051,20 +2058,15 @@ const AllFilesGalleryPage = () => {
       );
     }
 
-    // สำหรับรูปภาพ
+    // สำหรับรูปภาพ - แสดงทันทีโดยไม่ต้องรอ loading
     return (
-      <div className="relative w-full h-full">
-        {isLoading && (
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-purple-900 animate-pulse flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
+      <div className="relative w-full h-full bg-gradient-to-br from-slate-800/50 to-purple-900/50">
         <img
           src={imgSrc}
           alt={alt}
-          className={`${className} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
+          className={className}
           onError={handleError}
-          onLoad={handleLoad}
+          loading="eager"
         />
       </div>
     );

@@ -46,6 +46,5 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     sitemap: "https://app.bjhbangkok.com/sitemap.xml",
-    host: "https://app.bjhbangkok.com",
   };
 }

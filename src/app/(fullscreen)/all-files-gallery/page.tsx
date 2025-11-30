@@ -718,27 +718,30 @@ const AllFilesGalleryPage = () => {
   }, [activeFolder, folderPath]);
 
   const visibleFileIdSet = useMemo(() => {
+    // No folder selected - show NO files (only show folder grid)
     if (!activeFolder) {
-      return new Set(files.map((file) => file.id));
+      return new Set<number>();
     }
 
-    // If we're at a nested folder, show only its files (if it's a leaf)
+    // If we're at a nested folder that is a leaf, show only its files
     if (currentNestedFolder && isLeafFolder(currentNestedFolder)) {
       return new Set(currentNestedFolder.fileIds);
     }
 
-    // If no folder selected or at a non-leaf folder, show no files
-    if (folderPath.length > 0) {
+    // If we're inside a folder but it has subfolders, show no files (navigate deeper first)
+    if (currentNestedFolder && !isLeafFolder(currentNestedFolder)) {
       return new Set<number>();
     }
 
-    // At root of main folder, show all files (including root-level files)
-    const allIds = [
-      ...activeFolder.rootFileIds,
-      ...activeFolder.subFolders.flatMap((sub) => getAllFileIds(sub)),
-    ];
-    return new Set(allIds);
-  }, [activeFolder, currentNestedFolder, folderPath, files]);
+    // At root of main folder - check if it has subfolders
+    if (activeFolder.subFolders.length > 0) {
+      // Has subfolders, don't show files - user needs to navigate deeper
+      return new Set<number>();
+    }
+
+    // At root of main folder with no subfolders - show root files only
+    return new Set(activeFolder.rootFileIds);
+  }, [activeFolder, currentNestedFolder]);
 
   // Filtered และ Sorted files
   const filteredFiles = useMemo(() => {
@@ -2116,133 +2119,114 @@ const AllFilesGalleryPage = () => {
 
               {/* Nested Folders Grid - 2 columns like screenshot */}
               <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-5">
-                {displayFolders.length === 0 ? (
-                  <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-8 border-2 border-dashed border-purple-400/30 text-center col-span-full">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
-                      <FolderOpen className="w-6 h-6 sm:w-8 sm:h-8 text-purple-300/70" />
-                    </div>
-                    {canUploadFiles ? (
-                      <>
-                        <p className="text-purple-200/70 text-responsive-sm">นี่คือโฟลเดอร์ปลายทาง</p>
-                        <p className="text-emerald-300/70 text-responsive-xs mt-1">✓ สามารถอัพโหลดไฟล์ได้ที่นี่</p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-purple-200/70 text-responsive-sm">ยังไม่มีโฟลเดอร์ย่อย</p>
-                        <p className="text-purple-300/50 text-responsive-xs mt-1">ใช้เมนู 3 จุด เพื่อสร้างโฟลเดอร์</p>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  displayFolders.map((subFolder, index) => {
-                    const isEditing = editingSubFolderId === subFolder.id;
-                    const hasChildren = subFolder.children.length > 0;
-                    const isLeaf = isLeafFolder(subFolder);
-                    const subFolderCount = subFolder.children.length;
-                    const fileCount = subFolder.fileIds.length;
+                {displayFolders.map((subFolder, index) => {
+                  const isEditing = editingSubFolderId === subFolder.id;
+                  const hasChildren = subFolder.children.length > 0;
+                  const isLeaf = isLeafFolder(subFolder);
+                  const subFolderCount = subFolder.children.length;
+                  const fileCount = subFolder.fileIds.length;
 
-                    return (
-                      <div
-                        key={subFolder.id}
-                        onClick={() => {
-                          if (!isEditing) {
-                            handleNestedFolderSelect(subFolder.id);
-                          }
-                        }}
-                        className={`group relative glass-card rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 text-left transition-all duration-300 hover:scale-[1.03] border overflow-hidden animate-slide-up cursor-pointer border-white/10 hover:border-purple-300/50 hover:shadow-lg hover:shadow-purple-500/20`}
-                        style={{ animationDelay: `${index * 0.05}s` }}
-                      >
-                        {/* Glow effect on hover */}
-                        <div className={`absolute inset-0 bg-gradient-to-br ${activeFolder.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
+                  return (
+                    <div
+                      key={subFolder.id}
+                      onClick={() => {
+                        if (!isEditing) {
+                          handleNestedFolderSelect(subFolder.id);
+                        }
+                      }}
+                      className={`group relative glass-card rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 text-left transition-all duration-300 hover:scale-[1.03] border overflow-hidden animate-slide-up cursor-pointer border-white/10 hover:border-purple-300/50 hover:shadow-lg hover:shadow-purple-500/20`}
+                      style={{ animationDelay: `${index * 0.05}s` }}
+                    >
+                      {/* Glow effect on hover */}
+                      <div className={`absolute inset-0 bg-gradient-to-br ${activeFolder.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
 
-                        {isEditing ? (
-                          <div className="relative z-10 flex flex-col gap-3 h-full">
-                            <input
-                              type="text"
-                              value={editingSubFolderValue}
-                              onChange={(e) => setEditingSubFolderValue(e.target.value)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
-                              autoFocus
-                            />
-                            <div className="flex gap-2">
-                              <button
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  handleSaveSubFolderName(subFolder.id);
-                                }}
-                                className="flex-1 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white text-xs font-medium shadow-lg hover:shadow-green-500/50 transition-all"
-                              >
-                                บันทึก
-                              </button>
-                              <button
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  handleCancelEditSubFolder();
-                                }}
-                                className="flex-1 px-3 py-2 rounded-xl bg-white/10 text-purple-100 text-xs font-medium hover:bg-white/20 transition-all"
-                              >
-                                ยกเลิก
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="relative z-10 cursor-pointer">
-                            <div
-                              className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br ${activeFolder.gradient} flex items-center justify-center mb-2 sm:mb-3 md:mb-4 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300`}
+                      {isEditing ? (
+                        <div className="relative z-10 flex flex-col gap-3 h-full">
+                          <input
+                            type="text"
+                            value={editingSubFolderValue}
+                            onChange={(e) => setEditingSubFolderValue(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                            autoFocus
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleSaveSubFolderName(subFolder.id);
+                              }}
+                              className="flex-1 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white text-xs font-medium shadow-lg hover:shadow-green-500/50 transition-all"
                             >
-                              <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-white drop-shadow-md" />
-                            </div>
-                            <h3 className="folder-title font-bold text-white group-hover:text-purple-100 transition-colors text-sm sm:text-base">
-                              {subFolder.name}
-                            </h3>
-                            <p className="folder-description text-purple-200/60 mt-0.5 sm:mt-1 line-clamp-2 text-xs sm:text-sm hidden sm:block">
-                              {isLeaf ? `${fileCount} ไฟล์` : `${subFolderCount} โฟลเดอร์`}
-                            </p>
-                            <div className="flex items-center justify-between folder-meta mt-2 sm:mt-3 md:mt-4 pt-2 sm:pt-3 border-t border-white/10 text-xs sm:text-sm">
-                              <span className="flex items-center gap-1 sm:gap-1.5 text-purple-200/70">
-                                <FolderOpen className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                                {subFolderCount}
-                              </span>
-                              <span className="flex items-center gap-1 sm:gap-1.5 text-purple-200/70">
-                                <FileVideo className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                                {fileCount}
-                              </span>
-                            </div>
-                            {/* Action buttons on hover */}
-                            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  handleStartEditSubFolder(subFolder);
-                                }}
-                                className="p-1.5 rounded-lg bg-white/20 text-white hover:bg-white/30 transition-all"
-                                title="แก้ไขชื่อ"
-                              >
-                                <Pencil className="w-3 h-3" />
-                              </button>
-                              <button
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  handleDeleteSubFolder(subFolder.id);
-                                }}
-                                className="p-1.5 rounded-lg bg-white/20 text-red-300 hover:bg-red-500/30 transition-all"
-                                title="ลบโฟลเดอร์"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
+                              บันทึก
+                            </button>
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleCancelEditSubFolder();
+                              }}
+                              className="flex-1 px-3 py-2 rounded-xl bg-white/10 text-purple-100 text-xs font-medium hover:bg-white/20 transition-all"
+                            >
+                              ยกเลิก
+                            </button>
                           </div>
-                        )}
+                        </div>
+                      ) : (
+                        <div className="relative z-10 cursor-pointer">
+                          <div
+                            className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br ${activeFolder.gradient} flex items-center justify-center mb-2 sm:mb-3 md:mb-4 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300`}
+                          >
+                            <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-white drop-shadow-md" />
+                          </div>
+                          <h3 className="folder-title font-bold text-white group-hover:text-purple-100 transition-colors text-sm sm:text-base">
+                            {subFolder.name}
+                          </h3>
+                          <p className="folder-description text-purple-200/60 mt-0.5 sm:mt-1 line-clamp-2 text-xs sm:text-sm hidden sm:block">
+                            {isLeaf ? `${fileCount} ไฟล์` : `${subFolderCount} โฟลเดอร์`}
+                          </p>
+                          <div className="flex items-center justify-between folder-meta mt-2 sm:mt-3 md:mt-4 pt-2 sm:pt-3 border-t border-white/10 text-xs sm:text-sm">
+                            <span className="flex items-center gap-1 sm:gap-1.5 text-purple-200/70">
+                              <FolderOpen className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                              {subFolderCount}
+                            </span>
+                            <span className="flex items-center gap-1 sm:gap-1.5 text-purple-200/70">
+                              <FileVideo className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                              {fileCount}
+                            </span>
+                          </div>
+                          {/* Action buttons on hover */}
+                          <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleStartEditSubFolder(subFolder);
+                              }}
+                              className="p-1.5 rounded-lg bg-white/20 text-white hover:bg-white/30 transition-all"
+                              title="แก้ไขชื่อ"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleDeleteSubFolder(subFolder.id);
+                              }}
+                              className="p-1.5 rounded-lg bg-white/20 text-red-300 hover:bg-red-500/30 transition-all"
+                              title="ลบโฟลเดอร์"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
-                        {/* Leaf indicator */}
-                        {isLeaf && !isEditing && (
-                          <div className="absolute bottom-2 right-2 w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-gradient-to-r from-emerald-400 to-green-400 shadow-lg shadow-emerald-500/50" />
-                        )}
-                      </div>
-                    );
-                  })
-                )}
+                      {/* Leaf indicator */}
+                      {isLeaf && !isEditing && (
+                        <div className="absolute bottom-2 right-2 w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-gradient-to-r from-emerald-400 to-green-400 shadow-lg shadow-emerald-500/50" />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

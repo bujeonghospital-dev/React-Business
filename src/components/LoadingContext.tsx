@@ -11,10 +11,14 @@ type LoadingCtx = {
   showLoading: () => void;
   hideLoading: () => void;
   withLoading: <T>(fn: () => Promise<T>) => Promise<T>;
+  // Suppress loading overlay when file transfers are in progress
+  suppressLoading: boolean;
+  setSuppressLoading: (suppress: boolean) => void;
 };
 const Ctx = createContext<LoadingCtx | null>(null);
 export function LoadingProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
+  const [suppressLoading, setSuppressLoading] = useState(false);
   const showLoading = useCallback(() => setLoading(true), []);
   const hideLoading = useCallback(() => setLoading(false), []);
   const withLoading = useCallback(async <T,>(fn: () => Promise<T>) => {
@@ -32,8 +36,10 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
       showLoading,
       hideLoading,
       withLoading,
+      suppressLoading,
+      setSuppressLoading,
     }),
-    [loading, showLoading, hideLoading, withLoading]
+    [loading, showLoading, hideLoading, withLoading, suppressLoading]
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -41,4 +47,4 @@ export function useLoading() {
   const ctx = useContext(Ctx);
   if (!ctx) throw new Error("useLoading must be used within LoadingProvider");
   return ctx;
-}
+}

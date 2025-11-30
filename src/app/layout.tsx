@@ -17,6 +17,8 @@ import NavProgress from "@/components/NavProgress";
 import HomeBackground from "@/components/HomeBackground";
 import { Suspense } from "react";
 import Providers from "./providers";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 // ====== SEO / Metadata ======
 // Note: Next.js 15 App Router uses Metadata API instead of next-seo
 export const metadata: Metadata = {
@@ -278,6 +280,8 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <ScrollToTop />
           </Suspense>
+          <Analytics />
+          <SpeedInsights />
         </Providers>
       </body>
     </html>

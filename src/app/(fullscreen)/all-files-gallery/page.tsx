@@ -1860,8 +1860,8 @@ const AllFilesGalleryPage = () => {
   };
 
   // Generate video share URL for LINE inline playback
-  // URL format: https://app.bjhbangkok.com/all-files-gallery/video/{base64url-encoded-path}
-  const generateVideoShareUrl = (file: FileItem): string => {
+  const generateVideoShareUrl = async (file: FileItem): Promise<string> => {
+    // For videos, create a special share URL that includes proper meta tags
     if (file.type === 'video' || file.type === 'clip') {
       // Extract the path from the URL (remove domain if present)
       let videoPath = file.url;
@@ -1873,26 +1873,37 @@ const AllFilesGalleryPage = () => {
         videoPath = '/' + videoPath;
       }
 
-      // Encode path as base64url for the video ID
-      const videoId = btoa(videoPath)
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
+      try {
+        const response = await fetch('/api/share-video', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ videoPath }),
+        });
 
-      return `${baseUrl}/all-files-gallery/video/${videoId}`;
+        if (response.ok) {
+          const data = await response.json();
+          return data.shareUrl;
+        }
+      } catch (error) {
+        console.error('Error generating share URL:', error);
+      }
     }
+    // Fallback to current page URL
     return window.location.href;
   };
 
   // Share to LINE handler with video support
-  const shareToLine = (fileId: number) => {
+  const shareToLine = async (fileId: number) => {
     const file = files.find(f => f.id === fileId);
     if (!file) return;
 
     // For videos, use special share URL for inline playback
-    const shareUrl = (file.type === 'video' || file.type === 'clip')
-      ? generateVideoShareUrl(file)
-      : window.location.href;
+    let shareUrl: string;
+    if (file.type === 'video' || file.type === 'clip') {
+      shareUrl = await generateVideoShareUrl(file);
+    } else {
+      shareUrl = window.location.href;
+    }
 
     const shareText = encodeURIComponent(`📹 ${file.name} - BJH Bangkok`);
     const encodedUrl = encodeURIComponent(shareUrl);
@@ -1921,7 +1932,7 @@ const AllFilesGalleryPage = () => {
 
     // Get proper share URL for videos
     const shareUrl = (file.type === 'video' || file.type === 'clip')
-      ? generateVideoShareUrl(file)
+      ? await generateVideoShareUrl(file)
       : window.location.href;
 
     switch (platform) {
@@ -3480,49 +3491,49 @@ const AllFilesGalleryPage = () => {
                       </div>
                     )}
 
-                  {/* Selection Checkbox - Only visible in selection mode */}
-                  {isSelectionMode && (
-                    <div className="absolute top-2 left-2">
-                      <div
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedFiles.includes(file.id)
-                          ? 'bg-white border-white'
-                          : 'border-white/70 bg-black/30'
-                          }`}
-                      >
-                        {selectedFiles.includes(file.id) && (
-                          <Check className="w-4 h-4 text-black" />
-                        )}
+                    {/* Selection Checkbox - Only visible in selection mode */}
+                    {isSelectionMode && (
+                      <div className="absolute top-2 left-2">
+                        <div
+                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedFiles.includes(file.id)
+                            ? 'bg-white border-white'
+                            : 'border-white/70 bg-black/30'
+                            }`}
+                        >
+                          {selectedFiles.includes(file.id) && (
+                            <Check className="w-4 h-4 text-black" />
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Duration for videos */}
-                  {file.duration && (
-                    <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/70 rounded text-white text-xs font-medium">
-                      {file.duration}
-                    </div>
-                  )}
+                    {/* Duration for videos */}
+                    {file.duration && (
+                      <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/70 rounded text-white text-xs font-medium">
+                        {file.duration}
+                      </div>
+                    )}
 
-                  {/* Play Icon for videos */}
-                  {(file.type === "video" || file.type === "clip") && !file.duration && (
-                    <div className="absolute bottom-1 right-1">
-                      <Play className="w-4 h-4 text-white drop-shadow-lg" fill="white" />
-                    </div>
-                  )}
+                    {/* Play Icon for videos */}
+                    {(file.type === "video" || file.type === "clip") && !file.duration && (
+                      <div className="absolute bottom-1 right-1">
+                        <Play className="w-4 h-4 text-white drop-shadow-lg" fill="white" />
+                      </div>
+                    )}
 
-                  {/* Share icon bottom right */}
-                  {!isSelectionMode && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShareFileId(file.id);
-                        setShowShareModal(true);
-                      }}
-                      className="absolute bottom-1 right-1 p-1 text-white/80 hover:text-white"
-                    >
-                      <Share2 className="w-4 h-4 drop-shadow-lg" />
-                    </button>
-                  )}
+                    {/* Share icon bottom right */}
+                    {!isSelectionMode && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShareFileId(file.id);
+                          setShowShareModal(true);
+                        }}
+                        className="absolute bottom-1 right-1 p-1 text-white/80 hover:text-white"
+                      >
+                        <Share2 className="w-4 h-4 drop-shadow-lg" />
+                      </button>
+                    )}
                     {/* Action Buttons */}
                     <div className="flex items-center gap-1.5 sm:gap-2 pt-1.5 sm:pt-2 file-actions">
                       {/* Share Button (was Save) */}

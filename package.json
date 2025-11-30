@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "prestart": "npm run build",
     "lint": "next lint",
     "check-env": "node scripts/check-env-local.js",
     "predeploy": "npm run check-env"

@@ -16,7 +16,10 @@ interface ApiFileItem {
   favorite: boolean;
   views: number;
   category: string;
+  needsThumbnailGeneration?: boolean;
 }
+
+const thumbnailsRoot = path.join(process.cwd(), "public", "images", "video");
 
 interface ApiFolderNode {
   id: string;
@@ -30,15 +33,32 @@ const marketingRoot = path.join(process.cwd(), "public", "marketing");
 
 const folderDefinitions = [
   { id: "ad-content", name: "Ad Content" },
-  { id: "customer-reviews", name: "Before and After" },
+  { id: "before-and-after", name: "Before and After" },
   { id: "branding", name: "Branding" },
   { id: "presentations", name: "Presentations" },
   { id: "all-footages", name: "All Footages" },
   { id: "other-files", name: "Other Files" },
 ];
 
-const imageExtensions = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff"]);
-const videoExtensions = new Set([".mp4", ".mov", ".avi", ".mkv", ".webm", ".flv", ".mpeg"]);
+const imageExtensions = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".webp",
+  ".gif",
+  ".bmp",
+  ".tif",
+  ".tiff",
+]);
+const videoExtensions = new Set([
+  ".mp4",
+  ".mov",
+  ".avi",
+  ".mkv",
+  ".webm",
+  ".flv",
+  ".mpeg",
+]);
 
 const slugify = (value: string) =>
   value
@@ -85,6 +105,35 @@ const isInsideMarketingRoot = (target: string) => {
   return !relative.startsWith("..") && !path.isAbsolute(relative);
 };
 
+const fileExists = async (target: string): Promise<boolean> => {
+  try {
+    const stats = await fs.stat(target);
+    return stats.isFile();
+  } catch {
+    return false;
+  }
+};
+
+// Generate thumbnail path for a video file
+const getVideoThumbnailPath = (
+  segments: string[],
+  fileName: string
+): string => {
+  const baseName = path.basename(fileName, path.extname(fileName));
+  const thumbnailName = `${baseName}_thumb.jpg`;
+  return path.join(thumbnailsRoot, thumbnailName);
+};
+
+// Get thumbnail URL for a video file
+const getVideoThumbnailUrl = (segments: string[], fileName: string): string => {
+  const baseName = path.basename(fileName, path.extname(fileName));
+  const thumbnailName = `${baseName}_thumb.jpg`;
+  return `/images/video/${thumbnailName}`;
+};
+
+// Default video placeholder
+const VIDEO_PLACEHOLDER = "/images/video-placeholder.svg";
+
 const buildFolderNode = async (
   dirPath: string,
   segments: string[],
@@ -93,7 +142,9 @@ const buildFolderNode = async (
   counter: { value: number }
 ): Promise<ApiFolderNode> => {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
-  entries.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+  entries.sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+  );
 
   const fileIds: number[] = [];
   const children: ApiFolderNode[] = [];
@@ -104,7 +155,13 @@ const buildFolderNode = async (
     const entryPath = path.join(dirPath, entry.name);
 
     if (entry.isDirectory()) {
-      const childNode = await buildFolderNode(entryPath, [...segments, entry.name], category, files, counter);
+      const childNode = await buildFolderNode(
+        entryPath,
+        [...segments, entry.name],
+        category,
+        files,
+        counter
+      );
       children.push(childNode);
       continue;
     }
@@ -112,20 +169,44 @@ const buildFolderNode = async (
     if (entry.isFile()) {
       const stats = await fs.stat(entryPath);
       const fileId = counter.value++;
-      const urlSegments = [...segments, entry.name].map((segment) => encodeURIComponent(segment));
+      const fileSegments = [...segments, entry.name];
+      const urlSegments = fileSegments.map((segment) =>
+        encodeURIComponent(segment)
+      );
       const url = `/marketing/${urlSegments.join("/")}`;
+      const fileType = getFileType(entry.name);
+
+      // Determine thumbnail for the file
+      let thumbnail = url;
+      let needsThumbnailGeneration = false;
+
+      if (fileType === "video" || fileType === "clip") {
+        // Check if thumbnail exists
+        const thumbnailPath = getVideoThumbnailPath(fileSegments, entry.name);
+        const thumbnailExists = await fileExists(thumbnailPath);
+
+        if (thumbnailExists) {
+          thumbnail = getVideoThumbnailUrl(fileSegments, entry.name);
+        } else {
+          // Use placeholder and mark for generation
+          thumbnail = VIDEO_PLACEHOLDER;
+          needsThumbnailGeneration = true;
+        }
+      }
+
       const fileItem: ApiFileItem = {
         id: fileId,
         name: entry.name,
-        type: getFileType(entry.name),
+        type: fileType,
         url,
-        thumbnail: url,
+        thumbnail,
         size: formatBytes(stats.size),
         date: stats.mtime.toISOString(),
         tags: segments,
         favorite: false,
         views: 0,
         category,
+        needsThumbnailGeneration,
       };
       files.push(fileItem);
       fileIds.push(fileId);
@@ -152,7 +233,13 @@ export async function GET() {
     for (const definition of folderDefinitions) {
       const dirPath = path.join(marketingRoot, definition.name);
       if (await pathExists(dirPath)) {
-        const node = await buildFolderNode(dirPath, [definition.name], definition.name, files, counter);
+        const node = await buildFolderNode(
+          dirPath,
+          [definition.name],
+          definition.name,
+          files,
+          counter
+        );
         folders.push(node);
       } else {
         folders.push({
@@ -187,7 +274,8 @@ const isDirectoryEmpty = async (dirPath: string) => {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const rawCurrentPath = typeof body.currentPath === "string" ? body.currentPath : "";
+    const rawCurrentPath =
+      typeof body.currentPath === "string" ? body.currentPath : "";
     const rawNewName = typeof body.newName === "string" ? body.newName : "";
     const sanitizedNewName = sanitizeFolderName(rawNewName);
 
@@ -199,7 +287,10 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (sanitizedNewName.includes("..")) {
-      return NextResponse.json({ error: "Invalid folder name." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid folder name." },
+        { status: 400 }
+      );
     }
 
     const currentSegments = normalizeSegments(rawCurrentPath);
@@ -207,86 +298,141 @@ export async function PATCH(req: NextRequest) {
       currentSegments.length === 0 ||
       currentSegments.some((segment) => segment.includes(".."))
     ) {
-      return NextResponse.json({ error: "Invalid current path." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid current path." },
+        { status: 400 }
+      );
     }
 
     const currentDir = path.join(marketingRoot, ...currentSegments);
     if (!isInsideMarketingRoot(currentDir)) {
-      return NextResponse.json({ error: "Current path is outside of marketing assets." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Current path is outside of marketing assets." },
+        { status: 400 }
+      );
     }
 
     if (!(await pathExists(currentDir))) {
-      return NextResponse.json({ error: "Folder does not exist." }, { status: 404 });
+      return NextResponse.json(
+        { error: "Folder does not exist." },
+        { status: 404 }
+      );
     }
 
     const parentSegments = currentSegments.slice(0, -1);
     const parentDir = path.join(marketingRoot, ...parentSegments);
     if (!isInsideMarketingRoot(parentDir)) {
-      return NextResponse.json({ error: "Invalid parent folder." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid parent folder." },
+        { status: 400 }
+      );
     }
 
     const newDir = path.join(parentDir, sanitizedNewName);
     if (!isInsideMarketingRoot(newDir)) {
-      return NextResponse.json({ error: "Invalid target path." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid target path." },
+        { status: 400 }
+      );
     }
 
     if (await pathExists(newDir)) {
-      return NextResponse.json({ error: "Target folder already exists." }, { status: 409 });
+      return NextResponse.json(
+        { error: "Target folder already exists." },
+        { status: 409 }
+      );
     }
 
     await fs.rename(currentDir, newDir);
     const parentPath = parentSegments.join("/");
-    const newPath = parentPath ? `${parentPath}/${sanitizedNewName}` : sanitizedNewName;
+    const newPath = parentPath
+      ? `${parentPath}/${sanitizedNewName}`
+      : sanitizedNewName;
     return NextResponse.json({ success: true, path: newPath }, { status: 200 });
   } catch (error) {
     console.error("Error renaming marketing folder", error);
-    return NextResponse.json({ error: "Unable to rename folder." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Unable to rename folder." },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const rawParentPath = typeof body.parentPath === "string" ? body.parentPath : "";
-    const rawFolderName = typeof body.folderName === "string" ? body.folderName : "";
+    const rawParentPath =
+      typeof body.parentPath === "string" ? body.parentPath : "";
+    const rawFolderName =
+      typeof body.folderName === "string" ? body.folderName : "";
     const sanitizedFolderName = sanitizeFolderName(rawFolderName);
 
     if (!rawParentPath || !sanitizedFolderName) {
-      return NextResponse.json({ error: "Parent path and folder name are required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Parent path and folder name are required." },
+        { status: 400 }
+      );
     }
 
     if (sanitizedFolderName.includes("..")) {
-      return NextResponse.json({ error: "Invalid folder name." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid folder name." },
+        { status: 400 }
+      );
     }
 
     const parentSegments = normalizeSegments(rawParentPath);
-    if (parentSegments.length === 0 || parentSegments.some((segment) => segment.includes(".."))) {
-      return NextResponse.json({ error: "Invalid parent path." }, { status: 400 });
+    if (
+      parentSegments.length === 0 ||
+      parentSegments.some((segment) => segment.includes(".."))
+    ) {
+      return NextResponse.json(
+        { error: "Invalid parent path." },
+        { status: 400 }
+      );
     }
 
     const parentDir = path.join(marketingRoot, ...parentSegments);
     if (!isInsideMarketingRoot(parentDir)) {
-      return NextResponse.json({ error: "Parent path is outside of the marketing tree." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Parent path is outside of the marketing tree." },
+        { status: 400 }
+      );
     }
 
     if (!(await pathExists(parentDir))) {
-      return NextResponse.json({ error: "Parent folder does not exist." }, { status: 404 });
+      return NextResponse.json(
+        { error: "Parent folder does not exist." },
+        { status: 404 }
+      );
     }
 
     const newFolderPath = path.join(parentDir, sanitizedFolderName);
     if (!isInsideMarketingRoot(newFolderPath)) {
-      return NextResponse.json({ error: "Invalid folder path." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid folder path." },
+        { status: 400 }
+      );
     }
 
     if (await pathExists(newFolderPath)) {
-      return NextResponse.json({ error: "Folder already exists." }, { status: 409 });
+      return NextResponse.json(
+        { error: "Folder already exists." },
+        { status: 409 }
+      );
     }
 
     await fs.mkdir(newFolderPath);
-    return NextResponse.json({ success: true, path: `${rawParentPath}/${sanitizedFolderName}` }, { status: 201 });
+    return NextResponse.json(
+      { success: true, path: `${rawParentPath}/${sanitizedFolderName}` },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Error creating marketing folder", error);
-    return NextResponse.json({ error: "Unable to create folder." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Unable to create folder." },
+      { status: 500 }
+    );
   }
 }
 
@@ -297,16 +443,25 @@ export async function DELETE(req: NextRequest) {
     const normalized = normalizeSegments(rawPath);
 
     if (normalized.length === 0) {
-      return NextResponse.json({ error: "Folder path is required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Folder path is required." },
+        { status: 400 }
+      );
     }
 
     if (normalized.some((segment) => segment.includes(".."))) {
-      return NextResponse.json({ error: "Invalid folder path." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid folder path." },
+        { status: 400 }
+      );
     }
 
     const targetDir = path.join(marketingRoot, ...normalized);
     if (!isInsideMarketingRoot(targetDir)) {
-      return NextResponse.json({ error: "Path is outside marketing assets." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Path is outside marketing assets." },
+        { status: 400 }
+      );
     }
 
     if (!(await pathExists(targetDir))) {
@@ -314,13 +469,22 @@ export async function DELETE(req: NextRequest) {
     }
 
     if (!(await isDirectoryEmpty(targetDir))) {
-      return NextResponse.json({ error: "Folder must be empty before deleting." }, { status: 409 });
+      return NextResponse.json(
+        { error: "Folder must be empty before deleting." },
+        { status: 409 }
+      );
     }
 
     await fs.rmdir(targetDir);
-    return NextResponse.json({ success: true, path: normalized.join("/") }, { status: 200 });
+    return NextResponse.json(
+      { success: true, path: normalized.join("/") },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error deleting marketing folder", error);
-    return NextResponse.json({ error: "Unable to delete folder." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Unable to delete folder." },
+      { status: 500 }
+    );
   }
 }

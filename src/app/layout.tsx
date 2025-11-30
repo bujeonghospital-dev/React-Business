@@ -23,57 +23,79 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://app.bjhbangkok.com"),
   title: {
     default:
-      "BJH Bangkok | Thai Packaging & Printing | บรรจุภัณฑ์และงานพิมพ์คุณภาพ",
-    template: "%s | BJH Bangkok",
+      "BJH Bangkok | โรงพยาบาลบีเจเอช | BJH Hospital Bangkok Thailand",
+    template: "%s | BJH Bangkok - โรงพยาบาลบีเจเอช",
   },
   description:
-    "BJH Bangkok (บีเจเอช แบงค็อก) - ผู้นำด้านบรรจุภัณฑ์และงานพิมพ์ในประเทศไทย | Thai Packaging & Printing PCL | บริการครบวงจร คุณภาพระดับโลก | ติดต่อ BJH Bangkok วันนี้",
+    "BJH Bangkok (โรงพยาบาลบีเจเอช) - โรงพยาบาลชั้นนำในกรุงเทพฯ ประเทศไทย | BJH Hospital Bangkok - Leading Healthcare Provider in Thailand | บริการทางการแพทย์ครบวงจร มาตรฐานสากล | ติดต่อ BJH Hospital วันนี้",
   keywords: [
+    // Primary Keywords - ค้นหาหลัก
     "BJH Bangkok",
-    "บีเจเอช แบงค็อก",
     "bjh bangkok",
     "BJH",
-    "Thai Packaging",
-    "Thai Packaging and Printing",
-    "TPP",
-    "บรรจุภัณฑ์",
-    "งานพิมพ์",
-    "Printing Solutions",
-    "Packaging Thailand",
-    "กล่องกระดาษ",
-    "corrugated box bangkok",
-    "packaging company bangkok",
-    "printing company bangkok",
-    "บริษัทบรรจุภัณฑ์ กรุงเทพ",
-    "บริษัทงานพิมพ์ กรุงเทพ",
+    "bjh",
+    "โรงพยาบาลบีเจเอช",
+    "โรงพยาบาล bjh",
+    "โรงพยาบาล BJH",
+    "BJH Hospital",
+    "bjh hospital",
+    // Secondary Keywords - ค้นหารอง
+    "บีเจเอช แบงค็อก",
+    "โรงพยาบาลบีเจเอช กรุงเทพ",
+    "BJH Hospital Bangkok",
+    "BJH Hospital Thailand",
+    "Bujeong Hospital",
+    "โรงพยาบาลบูจอง",
+    // Location Keywords
+    "โรงพยาบาล กรุงเทพ",
+    "hospital bangkok",
+    "bangkok hospital",
+    "thailand hospital",
+    // Service Keywords
+    "บริการทางการแพทย์",
+    "healthcare bangkok",
+    "medical services thailand",
+    "คลินิก กรุงเทพ",
   ],
   robots: { index: true, follow: true },
-  alternates: { canonical: "/" },
+  alternates: {
+    canonical: "https://app.bjhbangkok.com",
+    languages: {
+      'th': 'https://app.bjhbangkok.com',
+      'en': 'https://app.bjhbangkok.com/en',
+    }
+  },
   icons: { icon: "/BJH.ico", apple: "/BJH.png" },
-  // เพิ่ม Open Graph ช่วยแชร์สวยและช่วย Search Engine
+  // Open Graph - สำหรับ Facebook และ Social Media
   openGraph: {
     type: "website",
     url: "https://app.bjhbangkok.com",
-    siteName: "BJH Bangkok",
-    title: "BJH Bangkok | Thai Packaging & Printing | บรรจุภัณฑ์และงานพิมพ์",
+    siteName: "BJH Bangkok Hospital - โรงพยาบาลบีเจเอช",
+    title: "BJH Bangkok | โรงพยาบาลบีเจเอช | BJH Hospital Thailand",
     description:
-      "BJH Bangkok (บีเจเอช แบงค็อก) - ผู้นำด้านบรรจุภัณฑ์และงานพิมพ์ในประเทศไทย | Thai Packaging & Printing PCL",
+      "BJH Bangkok (โรงพยาบาลบีเจเอช) - โรงพยาบาลชั้นนำในกรุงเทพฯ | BJH Hospital - Leading Healthcare Provider in Bangkok, Thailand",
+    locale: "th_TH",
     images: [
       {
         url: "https://app.bjhbangkok.com/BJH.png",
         width: 1200,
         height: 630,
-        alt: "BJH Bangkok Logo",
+        alt: "BJH Bangkok Hospital - โรงพยาบาลบีเจเอช Logo",
       },
     ],
   },
-  // เพิ่ม Twitter Card (ถ้ายังไม่ใช้รูป ใส่ได้ภายหลัง)
+  // Twitter Card
   twitter: {
     card: "summary_large_image",
-    title: "BJH Bangkok | Thai Packaging & Printing",
-    description: "BJH Bangkok - ผู้นำด้านบรรจุภัณฑ์และงานพิมพ์ในประเทศไทย",
+    title: "BJH Bangkok | โรงพยาบาลบีเจเอช | BJH Hospital",
+    description: "BJH Bangkok (โรงพยาบาลบีเจเอช) - โรงพยาบาลชั้นนำในกรุงเทพฯ ประเทศไทย | Leading Hospital in Bangkok",
     images: ["/BJH.png"],
   },
+  // Additional SEO
+  verification: {
+    google: "flGnNhb1Ui0L9FS0V80ePdbJw7VeQWIuNXjtDV2R6nU",
+  },
+  category: "Healthcare",
 };
 // ====== Fonts ======
 const font = localFont({
@@ -89,79 +111,40 @@ export default function RootLayout({
   return (
     <html lang="th" suppressHydrationWarning>
       <head>
-        {/* Google Site Verification */}
-        <meta
-          name="google-site-verification"
-          content="flGnNhb1Ui0L9FS0V80ePdbJw7VeQWIuNXjtDV2R6nU"
-        />
-        {/* JSON-LD: Organization - ช่วยให้ Google เข้าใจข้อมูลบริษัท */}
+        {/* JSON-LD: Hospital - ช่วยให้ Google เข้าใจว่าเป็นโรงพยาบาล */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "Organization",
-              name: "BJH Bangkok",
-              legalName: "Thai Packaging & Printing Public Company Limited",
+              "@type": "Hospital",
+              "@id": "https://app.bjhbangkok.com/#hospital",
+              name: "BJH Bangkok Hospital",
               alternateName: [
+                "โรงพยาบาลบีเจเอช",
+                "BJH Hospital",
+                "BJH Bangkok",
                 "บีเจเอช แบงค็อก",
-                "TPP",
-                "Thai Packaging",
+                "Bujeong Hospital",
+                "โรงพยาบาลบูจอง",
                 "BJH",
               ],
               url: "https://app.bjhbangkok.com",
               logo: "https://app.bjhbangkok.com/BJH.png",
-              description:
-                "BJH Bangkok - ผู้นำด้านบรรจุภัณฑ์และงานพิมพ์ในประเทศไทย | Leading packaging & printing solutions provider in Thailand",
-              foundingDate: "1991",
-              email: "info@bjhbangkok.com",
-              telephone: "+66-2-xxx-xxxx",
-              address: {
-                "@type": "PostalAddress",
-                addressCountry: "TH",
-                addressLocality: "Bangkok",
-                addressRegion: "Bangkok",
-              },
-              geo: {
-                "@type": "GeoCoordinates",
-                latitude: "13.7563",
-                longitude: "100.5018",
-              },
-              sameAs: [
-                "https://www.facebook.com/bjhbangkok",
-                "https://www.linkedin.com/company/bjhbangkok",
-              ],
-              knowsAbout: [
-                "Packaging",
-                "Printing",
-                "Corrugated Box",
-                "บรรจุภัณฑ์",
-                "งานพิมพ์",
-              ],
-            }),
-          }}
-        />
-        {/* JSON-LD: LocalBusiness - สำหรับการค้นหาในพื้นที่ */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "LocalBusiness",
-              "@id": "https://app.bjhbangkok.com/#organization",
-              name: "BJH Bangkok",
-              alternateName: "บีเจเอช แบงค็อก",
-              description:
-                "ผู้นำด้านบรรจุภัณฑ์และงานพิมพ์ในกรุงเทพฯ และประเทศไทย",
-              url: "https://app.bjhbangkok.com",
               image: "https://app.bjhbangkok.com/BJH.png",
-              priceRange: "$$",
-              telephone: "+66-2-xxx-xxxx",
+              description:
+                "BJH Bangkok (โรงพยาบาลบีเจเอช) - โรงพยาบาลชั้นนำในกรุงเทพฯ ประเทศไทย | Leading Hospital in Bangkok, Thailand | บริการทางการแพทย์ครบวงจร มาตรฐานสากล",
               email: "info@bjhbangkok.com",
+              telephone: "+66-2-xxx-xxxx",
+              priceRange: "$$$",
+              currenciesAccepted: "THB",
+              paymentAccepted: "Cash, Credit Card, Insurance",
               address: {
                 "@type": "PostalAddress",
+                streetAddress: "Bangkok",
                 addressLocality: "Bangkok",
                 addressRegion: "Bangkok",
+                postalCode: "10xxx",
                 addressCountry: "TH",
               },
               geo: {
@@ -178,15 +161,84 @@ export default function RootLayout({
                     "Wednesday",
                     "Thursday",
                     "Friday",
+                    "Saturday",
+                    "Sunday",
                   ],
-                  opens: "08:00",
-                  closes: "17:00",
+                  opens: "00:00",
+                  closes: "23:59",
                 },
               ],
+              medicalSpecialty: [
+                "GeneralPractice",
+                "Surgery",
+                "InternalMedicine",
+                "Cardiology",
+                "Orthopedics",
+              ],
+              availableService: {
+                "@type": "MedicalProcedure",
+                name: "Medical Services",
+                description: "บริการทางการแพทย์ครบวงจร",
+              },
               sameAs: [
                 "https://www.facebook.com/bjhbangkok",
                 "https://www.linkedin.com/company/bjhbangkok",
               ],
+            }),
+          }}
+        />
+        {/* JSON-LD: MedicalOrganization - เสริม SEO สำหรับองค์กรทางการแพทย์ */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "MedicalOrganization",
+              "@id": "https://app.bjhbangkok.com/#organization",
+              name: "BJH Bangkok Hospital",
+              alternateName: ["โรงพยาบาลบีเจเอช", "BJH Hospital", "BJH"],
+              description:
+                "โรงพยาบาลบีเจเอช กรุงเทพ - บริการทางการแพทย์ครบวงจร มาตรฐานสากล | BJH Hospital Bangkok - Comprehensive Healthcare Services",
+              url: "https://app.bjhbangkok.com",
+              logo: "https://app.bjhbangkok.com/BJH.png",
+              contactPoint: {
+                "@type": "ContactPoint",
+                telephone: "+66-2-xxx-xxxx",
+                contactType: "customer service",
+                availableLanguage: ["Thai", "English"],
+              },
+              address: {
+                "@type": "PostalAddress",
+                addressLocality: "Bangkok",
+                addressRegion: "Bangkok",
+                addressCountry: "TH",
+              },
+            }),
+          }}
+        />
+        {/* JSON-LD: WebSite with SearchAction - ช่วยให้ Google แสดง Sitelinks Search Box */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              "@id": "https://app.bjhbangkok.com/#website",
+              name: "BJH Bangkok Hospital - โรงพยาบาลบีเจเอช",
+              alternateName: ["BJH Hospital", "โรงพยาบาลบีเจเอช", "BJH Bangkok"],
+              url: "https://app.bjhbangkok.com",
+              inLanguage: ["th", "en"],
+              publisher: {
+                "@id": "https://app.bjhbangkok.com/#organization",
+              },
+              potentialAction: {
+                "@type": "SearchAction",
+                target: {
+                  "@type": "EntryPoint",
+                  urlTemplate: "https://app.bjhbangkok.com/search?q={search_term_string}",
+                },
+                "query-input": "required name=search_term_string",
+              },
             }),
           }}
         />

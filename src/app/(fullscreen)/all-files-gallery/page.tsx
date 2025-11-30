@@ -1946,7 +1946,7 @@ const AllFilesGalleryPage = () => {
   };
 
   // Share to LINE handler with video support
-  const shareToLine = (fileId: number) => {
+  const shareToLine = async (fileId: number) => {
     const file = files.find(f => f.id === fileId);
     if (!file) return;
 
@@ -3558,49 +3558,49 @@ const AllFilesGalleryPage = () => {
                       </div>
                     )}
 
-                  {/* Selection Checkbox - Only visible in selection mode */}
-                  {isSelectionMode && (
-                    <div className="absolute top-2 left-2">
-                      <div
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedFiles.includes(file.id)
-                          ? 'bg-white border-white'
-                          : 'border-white/70 bg-black/30'
-                          }`}
-                      >
-                        {selectedFiles.includes(file.id) && (
-                          <Check className="w-4 h-4 text-black" />
-                        )}
+                    {/* Selection Checkbox - Only visible in selection mode */}
+                    {isSelectionMode && (
+                      <div className="absolute top-2 left-2">
+                        <div
+                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedFiles.includes(file.id)
+                            ? 'bg-white border-white'
+                            : 'border-white/70 bg-black/30'
+                            }`}
+                        >
+                          {selectedFiles.includes(file.id) && (
+                            <Check className="w-4 h-4 text-black" />
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Duration for videos */}
-                  {file.duration && (
-                    <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/70 rounded text-white text-xs font-medium">
-                      {file.duration}
-                    </div>
-                  )}
+                    {/* Duration for videos */}
+                    {file.duration && (
+                      <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/70 rounded text-white text-xs font-medium">
+                        {file.duration}
+                      </div>
+                    )}
 
-                  {/* Play Icon for videos */}
-                  {(file.type === "video" || file.type === "clip") && !file.duration && (
-                    <div className="absolute bottom-1 right-1">
-                      <Play className="w-4 h-4 text-white drop-shadow-lg" fill="white" />
-                    </div>
-                  )}
+                    {/* Play Icon for videos */}
+                    {(file.type === "video" || file.type === "clip") && !file.duration && (
+                      <div className="absolute bottom-1 right-1">
+                        <Play className="w-4 h-4 text-white drop-shadow-lg" fill="white" />
+                      </div>
+                    )}
 
-                  {/* Share icon bottom right */}
-                  {!isSelectionMode && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShareFileId(file.id);
-                        setShowShareModal(true);
-                      }}
-                      className="absolute bottom-1 right-1 p-1 text-white/80 hover:text-white"
-                    >
-                      <Share2 className="w-4 h-4 drop-shadow-lg" />
-                    </button>
-                  )}
+                    {/* Share icon bottom right */}
+                    {!isSelectionMode && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShareFileId(file.id);
+                          setShowShareModal(true);
+                        }}
+                        className="absolute bottom-1 right-1 p-1 text-white/80 hover:text-white"
+                      >
+                        <Share2 className="w-4 h-4 drop-shadow-lg" />
+                      </button>
+                    )}
                     {/* Action Buttons */}
                     <div className="flex items-center gap-1.5 sm:gap-2 pt-1.5 sm:pt-2 file-actions">
                       {/* Share Button (was Save) */}

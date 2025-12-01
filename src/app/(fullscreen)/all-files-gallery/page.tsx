@@ -870,6 +870,54 @@ const AllFilesGalleryPage = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Handle hardware back button (popstate) for mobile
+  useEffect(() => {
+    // Push initial state when entering a folder
+    if (activeFolderId) {
+      window.history.pushState({ folderId: activeFolderId, path: folderPath }, '');
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      // Close any open modals first
+      if (showLightbox) {
+        setShowLightbox(false);
+        window.history.pushState({ folderId: activeFolderId, path: folderPath }, '');
+        return;
+      }
+      if (showShareModal) {
+        setShowShareModal(false);
+        setShareFileId(null);
+        window.history.pushState({ folderId: activeFolderId, path: folderPath }, '');
+        return;
+      }
+      if (isFileSelectionMode) {
+        setIsFileSelectionMode(false);
+        setSelectedFiles([]);
+        window.history.pushState({ folderId: activeFolderId, path: folderPath }, '');
+        return;
+      }
+
+      // Navigate back through folders
+      if (activeFolderId) {
+        if (folderPath.length > 0) {
+          // Go back one level in nested folders
+          setFolderPath(prev => prev.slice(0, -1));
+          window.history.pushState({ folderId: activeFolderId, path: folderPath.slice(0, -1) }, '');
+        } else {
+          // Go back to main folder list
+          setActiveFolderId(null);
+          setFolderPath([]);
+        }
+      } else {
+        // At root level, go back to home
+        router.push('/home');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [activeFolderId, folderPath, showLightbox, showShareModal, isFileSelectionMode, router]);
+
   // Categories สำหรับ filter
   const categories = useMemo(() => {
     const cats = new Set(files.map((f) => f.category));
@@ -2290,29 +2338,21 @@ const AllFilesGalleryPage = () => {
                       router.push("/home");
                     }
                   }}
-                  className="p-2 md:p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all"
+                  className="p-2 md:p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all flex items-center justify-center"
                 >
                   <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
                 </button>
 
                 {/* Folder Name - shown when inside a folder */}
                 {activeFolder && (
-                  <div className="flex items-center gap-2">
-                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${activeFolder.gradient} flex items-center justify-center shadow-lg`}>
-                      {(() => {
-                        const Icon = activeFolder.icon;
-                        return <Icon className="w-5 h-5 text-white" />;
-                      })()}
-                    </div>
-                    <h1 className="text-lg md:text-xl font-bold text-white">
-                      {currentNestedFolder?.name || activeFolder.name}
-                    </h1>
-                  </div>
+                  <h1 className="folder-title font-bold text-white text-sm sm:text-base flex items-center">
+                    {currentNestedFolder?.name || activeFolder.name}
+                  </h1>
                 )}
 
                 {/* Title when no folder selected */}
                 {!activeFolder && (
-                  <h1 className="hidden md:block text-lg font-semibold text-white/90">
+                  <h1 className="hidden md:block text-lg font-semibold text-white/90 flex items-center">
                     อัลบั้มทั้งหมด
                   </h1>
                 )}
@@ -2894,56 +2934,78 @@ const AllFilesGalleryPage = () => {
 
           {/* Share Modal */}
           {showShareModal && shareFileId && (
-            <div className="fixed inset-0 z-50 bg-black/80 flex items-end md:items-center justify-center p-4">
-              <div className="w-full max-w-md bg-slate-900 rounded-t-3xl md:rounded-3xl p-4 sm:p-6 space-y-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-responsive-xl font-bold text-white">แชร์ไฟล์</h3>
+            <div
+              className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end justify-center"
+              onClick={() => {
+                setShowShareModal(false);
+                setShareFileId(null);
+              }}
+            >
+              <div
+                className="w-full max-w-lg bg-slate-900 rounded-t-3xl overflow-hidden animate-slide-up"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="p-5 border-b border-white/10">
+                  <div className="w-12 h-1 bg-white/30 rounded-full mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-white text-center">แชร์ไฟล์</h3>
+                </div>
+
+                {/* Share Options */}
+                <div className="p-5 space-y-2">
+                  {/* LINE Share */}
+                  <button
+                    onClick={() => shareFile(shareFileId, 'line')}
+                    className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-green-500/10 hover:bg-green-500/20 transition-colors"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
+                      <Send className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-white text-lg">LINE</span>
+                  </button>
+
+                  {/* WhatsApp Share */}
+                  <button
+                    onClick={() => {
+                      const file = files.find(f => f.id === shareFileId);
+                      if (file) {
+                        const text = encodeURIComponent(`Check out: ${file.name}`);
+                        window.open(`https://wa.me/?text=${text}`, '_blank');
+                      }
+                      setShowShareModal(false);
+                      setShareFileId(null);
+                    }}
+                    className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center">
+                      <MessageSquareQuote className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-white text-lg">WhatsApp</span>
+                  </button>
+
+                  {/* Other Apps Share */}
+                  <button
+                    onClick={() => shareFile(shareFileId, 'native')}
+                    className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center">
+                      <Share2 className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-white text-lg">แอปอื่นๆ</span>
+                  </button>
+                </div>
+
+                {/* Cancel Button */}
+                <div className="p-5 pt-0">
                   <button
                     onClick={() => {
                       setShowShareModal(false);
                       setShareFileId(null);
                     }}
-                    className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20"
+                    className="w-full py-4 rounded-2xl bg-white/10 text-white font-medium text-lg hover:bg-white/20 transition-colors"
                   >
-                    <X className="w-5 h-5" />
+                    ยกเลิก
                   </button>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 sm:gap-4">
-                  {/* LINE Share */}
-                  <button
-                    onClick={() => shareFile(shareFileId, 'line')}
-                    className="flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl line-share-btn transition-all"
-                  >
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white flex items-center justify-center">
-                      <Send className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />
-                    </div>
-                    <span className="text-white text-responsive-sm font-medium">LINE</span>
-                  </button>
-
-                  {/* Copy Link */}
-                  <button
-                    onClick={() => shareFile(shareFileId, 'copy')}
-                    className="flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
-                  >
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500 flex items-center justify-center">
-                      <Copy className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                    </div>
-                    <span className="text-white text-responsive-sm font-medium">คัดลอก</span>
-                  </button>
-
-                  {/* Native Share */}
-                  {'share' in navigator && (
-                    <button
-                      onClick={() => shareFile(shareFileId, 'native')}
-                      className="flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
-                    >
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-500 flex items-center justify-center">
-                        <Share2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                      </div>
-                      <span className="text-white text-responsive-sm font-medium">อื่นๆ</span>
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
@@ -3077,11 +3139,41 @@ const AllFilesGalleryPage = () => {
                   key={file.id}
                   className={`relative aspect-square overflow-hidden cursor-pointer ${selectedFiles.includes(file.id) ? 'ring-2 ring-white ring-inset' : ''}`}
                   onClick={() => {
-                    // Toggle selection on click for both web and mobile
-                    if (!isFileSelectionMode) {
-                      setIsFileSelectionMode(true);
+                    // In selection mode: toggle selection
+                    // Not in selection mode: open lightbox to view
+                    if (isFileSelectionMode) {
+                      toggleSelect(file.id);
+                    } else {
+                      openLightbox(index);
                     }
-                    toggleSelect(file.id);
+                  }}
+                  onTouchStart={() => {
+                    // Long press to enter selection mode
+                    fileLongPressRef.current = setTimeout(() => {
+                      setIsFileSelectionMode(true);
+                      if (!selectedFiles.includes(file.id)) {
+                        toggleSelect(file.id);
+                      }
+                    }, 500);
+                  }}
+                  onTouchEnd={() => {
+                    if (fileLongPressRef.current) {
+                      clearTimeout(fileLongPressRef.current);
+                      fileLongPressRef.current = null;
+                    }
+                  }}
+                  onTouchMove={() => {
+                    if (fileLongPressRef.current) {
+                      clearTimeout(fileLongPressRef.current);
+                      fileLongPressRef.current = null;
+                    }
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setIsFileSelectionMode(true);
+                    if (!selectedFiles.includes(file.id)) {
+                      toggleSelect(file.id);
+                    }
                   }}
                 >
                   {/* Image */}
@@ -3127,7 +3219,7 @@ const AllFilesGalleryPage = () => {
 
           {/* File Selection Mode Bottom Action Bar - Slide up animation */}
           <div
-            className={`fixed bottom-0 left-0 right-0 bg-black border-t border-white/10 z-50 safe-area-bottom transform transition-transform duration-300 ease-out ${isFileSelectionMode ? 'translate-y-0' : 'translate-y-full'
+            className={`fixed bottom-0 left-0 right-0 bg-black border-t border-white/10 z-50 safe-area-bottom transform transition-transform duration-300 ease-out ${isFileSelectionMode && !showShareModal ? 'translate-y-0' : 'translate-y-full'
               }`}
           >
             <div className="flex items-center justify-around py-3 px-4">
@@ -3195,23 +3287,76 @@ const AllFilesGalleryPage = () => {
               <div
                 className="relative w-full h-full flex items-center justify-center p-4"
                 onClick={(e) => e.stopPropagation()}
-              >
-                {/* Close Button */}
-                <button
-                  onClick={() => setShowLightbox(false)}
-                  className="absolute top-4 right-4 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-50"
-                >
-                  <X className="w-6 h-6" />
-                </button>
+                onTouchStart={(e) => {
+                  const touch = e.touches[0];
+                  (e.currentTarget as HTMLDivElement).dataset.touchStartX = String(touch.clientX);
+                }}
+                onTouchEnd={(e) => {
+                  const touchStartX = parseFloat((e.currentTarget as HTMLDivElement).dataset.touchStartX || '0');
+                  const touchEndX = e.changedTouches[0].clientX;
+                  const diff = touchStartX - touchEndX;
 
-                {/* Download Button in Lightbox */}
-                <button
-                  onClick={() => handleDownloadFile(filteredFiles[lightboxIndex].id)}
-                  className="absolute top-4 right-20 p-3 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-400 hover:to-cyan-400 transition-colors z-50"
-                  title="ดาวน์โหลด"
-                >
-                  <Download className="w-6 h-6" />
-                </button>
+                  if (Math.abs(diff) > 50) {
+                    if (diff > 0) {
+                      // Swipe left - next
+                      setLightboxIndex((prev) => prev < filteredFiles.length - 1 ? prev + 1 : 0);
+                    } else {
+                      // Swipe right - previous
+                      setLightboxIndex((prev) => prev > 0 ? prev - 1 : filteredFiles.length - 1);
+                    }
+                  }
+                }}
+              >
+                {/* Top Right Action Buttons */}
+                <div className="absolute top-4 right-4 flex items-center gap-2 z-50">
+                  {/* Download Button */}
+                  <button
+                    onClick={() => handleDownloadFile(filteredFiles[lightboxIndex].id)}
+                    className="p-3 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-400 hover:to-cyan-400 transition-colors"
+                    title="ดาวน์โหลด"
+                  >
+                    <Download className="w-6 h-6" />
+                  </button>
+
+                  {/* Share Button */}
+                  <button
+                    onClick={() => {
+                      setShareFileId(filteredFiles[lightboxIndex].id);
+                      setShowShareModal(true);
+                    }}
+                    className="p-3 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-400 hover:to-emerald-400 transition-colors"
+                    title="แชร์"
+                  >
+                    <Share2 className="w-6 h-6" />
+                  </button>
+
+                  {/* Delete Button */}
+                  <button
+                    onClick={() => {
+                      if (confirm('คุณต้องการลบไฟล์นี้หรือไม่?')) {
+                        handleDeleteFile(filteredFiles[lightboxIndex].id);
+                        // Close lightbox if no more files or move to next
+                        if (filteredFiles.length <= 1) {
+                          setShowLightbox(false);
+                        } else if (lightboxIndex >= filteredFiles.length - 1) {
+                          setLightboxIndex(lightboxIndex - 1);
+                        }
+                      }
+                    }}
+                    className="p-3 rounded-full bg-gradient-to-r from-red-500 to-pink-500 text-white hover:from-red-400 hover:to-pink-400 transition-colors"
+                    title="ลบ"
+                  >
+                    <Trash2 className="w-6 h-6" />
+                  </button>
+
+                  {/* Close Button */}
+                  <button
+                    onClick={() => setShowLightbox(false)}
+                    className="p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
 
                 {/* Navigation */}
                 <button

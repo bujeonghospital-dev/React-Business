@@ -181,11 +181,10 @@ const DevMiniToolbar: React.FC<DevMiniToolbarProps> = ({
                 </button>
                 {submenuIndex === idx && (
                   <div
-                    className={`absolute top-0 ${
-                      position === "bottom-left"
+                    className={`absolute top-0 ${position === "bottom-left"
                         ? "left-full ml-2"
                         : "right-full mr-2"
-                    } w-60 rounded-xl border bg-white shadow-xl`}
+                      } w-60 rounded-xl border bg-white shadow-xl`}
                   >
                     {item.items.map((sub, sidx) =>
                       sub.type === "action" ? (

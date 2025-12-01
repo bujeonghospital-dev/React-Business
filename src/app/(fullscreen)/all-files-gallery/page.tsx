@@ -602,6 +602,10 @@ const AllFilesGalleryPage = () => {
   const [aiProcessingFiles, setAIProcessingFiles] = useState<number[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareFileId, setShareFileId] = useState<number | null>(null);
+  const [showLineSendModal, setShowLineSendModal] = useState(false);
+  const [lineSendUserId, setLineSendUserId] = useState("");
+  const [lineSendStatus, setLineSendStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
+  const [lineSendError, setLineSendError] = useState("");
   const [isGlobalDropActive, setIsGlobalDropActive] = useState(false);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [showHeaderSearch, setShowHeaderSearch] = useState(false);
@@ -2088,6 +2092,51 @@ const AllFilesGalleryPage = () => {
     setShowShareModal(false);
   };
 
+  // Send video directly to LINE user via Messaging API (plays inline in LINE app)
+  const sendVideoToLineUser = async (fileId: number) => {
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+
+    if (!lineSendUserId.trim()) {
+      setLineSendError("กรุณาใส่ LINE User ID");
+      return;
+    }
+
+    setLineSendStatus("sending");
+    setLineSendError("");
+
+    try {
+      const response = await fetch('/api/line-send-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          videoPath: file.url,
+          lineUserId: lineSendUserId.trim(),
+          videoName: file.name,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setLineSendStatus("success");
+        // Reset after 2 seconds
+        setTimeout(() => {
+          setShowLineSendModal(false);
+          setLineSendUserId("");
+          setLineSendStatus("idle");
+          setShareFileId(null);
+        }, 2000);
+      } else {
+        setLineSendStatus("error");
+        setLineSendError(data.error || "ไม่สามารถส่งวิดีโอได้");
+      }
+    } catch (error) {
+      setLineSendStatus("error");
+      setLineSendError("เกิดข้อผิดพลาดในการเชื่อมต่อ");
+    }
+  };
+
   // Download file handler with progress animation
   const handleDownloadFile = async (fileId: number) => {
     const file = files.find(f => f.id === fileId);
@@ -2953,7 +3002,7 @@ const AllFilesGalleryPage = () => {
 
                 {/* Share Options */}
                 <div className="p-5 space-y-2">
-                  {/* LINE Share */}
+                  {/* LINE Share - Link Preview */}
                   <button
                     onClick={() => shareFile(shareFileId, 'line')}
                     className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-green-500/10 hover:bg-green-500/20 transition-colors"
@@ -2961,8 +3010,33 @@ const AllFilesGalleryPage = () => {
                     <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
                       <Send className="w-6 h-6 text-white" />
                     </div>
-                    <span className="text-white text-lg">LINE</span>
+                    <div className="flex-1 text-left">
+                      <span className="text-white text-lg block">LINE (แชร์ลิงก์)</span>
+                      <span className="text-white/50 text-sm">เปิดในเบราว์เซอร์ LINE</span>
+                    </div>
                   </button>
+
+                  {/* LINE Direct Send - Video plays inline */}
+                  {(files.find(f => f.id === shareFileId)?.type === 'video' ||
+                    files.find(f => f.id === shareFileId)?.type === 'clip') && (
+                      <button
+                        onClick={() => {
+                          setShowShareModal(false);
+                          setShowLineSendModal(true);
+                          setLineSendStatus("idle");
+                          setLineSendError("");
+                        }}
+                        className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 transition-colors border border-green-500/30"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
+                          <Film className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <span className="text-white text-lg block">ส่งวิดีโอตรงไป LINE ⭐</span>
+                          <span className="text-green-300 text-sm">เล่นได้เลยในแชท!</span>
+                        </div>
+                      </button>
+                    )}
 
                   {/* WhatsApp Share */}
                   <button
@@ -2981,6 +3055,17 @@ const AllFilesGalleryPage = () => {
                       <MessageSquareQuote className="w-6 h-6 text-white" />
                     </div>
                     <span className="text-white text-lg">WhatsApp</span>
+                  </button>
+
+                  {/* Copy Link */}
+                  <button
+                    onClick={() => shareFile(shareFileId, 'copy')}
+                    className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-purple-500/10 hover:bg-purple-500/20 transition-colors"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center">
+                      <Copy className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-white text-lg">คัดลอกลิงก์</span>
                   </button>
 
                   {/* Other Apps Share */}
@@ -3006,6 +3091,132 @@ const AllFilesGalleryPage = () => {
                   >
                     ยกเลิก
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* LINE Send Video Modal */}
+          {showLineSendModal && shareFileId && (
+            <div
+              className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+              onClick={() => {
+                if (lineSendStatus !== "sending") {
+                  setShowLineSendModal(false);
+                  setLineSendUserId("");
+                  setLineSendStatus("idle");
+                  setLineSendError("");
+                }
+              }}
+            >
+              <div
+                className="w-full max-w-md bg-slate-900 rounded-3xl overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="p-5 border-b border-white/10 bg-gradient-to-r from-green-500/20 to-emerald-500/20">
+                  <h3 className="text-xl font-bold text-white text-center flex items-center justify-center gap-2">
+                    <Film className="w-6 h-6 text-green-400" />
+                    ส่งวิดีโอตรงไป LINE
+                  </h3>
+                  <p className="text-green-300/80 text-sm text-center mt-1">เล่นได้เลยในแอป LINE!</p>
+                </div>
+
+                {/* Content */}
+                <div className="p-5 space-y-4">
+                  {lineSendStatus === "success" ? (
+                    <div className="text-center py-8">
+                      <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
+                        <Check className="w-10 h-10 text-green-400" />
+                      </div>
+                      <p className="text-green-400 text-xl font-semibold">ส่งวิดีโอสำเร็จ!</p>
+                      <p className="text-white/60 text-sm mt-2">วิดีโอถูกส่งไปยัง LINE แล้ว</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Video Preview */}
+                      <div className="bg-black/30 rounded-xl p-3 flex items-center gap-3">
+                        <div className="w-16 h-16 rounded-lg bg-purple-500/20 flex items-center justify-center overflow-hidden">
+                          {files.find(f => f.id === shareFileId)?.thumbnail ? (
+                            <img
+                              src={files.find(f => f.id === shareFileId)?.thumbnail}
+                              alt="Video thumbnail"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Film className="w-8 h-8 text-purple-400" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-medium truncate">
+                            {files.find(f => f.id === shareFileId)?.name}
+                          </p>
+                          <p className="text-white/50 text-sm">
+                            {files.find(f => f.id === shareFileId)?.size}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* LINE User ID Input */}
+                      <div>
+                        <label className="block text-white/80 text-sm font-medium mb-2">
+                          LINE User ID ของผู้รับ
+                        </label>
+                        <input
+                          type="text"
+                          value={lineSendUserId}
+                          onChange={(e) => setLineSendUserId(e.target.value)}
+                          placeholder="U1234567890abcdef..."
+                          className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                          disabled={lineSendStatus === "sending"}
+                        />
+                        <p className="text-white/40 text-xs mt-2">
+                          💡 ผู้รับต้องเพิ่ม LINE Official Account ของคุณเป็นเพื่อนก่อน
+                        </p>
+                      </div>
+
+                      {/* Error Message */}
+                      {lineSendError && (
+                        <div className="bg-red-500/20 border border-red-500/30 rounded-xl p-3 flex items-center gap-2">
+                          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                          <p className="text-red-300 text-sm">{lineSendError}</p>
+                        </div>
+                      )}
+
+                      {/* Buttons */}
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          onClick={() => {
+                            setShowLineSendModal(false);
+                            setLineSendUserId("");
+                            setLineSendStatus("idle");
+                            setLineSendError("");
+                          }}
+                          disabled={lineSendStatus === "sending"}
+                          className="flex-1 py-3 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors disabled:opacity-50"
+                        >
+                          ยกเลิก
+                        </button>
+                        <button
+                          onClick={() => sendVideoToLineUser(shareFileId)}
+                          disabled={lineSendStatus === "sending" || !lineSendUserId.trim()}
+                          className="flex-1 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium hover:from-green-600 hover:to-emerald-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          {lineSendStatus === "sending" ? (
+                            <>
+                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              กำลังส่ง...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-5 h-5" />
+                              ส่งวิดีโอ
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

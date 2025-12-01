@@ -1308,6 +1308,7 @@ export default function CRMAdvancedPage() {
       const hasRecords = dayRecords.length > 0;
       const dayOfWeek = new Date(year, month, day).getDay();
       const isSunday = dayOfWeek === 0;
+      const hasStarredRecords = dayRecords.some(r => r.star_flag);
 
       days.push(
         <div
@@ -1320,8 +1321,15 @@ export default function CRMAdvancedPage() {
             hover:bg-gray-800/50
           `}
         >
-          <div className={`text-xs sm:text-sm font-medium mb-1 ${isSunday ? "text-red-400" : "text-gray-300"} ${isToday ? "bg-white text-black rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center" : ""}`}>
-            {day}
+          <div className="flex items-center justify-between mb-1">
+            <div className={`text-xs sm:text-sm font-medium ${isSunday ? "text-red-400" : "text-gray-300"} ${isToday ? "bg-white text-black rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center" : ""}`}>
+              {day}
+            </div>
+            {hasStarredRecords && (
+              <svg className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400 fill-current" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+            )}
           </div>
           {hasRecords && (
             <div className="space-y-0.5">
@@ -1333,10 +1341,15 @@ export default function CRMAdvancedPage() {
                     event.stopPropagation();
                     openCustomerModal(record);
                   }}
-                  className="block w-full truncate rounded-sm bg-emerald-600 px-1 py-0.5 text-left text-[8px] sm:text-[10px] text-white font-medium hover:bg-emerald-500 transition"
+                  className="w-full flex items-center gap-0.5 truncate rounded-sm bg-emerald-600 px-1 py-0.5 text-left text-[8px] sm:text-[10px] text-white font-medium hover:bg-emerald-500 transition"
                   title={`${record.customer_name} - ${record.status}`}
                 >
-                  {record.customer_name}
+                  {record.star_flag && (
+                    <svg className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-yellow-300 fill-current flex-shrink-0" viewBox="0 0 24 24">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                  )}
+                  <span className="truncate">{record.customer_name}</span>
                 </button>
               ))}
               {dayRecords.length > 3 && (
@@ -1369,7 +1382,7 @@ export default function CRMAdvancedPage() {
 
     // Empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(<div key={`empty-${i}`} className="p-2"></div>);
+      days.push(<div key={`empty-${i}`} className="min-h-[80px] sm:min-h-[100px] border-b border-r border-gray-700"></div>);
     }
 
     // Days of the month
@@ -1381,7 +1394,8 @@ export default function CRMAdvancedPage() {
       const isToday = dateStr === today;
       const isSelected = dateStr === selectedDate;
       const hasAttendances = dayAttendances.length > 0;
-      const dayColor = getDayColor(dateStr);
+      const dayOfWeek = new Date(year, month, day).getDay();
+      const isSunday = dayOfWeek === 0;
 
       days.push(
         <div
@@ -1395,7 +1409,6 @@ export default function CRMAdvancedPage() {
             } else {
               // Open form to add new attendance
               setEditingAttendance(null);
-              // ใช้ dateStr โดยตรงโดยไม่ผ่านฟังก์ชันแปลง (เป็น YYYY-MM-DD อยู่แล้ว)
               setAttendanceForm({
                 employee_id: 0,
                 work_date: dateStr,
@@ -1410,72 +1423,46 @@ export default function CRMAdvancedPage() {
             }
           }}
           className={`
-            min-h-[120px] p-2 border-2 cursor-pointer transition-all
-            ${isToday ? "ring-4 ring-yellow-400 ring-offset-2" : ""}
-            ${isSelected ? "ring-4 ring-emerald-400 ring-offset-2" : ""}
-            ${dayColor.bg} ${dayColor.border}
-            ${hasAttendances ? "shadow-lg" : ""}
-            hover:shadow-xl hover:scale-105
+            min-h-[80px] sm:min-h-[100px] p-1 border-b border-r border-gray-700 cursor-pointer transition-all
+            ${isToday ? "bg-gray-800" : ""}
+            ${isSelected ? "bg-teal-900/50" : ""}
+            hover:bg-gray-800/50
           `}
         >
-          <div className={`font-bold ${dayColor.text} text-sm mb-1`}>{day}</div>
+          <div className={`text-xs sm:text-sm font-medium mb-1 ${isSunday ? "text-red-400" : "text-gray-300"} ${isToday ? "bg-white text-black rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center" : ""}`}>
+            {day}
+          </div>
           {hasAttendances ? (
-            <div className="space-y-1">
-              <div className="text-xs bg-teal-500 text-white px-2 py-1 rounded-full font-bold mb-2">
+            <div className="space-y-0.5">
+              <div className="text-[8px] sm:text-[10px] bg-teal-500 text-white px-1 py-0.5 rounded-sm font-bold text-center">
                 {dayAttendances.length} คน
               </div>
-              <div className="grid grid-cols-2 gap-1">
-                {dayAttendances.slice(0, 6).map((att) => {
-                  const statusColors: Record<string, string> = {
-                    PRESENT: "bg-green-100 text-green-800",
-                    LATE: "bg-yellow-100 text-yellow-800",
-                    LEAVE: "bg-blue-100 text-blue-800",
-                    ABSENT: "bg-red-100 text-red-800",
-                    WFH: "bg-purple-100 text-purple-800",
-                  };
-                  const statusLabels: Record<string, string> = {
-                    PRESENT: "มาทำงาน",
-                    LATE: "มาสาย",
-                    LEAVE: "ลา",
-                    ABSENT: "ขาดงาน",
-                    WFH: "WFH",
-                  };
-                  return (
-                    <div
-                      key={att.id}
-                      className="bg-white/90 rounded p-1 text-xs space-y-0.5"
-                    >
-                      <div
-                        className="font-bold text-gray-800 truncate"
-                        title={att.employee_name}
-                      >
-                        {att.employee_name}
-                      </div>
-                      <div
-                        className={`px-1 py-0.5 rounded text-xs font-semibold ${statusColors[att.status] ||
-                          "bg-gray-100 text-gray-800"
-                          }`}
-                      >
-                        {att.status_rank ||
-                          statusLabels[att.status] ||
-                          att.status}
-                      </div>
-                      <div className="flex justify-between text-xs text-gray-600">
-                        <span>⏰ {formatTimeDisplay(att.time_in)}</span>
-                        <span>🏁 {formatTimeDisplay(att.time_out)}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {dayAttendances.length > 6 && (
-                <div className="text-xs text-white/80 font-medium text-center mt-1">
-                  +{dayAttendances.length - 6} คน
+              {dayAttendances.slice(0, 2).map((att) => {
+                const statusColors: Record<string, string> = {
+                  PRESENT: "bg-green-500",
+                  LATE: "bg-yellow-500",
+                  LEAVE: "bg-blue-500",
+                  ABSENT: "bg-red-500",
+                  WFH: "bg-purple-500",
+                };
+                return (
+                  <div
+                    key={att.id}
+                    className={`${statusColors[att.status] || "bg-gray-500"} rounded-sm px-1 py-0.5 text-[8px] sm:text-[10px] text-white font-medium truncate`}
+                    title={`${att.employee_name} - ${att.status}`}
+                  >
+                    {att.employee_name}
+                  </div>
+                );
+              })}
+              {dayAttendances.length > 2 && (
+                <div className="text-[8px] sm:text-[10px] text-gray-400 pl-1">
+                  +{dayAttendances.length - 2} คน
                 </div>
               )}
             </div>
           ) : (
-            <div className="text-xs text-white/60 text-center mt-2">
+            <div className="text-[8px] sm:text-[10px] text-gray-500 text-center mt-2">
               คลิกเพื่อเพิ่มข้อมูล
             </div>
           )}
@@ -1794,7 +1781,7 @@ export default function CRMAdvancedPage() {
           )}
           {/* Calendar View 2 */}
           {viewMode === "calendar2" && (
-            <div className="px-8 pb-8">
+            <div className="px-2 sm:px-8 pb-8">
               {/* ปุ่มเพิ่มพนักงานและบันทึกการเข้างาน */}
               <div className="mb-4 flex justify-end gap-3">
                 <button
@@ -1821,10 +1808,10 @@ export default function CRMAdvancedPage() {
                     setAttendanceForm(newForm);
                     setShowAttendanceForm(true);
                   }}
-                  className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg transition-all shadow-lg font-bold flex items-center gap-2"
+                  className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg transition-all shadow-lg font-bold flex items-center gap-2 text-xs sm:text-sm"
                 >
                   <svg
-                    className="w-5 h-5"
+                    className="w-4 h-4 sm:w-5 sm:h-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -1840,15 +1827,15 @@ export default function CRMAdvancedPage() {
                 </button>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 shadow-2xl">
+              <div className="bg-black/90 backdrop-blur-md rounded-lg sm:rounded-2xl overflow-hidden shadow-2xl">
                 {/* Calendar Header */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-700">
                   <button
                     onClick={handlePrevMonth2}
-                    className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg transition-all shadow-lg font-medium"
+                    className="p-1 sm:p-2 hover:bg-gray-800 rounded-full transition-all"
                   >
                     <svg
-                      className="w-6 h-6"
+                      className="w-5 h-5 sm:w-6 sm:h-6 text-gray-300"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -1862,22 +1849,19 @@ export default function CRMAdvancedPage() {
                     </svg>
                   </button>
                   <div className="text-center">
-                    <h2 className="text-2xl font-bold text-white">
+                    <h2 className="text-lg sm:text-2xl font-bold text-white">
                       {currentMonth2.toLocaleDateString("th-TH", {
                         year: "numeric",
-                        month: "long",
-                      })}
+                        month: "short",
+                      }).replace(" ", ".")}
                     </h2>
-                    <p className="text-sm text-white/80 mt-1">
-                      {attendances.length} รายการในเดือนนี้
-                    </p>
                   </div>
                   <button
                     onClick={handleNextMonth2}
-                    className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg transition-all shadow-lg font-medium"
+                    className="p-1 sm:p-2 hover:bg-gray-800 rounded-full transition-all"
                   >
                     <svg
-                      className="w-6 h-6"
+                      className="w-5 h-5 sm:w-6 sm:h-6 text-gray-300"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -1893,12 +1877,12 @@ export default function CRMAdvancedPage() {
                 </div>
 
                 {/* Calendar Grid */}
-                <div className="grid grid-cols-7 gap-2">
+                <div className="grid grid-cols-7">
                   {/* Day Headers */}
-                  {["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"].map((day) => (
+                  {["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."].map((day, index) => (
                     <div
                       key={day}
-                      className="text-center font-bold text-white py-3 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg"
+                      className={`text-center text-[10px] sm:text-xs font-medium py-2 border-b border-r border-gray-700 ${index === 0 ? "text-red-400" : "text-gray-400"}`}
                     >
                       {day}
                     </div>
@@ -1906,71 +1890,6 @@ export default function CRMAdvancedPage() {
 
                   {/* Calendar Days */}
                   {renderCalendar2()}
-                </div>
-
-                {/* Legend */}
-                <div className="mt-6 space-y-3">
-                  <div className="text-center text-white font-bold text-lg mb-3">
-                    🌈 สีประจำวัน
-                  </div>
-                  <div className="grid grid-cols-7 gap-2">
-                    <div className="flex flex-col items-center gap-2 bg-white/20 px-3 py-2 rounded-lg ">
-                      <div className="w-8 h-8 bg-red-400/50 border-2 border-red-400 rounded"></div>
-                      <span className="text-white text-xs font-medium">
-                        อาทิตย์
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2 bg-white/20 px-3 py-2 rounded-lg">
-                      <div className="w-8 h-8 bg-yellow-400/50 border-2 border-yellow-400 rounded"></div>
-                      <span className="text-white text-xs font-medium">
-                        จันทร์
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2 bg-white/20 px-3 py-2 rounded-lg">
-                      <div className="w-8 h-8 bg-pink-400/50 border-2 border-pink-400 rounded"></div>
-                      <span className="text-white text-xs font-medium">
-                        อังคาร
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2 bg-white/20 px-3 py-2 rounded-lg">
-                      <div className="w-8 h-8 bg-green-400/50 border-2 border-green-400 rounded"></div>
-                      <span className="text-white text-xs font-medium">
-                        พุธ
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2 bg-white/20 px-3 py-2 rounded-lg">
-                      <div className="w-8 h-8 bg-orange-400/50 border-2 border-orange-400 rounded"></div>
-                      <span className="text-white text-xs font-medium">
-                        พฤหัส
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2 bg-white/20 px-3 py-2 rounded-lg">
-                      <div className="w-8 h-8 bg-blue-400/50 border-2 border-blue-400 rounded"></div>
-                      <span className="text-white text-xs font-medium">
-                        ศุกร์
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2 bg-white/20 px-3 py-2 rounded-lg">
-                      <div className="w-8 h-8 bg-purple-400/50 border-2 border-purple-400 rounded"></div>
-                      <span className="text-white text-xs font-medium">
-                        เสาร์
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-3 justify-center mt-4">
-                    <div className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg">
-                      <div className="w-4 h-4 bg-white/50 ring-4 ring-yellow-400 rounded"></div>
-                      <span className="text-white text-sm font-medium">
-                        วันนี้
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg">
-                      <div className="w-4 h-4 bg-white/50 ring-4 ring-white rounded"></div>
-                      <span className="text-white text-sm font-medium">
-                        วันที่เลือก
-                      </span>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -1980,12 +1899,25 @@ export default function CRMAdvancedPage() {
             <div className="space-y-3 sm:space-y-5 px-2 sm:px-0">
               {/* Date Filter Row */}
               <div className="flex justify-center">
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="px-3 sm:px-4 py-2 rounded-lg bg-white/90 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm sm:text-base"
-                />
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div className="px-3 sm:px-4 py-2 rounded-lg bg-white/90 text-gray-800 font-medium text-sm sm:text-base flex items-center gap-2 pointer-events-none">
+                    <span>
+                      {startDate ? (() => {
+                        const [year, month, day] = startDate.split("-");
+                        return `${day}/${month}/${year}`;
+                      })() : "เลือกวันที่"}
+                    </span>
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                </div>
               </div>
 
               {/* Customer Segment Buttons Row */}
@@ -2471,19 +2403,34 @@ export default function CRMAdvancedPage() {
       {/* Popup Modal */}
       {showPopup && selectedDateRecords.length > 0 && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end justify-center z-50"
           onClick={closePopup}
         >
           <div
-            className="bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-gradient-to-br from-white to-blue-50 rounded-t-3xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden animate-slide-up"
             onClick={(e) => e.stopPropagation()}
+            style={{
+              animation: 'slideUp 0.3s ease-out'
+            }}
           >
+            <style jsx>{`
+              @keyframes slideUp {
+                from {
+                  transform: translateY(100%);
+                  opacity: 0;
+                }
+                to {
+                  transform: translateY(0);
+                  opacity: 1;
+                }
+              }
+            `}</style>
             {/* Popup Header */}
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 rounded-t-2xl flex justify-between items-center">
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-4 sm:px-6 py-4 flex justify-between items-center">
               <div className="flex items-center gap-3">
                 <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
                   <svg
-                    className="w-6 h-6 text-white"
+                    className="w-5 h-5 sm:w-6 sm:h-6 text-white"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -2497,7 +2444,7 @@ export default function CRMAdvancedPage() {
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-white">
+                  <h2 className="text-lg sm:text-2xl font-bold text-white">
                     นัดหมายวันที่{" "}
                     {(() => {
                       const [year, month, day] = selectedDateStr
@@ -2511,7 +2458,7 @@ export default function CRMAdvancedPage() {
                       });
                     })()}
                   </h2>
-                  <p className="text-blue-100 text-sm mt-1">
+                  <p className="text-blue-100 text-xs sm:text-sm">
                     ทั้งหมด {selectedDateRecords.length} รายการ
                   </p>
                 </div>
@@ -2521,7 +2468,7 @@ export default function CRMAdvancedPage() {
                 className="bg-white/20 hover:bg-white/30 p-2 rounded-lg transition-all"
               >
                 <svg
-                  className="w-6 h-6 text-white"
+                  className="w-5 h-5 sm:w-6 sm:h-6 text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -2537,115 +2484,127 @@ export default function CRMAdvancedPage() {
             </div>
 
             {/* Popup Content */}
-            <div className="p-6 space-y-3 max-h-[calc(90vh-200px)] overflow-y-auto">
+            <div className="p-4 sm:p-6 space-y-4 max-h-[calc(85vh-140px)] overflow-y-auto">
               {selectedDateRecords.map((record, index) => (
                 <div
                   key={record.id}
-                  className="bg-gradient-to-r from-white to-blue-50 rounded-xl shadow-lg p-5 border-2 border-blue-200 hover:shadow-xl transition-all"
+                  className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden"
                 >
-                  {/* Header Row */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-3 py-1 rounded-full text-xs font-bold">
-                          #{index + 1}
-                        </span>
-                        {record.star_flag && (
-                          <svg
-                            className="w-5 h-5 text-yellow-500 fill-current"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                          </svg>
-                        )}
-                      </div>
+                  {/* Card Header */}
+                  <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-2.5 py-0.5 rounded-full text-xs font-bold">
+                        #{index + 1}
+                      </span>
                       <button
                         type="button"
                         onClick={() => openCustomerModal(record)}
-                        className="text-left text-xl font-bold text-blue-700 underline-offset-2 transition hover:underline"
+                        className="text-lg sm:text-xl font-bold text-blue-600 hover:underline"
                       >
                         {record.customer_name}
                       </button>
-                      <p className="text-sm text-gray-600">{record.phone}</p>
+                      <span className="text-gray-500 text-sm">{record.phone}</span>
                     </div>
-                    <div className="text-right">
-                      <span className="inline-block px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full text-xs font-bold">
-                        {record.status}
-                      </span>
-                      {record.status.trim() === "นัดพร้อมทำ" && record.hasCustomerProfile && (
-                        <div className="mt-1 inline-flex items-center justify-center rounded-full bg-emerald-500/90 text-white text-xs font-semibold px-4 py-2 shadow-lg">
-                          เปิด OPD แล้ว
-                        </div>
-                      )}
-                    </div>
+                    <span className="px-3 py-1 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-full text-xs font-bold">
+                      {record.status}
+                    </span>
                   </div>
 
                   {/* Delete Button */}
-                  <div className="mb-3">
+                  <div className="px-4 py-2">
                     <button
                       onClick={() => deleteRecord(record.id)}
-                      className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold shadow-lg transition-all flex items-center justify-center gap-2"
+                      className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold shadow transition-all flex items-center justify-center gap-2"
                     >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                       ลบข้อมูล
                     </button>
                   </div>
 
-                  {/* Details Grid */}
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                  {/* Details Grid - 2 columns layout */}
+                  <div className="px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-3">
+                    {/* Row 1 */}
                     <div>
-                      <p className="text-gray-600 font-medium">
-                        ⏰ เวลานัดหมาย
-                      </p>
-                      <p className="text-gray-800 font-bold">
+                      <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-0.5">
+                        <span className="text-red-500">⏰</span> เวลานัดหมาย
+                      </div>
+                      <p className="text-gray-900 font-bold text-sm sm:text-base">
                         {formatTimeDisplay(record.appointmentTime)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-600 font-medium">👨‍⚕️ แพทย์</p>
-                      <p className="text-gray-800 font-bold">{record.doctor}</p>
+                      <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-0.5">
+                        <span>👨‍⚕️</span> แพทย์
+                      </div>
+                      <p className="text-gray-900 font-bold text-sm sm:text-base">
+                        {record.doctor}
+                      </p>
                     </div>
+
+                    {/* Row 2 */}
                     <div>
-                      <p className="text-gray-600 font-medium">💊 ผลิตภัณฑ์</p>
-                      <p className="text-gray-800 font-bold">
+                      <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-0.5">
+                        <span>💊</span> ผลิตภัณฑ์
+                      </div>
+                      <p className="text-gray-900 font-bold text-sm sm:text-base">
                         {sanitizeProductName(record.interested_product || record.interestedProduct)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-600 font-medium">🌍 ประเทศ</p>
-                      <p className="text-gray-800 font-bold">
-                        {record.country}
+                      <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-0.5">
+                        <span>🌍</span> ประเทศ
+                      </div>
+                      <p className="text-gray-900 font-bold text-sm sm:text-base">
+                        {record.country || "-"}
+                      </p>
+                    </div>
+
+                    {/* Row 3 */}
+                    <div>
+                      <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-0.5">
+                        <span>👤</span> ผู้ติดต่อ
+                      </div>
+                      <p className="text-gray-900 font-bold text-sm sm:text-base">
+                        {record.contact_staff || "-"}
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-600 font-medium">👤 ผู้ติดต่อ</p>
-                      <p className="text-gray-800 font-bold">
-                        {record.contact_staff}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 font-medium">💰 ยอดเสนอ</p>
-                      <p className="text-purple-600 font-bold text-lg">
+                      <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-0.5">
+                        <span>💰</span> ยอดเสนอ
+                      </div>
+                      <p className="text-purple-600 font-bold text-lg sm:text-xl">
                         {record.proposed_amount.toLocaleString()} ฿
+                      </p>
+                    </div>
+
+                    {/* Row 4 - Star and OPD status */}
+                    <div>
+                      <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-0.5">
+                        <span>⭐</span> ติดดาว
+                      </div>
+                      <p className="text-gray-900 font-bold text-sm sm:text-base flex items-center gap-1">
+                        {record.star_flag ? (
+                          <><svg className="w-5 h-5 text-yellow-500 fill-current" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg> ใช่</>
+                        ) : "ไม่"}
+                      </p>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-0.5">
+                        <span>🏥</span> OPD
+                      </div>
+                      <p className="text-gray-900 font-bold text-sm sm:text-base">
+                        {record.status.trim() === "นัดพร้อมทำ" && record.hasCustomerProfile ? (
+                          <span className="text-emerald-600">เปิด OPD แล้ว</span>
+                        ) : "-"}
                       </p>
                     </div>
                   </div>
 
-                  {/* Note */}
+                  {/* Note Section */}
                   {record.note && (
-                    <div className="mt-3 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                    <div className="mx-4 mb-3 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
                       <p className="text-xs text-gray-600 font-medium mb-1">
                         📝 หมายเหตุ
                       </p>
@@ -2653,17 +2612,15 @@ export default function CRMAdvancedPage() {
                     </div>
                   )}
 
-                  {/* Dates */}
+                  {/* Surgery/Consult Dates */}
                   {(record.surgery_date || record.consult_date) && (
-                    <div className="mt-3 flex gap-2 text-xs">
+                    <div className="px-4 pb-3 flex flex-wrap gap-2">
                       {record.surgery_date && (
                         <div className="bg-red-100 px-3 py-1 rounded-full">
-                          <span className="text-red-700 font-bold">
+                          <span className="text-red-700 font-bold text-xs">
                             🏥 ผ่าตัด:{" "}
                             {(() => {
-                              const [year, month, day] = record
-                                .surgery_date!.split("-")
-                                .map(Number);
+                              const [year, month, day] = record.surgery_date!.split("-").map(Number);
                               const date = new Date(year, month - 1, day);
                               return date.toLocaleDateString("th-TH");
                             })()}
@@ -2672,12 +2629,10 @@ export default function CRMAdvancedPage() {
                       )}
                       {record.consult_date && (
                         <div className="bg-blue-100 px-3 py-1 rounded-full">
-                          <span className="text-blue-700 font-bold">
+                          <span className="text-blue-700 font-bold text-xs">
                             📅 ปรึกษา:{" "}
                             {(() => {
-                              const [year, month, day] = record
-                                .consult_date!.split("-")
-                                .map(Number);
+                              const [year, month, day] = record.consult_date!.split("-").map(Number);
                               const date = new Date(year, month - 1, day);
                               return date.toLocaleDateString("th-TH");
                             })()}
@@ -2688,74 +2643,13 @@ export default function CRMAdvancedPage() {
                   )}
                 </div>
               ))}
-
-              {/* Summary */}
-              <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-4 border-2 border-purple-300">
-                <div className="flex justify-between items-center">
-                  <div>
-
-                    {needsItemGroupSection && (
-                      <div className="mt-4 bg-white/80 border border-gray-200 rounded-2xl p-4 shadow-inner space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-semibold text-gray-700">
-                              เลือกบริการจาก Item Group
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              กลุ่มบริการจากตาราง b_itemgroup
-                            </p>
-                          </div>
-                          {groupsLoading && (
-                            <span className="text-xs text-slate-500">กำลังโหลด...</span>
-                          )}
-                        </div>
-                        {groupsError && (
-                          <p className="text-xs text-red-600">{groupsError}</p>
-                        )}
-                        <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-                          {!groupsLoading && itemGroups.length === 0 && (
-                            <p className="text-xs text-gray-500">ไม่พบกลุ่มบริการ</p>
-                          )}
-                          {itemGroups.map((group) => (
-                            <button
-                              type="button"
-                              key={group.groupcode}
-                              onClick={() => openGroupServiceModal(group)}
-                              className="flex-1 min-w-[160px] whitespace-nowrap rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:shadow-lg transition"
-                            >
-                              {group.groupname}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    <p className="text-sm text-gray-600 font-medium">
-                      รวมทั้งหมด
-                    </p>
-                    <p className="text-2xl font-bold text-purple-600">
-                      {selectedDateRecords.length} รายการ
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600 font-medium">
-                      รวมยอดเสนอ
-                    </p>
-                    <p className="text-2xl font-bold text-purple-600">
-                      {selectedDateRecords
-                        .reduce((sum, r) => sum + r.proposed_amount, 0)
-                        .toLocaleString()}{" "}
-                      ฿
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Popup Footer */}
-            <div className="bg-gray-100 p-4 rounded-b-2xl flex justify-end">
+            <div className="bg-gray-100 px-4 sm:px-6 py-3 flex justify-end border-t">
               <button
                 onClick={closePopup}
-                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-lg font-bold shadow-lg transition-all"
+                className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-lg font-bold shadow-lg transition-all"
               >
                 ปิด
               </button>

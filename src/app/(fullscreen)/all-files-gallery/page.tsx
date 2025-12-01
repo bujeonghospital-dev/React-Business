@@ -3483,20 +3483,6 @@ const AllFilesGalleryPage = () => {
                       <Play className="w-4 h-4 text-white drop-shadow-lg" fill="white" />
                     </div>
                   )}
-
-                  {/* Share icon - only when not in selection mode */}
-                  {!isFileSelectionMode && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShareFileId(file.id);
-                        setShowShareModal(true);
-                      }}
-                      className="absolute bottom-1 right-1 p-1.5 rounded-full bg-black/40 text-white/80 hover:text-white hover:bg-black/60 transition-all"
-                    >
-                      <Share2 className="w-4 h-4 drop-shadow-lg" />
-                    </button>
-                  )}
                 </div>
               ))}
             </div>

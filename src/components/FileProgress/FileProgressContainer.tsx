@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     FileProgressAnimation,
@@ -14,6 +14,7 @@ interface FileProgressContainerProps {
     onDismiss?: (id: string) => void;
     onClearAll?: () => void;
     position?: "bottom-right" | "bottom-left" | "top-right" | "top-left";
+    autoDismissDelay?: number; // Auto dismiss after all complete (ms), default 2000
 }
 
 export const FileProgressContainer: React.FC<FileProgressContainerProps> = ({
@@ -23,8 +24,10 @@ export const FileProgressContainer: React.FC<FileProgressContainerProps> = ({
     onDismiss,
     onClearAll,
     position = "bottom-right",
+    autoDismissDelay = 2000,
 }) => {
     const [isMinimized, setIsMinimized] = React.useState(false);
+    const autoDismissTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     const uploadItems = items.filter((i) => i.type === "upload");
     const downloadItems = items.filter((i) => i.type === "download");
@@ -33,6 +36,33 @@ export const FileProgressContainer: React.FC<FileProgressContainerProps> = ({
     ).length;
     const completedCount = items.filter((i) => i.status === "success").length;
     const errorCount = items.filter((i) => i.status === "error").length;
+
+    // Auto dismiss when all items are complete (success only, not errors)
+    useEffect(() => {
+        // Clear any existing timer
+        if (autoDismissTimerRef.current) {
+            clearTimeout(autoDismissTimerRef.current);
+            autoDismissTimerRef.current = null;
+        }
+
+        // Check if all items are complete with no errors and no active transfers
+        const allSuccess = items.length > 0 &&
+            activeCount === 0 &&
+            errorCount === 0 &&
+            completedCount === items.length;
+
+        if (allSuccess && onClearAll && autoDismissDelay > 0) {
+            autoDismissTimerRef.current = setTimeout(() => {
+                onClearAll();
+            }, autoDismissDelay);
+        }
+
+        return () => {
+            if (autoDismissTimerRef.current) {
+                clearTimeout(autoDismissTimerRef.current);
+            }
+        };
+    }, [items.length, activeCount, errorCount, completedCount, onClearAll, autoDismissDelay]);
 
     // Calculate overall progress
     const overallProgress = items.length > 0

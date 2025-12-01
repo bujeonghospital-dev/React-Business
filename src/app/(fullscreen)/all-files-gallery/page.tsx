@@ -54,6 +54,7 @@ import {
   AlertCircle,
   Info,
   FolderPlus,
+  ArrowRight,
 } from "lucide-react";
 import UserMenu from "@/components/UserMenu";
 import {
@@ -604,8 +605,14 @@ const AllFilesGalleryPage = () => {
   const [isGlobalDropActive, setIsGlobalDropActive] = useState(false);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [showHeaderSearch, setShowHeaderSearch] = useState(false);
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [folderActionSheet, setFolderActionSheet] = useState<{
+    isOpen: boolean;
+    folderId: string | null;
+    folderName: string;
+  }>({ isOpen: false, folderId: null, folderName: '' });
+  const [isFileSelectionMode, setIsFileSelectionMode] = useState(false);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const fileLongPressRef = useRef<NodeJS.Timeout | null>(null);
 
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState<{
@@ -2223,10 +2230,10 @@ const AllFilesGalleryPage = () => {
           ))}
         </div>
 
-        <div className="relative z-10 p-3 md:p-6 pb-24">
-          {/* Header Section - Samsung Gallery Style */}
-          {isSelectionMode ? (
-            /* Selection Mode Header */
+        <div className="relative z-10 p-3 md:p-6 pb-20">
+          {/* Header Section - Gallery Style */}
+          {isFileSelectionMode ? (
+            /* File Selection Mode Header */
             <div className="flex items-center justify-between mb-4 md:mb-6">
               {/* Left: Select All Checkbox */}
               <button
@@ -2249,7 +2256,7 @@ const AllFilesGalleryPage = () => {
               {/* Right: Cancel Button */}
               <button
                 onClick={() => {
-                  setIsSelectionMode(false);
+                  setIsFileSelectionMode(false);
                   setSelectedFiles([]);
                 }}
                 className="text-white font-medium px-2 py-1"
@@ -2260,33 +2267,50 @@ const AllFilesGalleryPage = () => {
           ) : (
             /* Normal Mode Header */
             <div className="flex items-center justify-between mb-4 md:mb-6">
-              {/* Left: Back Button */}
-              <button
-                onClick={() => {
-                  if (activeFolder) {
-                    // If in nested folder, go back one level
-                    if (folderPath.length > 0) {
-                      setFolderPath(prev => prev.slice(0, -1));
+              {/* Left: Back Button + Folder Name */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    if (activeFolder) {
+                      // If in nested folder, go back one level
+                      if (folderPath.length > 0) {
+                        setFolderPath(prev => prev.slice(0, -1));
+                      } else {
+                        // Go back to main folder list
+                        setActiveFolderId(null);
+                        setFolderPath([]);
+                      }
                     } else {
-                      // Go back to main folder list
-                      setActiveFolderId(null);
-                      setFolderPath([]);
+                      router.push("/home");
                     }
-                  } else {
-                    router.push("/home");
-                  }
-                }}
-                className="p-2 md:p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all"
-              >
-                <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
-              </button>
+                  }}
+                  className="p-2 md:p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all"
+                >
+                  <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
+                </button>
 
-              {/* Center: Title (only when no folder selected) */}
-              {!activeFolder && (
-                <h1 className="hidden md:block text-lg font-semibold text-white/90">
-                  อัลบั้มทั้งหมด
-                </h1>
-              )}
+                {/* Folder Name - shown when inside a folder */}
+                {activeFolder && (
+                  <div className="flex items-center gap-2">
+                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${activeFolder.gradient} flex items-center justify-center shadow-lg`}>
+                      {(() => {
+                        const Icon = activeFolder.icon;
+                        return <Icon className="w-5 h-5 text-white" />;
+                      })()}
+                    </div>
+                    <h1 className="text-lg md:text-xl font-bold text-white">
+                      {currentNestedFolder?.name || activeFolder.name}
+                    </h1>
+                  </div>
+                )}
+
+                {/* Title when no folder selected */}
+                {!activeFolder && (
+                  <h1 className="hidden md:block text-lg font-semibold text-white/90">
+                    อัลบั้มทั้งหมด
+                  </h1>
+                )}
+              </div>
 
               {/* Right: Action Icons */}
               <div className="flex items-center gap-1 sm:gap-2">
@@ -2595,98 +2619,6 @@ const AllFilesGalleryPage = () => {
 
           {activeFolder && (
             <div className="mb-6 md:mb-8 space-y-5">
-              {/* Selected Folder Header Card */}
-              <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-purple-400/50 shadow-lg shadow-purple-500/20">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    {/* Back button */}
-                    <button
-                      onClick={() => {
-                        setActiveFolderId(null);
-                        setFolderPath([]);
-                      }}
-                      className="p-2 sm:p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all"
-                    >
-                      <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </button>
-
-                    {/* Folder icon and info */}
-                    <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br ${activeFolder.gradient} flex items-center justify-center shadow-lg`}>
-                        {(() => {
-                          const Icon = activeFolder.icon;
-                          return <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />;
-                        })()}
-                      </div>
-                      <div>
-                        <h2 className="text-lg sm:text-xl font-bold text-white">{activeFolder.name}</h2>
-                        <p className="text-purple-200/60 text-sm hidden sm:block">{activeFolder.description}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Folder stats */}
-                  <div className="flex items-center gap-3 sm:gap-4 text-sm text-purple-200/60">
-                    <span className="flex items-center gap-1.5">
-                      <FolderOpen className="w-4 h-4" />
-                      {displayFolders.length}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <FileVideo className="w-4 h-4" />
-                      {currentNestedFolder?.fileIds.length || 0}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Breadcrumb - show only if nested */}
-                {breadcrumbItems.length > 1 && (
-                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10 flex-wrap">
-                    {breadcrumbItems.map((item, index) => (
-                      <div key={item.id} className="flex items-center gap-2">
-                        {index > 0 && (
-                          <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-purple-300/50" />
-                        )}
-                        <button
-                          onClick={() => handleBreadcrumbClick(index)}
-                          className={`px-2 sm:px-3 py-1 rounded-lg text-sm transition-all ${index === breadcrumbItems.length - 1
-                            ? "bg-purple-500/30 text-white font-medium"
-                            : "text-purple-200/70 hover:text-white hover:bg-white/10"
-                            }`}
-                        >
-                          {item.name}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Action Buttons - Upload & Create Folder */}
-              <div className="flex justify-end gap-2 sm:gap-3">
-                {/* Upload Button */}
-                <button
-                  onClick={() => setShowUploadModal(true)}
-                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl btn-text font-semibold bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 transition-all duration-200"
-                >
-                  <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  อัพโหลด
-                </button>
-
-                {/* Create Folder Button */}
-                <button
-                  onClick={() => {
-                    setIsCreatingSubFolder((prev) => !prev);
-                    setSubFolderDraftName("");
-                    setEditingSubFolderId(null);
-                    setEditingSubFolderValue("");
-                  }}
-                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl btn-text font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all duration-200"
-                >
-                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  {isCreatingSubFolder ? "ยกเลิก" : "สร้างโฟลเดอร์"}
-                </button>
-              </div>
-
               {/* Create Folder Form */}
               {isCreatingSubFolder && (
                 <div className="glass-card rounded-2xl p-5 border border-white/10 shadow-lg mb-4">
@@ -2723,6 +2655,39 @@ const AllFilesGalleryPage = () => {
                       onClick={() => {
                         if (!isEditing) {
                           handleNestedFolderSelect(subFolder.id);
+                        }
+                      }}
+                      onTouchStart={() => {
+                        if (!isEditing) {
+                          longPressTimerRef.current = setTimeout(() => {
+                            setFolderActionSheet({
+                              isOpen: true,
+                              folderId: subFolder.id,
+                              folderName: subFolder.name,
+                            });
+                          }, 500);
+                        }
+                      }}
+                      onTouchEnd={() => {
+                        if (longPressTimerRef.current) {
+                          clearTimeout(longPressTimerRef.current);
+                          longPressTimerRef.current = null;
+                        }
+                      }}
+                      onTouchMove={() => {
+                        if (longPressTimerRef.current) {
+                          clearTimeout(longPressTimerRef.current);
+                          longPressTimerRef.current = null;
+                        }
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        if (!isEditing) {
+                          setFolderActionSheet({
+                            isOpen: true,
+                            folderId: subFolder.id,
+                            folderName: subFolder.name,
+                          });
                         }
                       }}
                       className={`group relative glass-card rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 text-left transition-all duration-300 hover:scale-[1.03] border overflow-hidden animate-slide-up cursor-pointer border-white/10 hover:border-purple-300/50 hover:shadow-lg hover:shadow-purple-500/20`}
@@ -2784,29 +2749,6 @@ const AllFilesGalleryPage = () => {
                               <FileVideo className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                               {fileCount}
                             </span>
-                          </div>
-                          {/* Action buttons on hover */}
-                          <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleStartEditSubFolder(subFolder);
-                              }}
-                              className="p-1.5 rounded-lg bg-white/20 text-white hover:bg-white/30 transition-all"
-                              title="แก้ไขชื่อ"
-                            >
-                              <Pencil className="w-3 h-3" />
-                            </button>
-                            <button
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleDeleteSubFolder(subFolder.id);
-                              }}
-                              className="p-1.5 rounded-lg bg-white/20 text-red-300 hover:bg-red-500/30 transition-all"
-                              title="ลบโฟลเดอร์"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
                           </div>
                         </div>
                       )}
@@ -3464,187 +3406,171 @@ const AllFilesGalleryPage = () => {
               </table>
             </div>
           ) : (
-            // Grid View - Samsung Gallery Style (4 columns)
+            // Samsung Gallery Style - 4 columns grid
             <div className="grid grid-cols-4 gap-0.5">
               {filteredFiles.map((file, index) => (
                 <div
                   key={file.id}
                   className={`relative aspect-square overflow-hidden cursor-pointer ${selectedFiles.includes(file.id) ? 'ring-2 ring-white ring-inset' : ''}`}
                   onClick={() => {
-                    if (isSelectionMode) {
+                    if (isFileSelectionMode) {
                       toggleSelect(file.id);
                     } else {
                       openLightbox(index);
                     }
                   }}
                   onTouchStart={() => {
-                    longPressTimerRef.current = setTimeout(() => {
-                      setIsSelectionMode(true);
+                    fileLongPressRef.current = setTimeout(() => {
+                      setIsFileSelectionMode(true);
                       if (!selectedFiles.includes(file.id)) {
                         toggleSelect(file.id);
                       }
                     }, 500);
                   }}
                   onTouchEnd={() => {
-                    if (longPressTimerRef.current) {
-                      clearTimeout(longPressTimerRef.current);
-                      longPressTimerRef.current = null;
+                    if (fileLongPressRef.current) {
+                      clearTimeout(fileLongPressRef.current);
+                      fileLongPressRef.current = null;
                     }
                   }}
                   onTouchMove={() => {
-                    if (longPressTimerRef.current) {
-                      clearTimeout(longPressTimerRef.current);
-                      longPressTimerRef.current = null;
+                    if (fileLongPressRef.current) {
+                      clearTimeout(fileLongPressRef.current);
+                      fileLongPressRef.current = null;
                     }
                   }}
                   onContextMenu={(e) => {
                     e.preventDefault();
-                    setIsSelectionMode(true);
+                    setIsFileSelectionMode(true);
                     if (!selectedFiles.includes(file.id)) {
                       toggleSelect(file.id);
                     }
                   }}
                 >
                   {/* Image */}
-                  <img
-                    src={file.thumbnail}
+                  <ThumbnailImage
+                    file={file}
                     alt={file.name}
                     className="w-full h-full object-cover"
                   />
-                  {/* Image/Video Container */}
-                  <div
-                    className="relative aspect-[4/3] overflow-hidden cursor-pointer"
-                    onClick={() => openLightbox(index)}
-                  >
-                    <ThumbnailImage
-                      file={file}
-                      alt={file.name}
-                      className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-                    />
 
-                    {/* Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  {/* Selection Checkbox - visible in selection mode or when selected */}
+                  {(isFileSelectionMode || selectedFiles.includes(file.id)) && (
+                    <div className="absolute top-2 left-2">
+                      <div
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedFiles.includes(file.id)
+                          ? 'bg-white border-white'
+                          : 'border-white/70 bg-black/30'
+                          }`}
+                      >
+                        {selectedFiles.includes(file.id) && (
+                          <Check className="w-4 h-4 text-black" />
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-                    {/* Type Badge */}
-                    <div
-                      className={`absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r ${getTypeColor(
-                        file.type
-                      )} text-white text-xs font-semibold shadow-lg`}
+                  {/* Video duration badge */}
+                  {file.duration && (
+                    <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/70 rounded text-white text-xs font-medium">
+                      {file.duration}
+                    </div>
+                  )}
+
+                  {/* Play icon for videos */}
+                  {(file.type === "video" || file.type === "clip") && !file.duration && (
+                    <div className="absolute bottom-1 right-1">
+                      <Play className="w-4 h-4 text-white drop-shadow-lg" fill="white" />
+                    </div>
+                  )}
+
+                  {/* Share icon - only when not in selection mode */}
+                  {!isFileSelectionMode && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShareFileId(file.id);
+                        setShowShareModal(true);
+                      }}
+                      className="absolute bottom-1 right-1 p-1.5 rounded-full bg-black/40 text-white/80 hover:text-white hover:bg-black/60 transition-all"
                     >
-                      {getTypeIcon(file.type)}
-                      <span className="uppercase">{file.type}</span>
-                    </div>
-
-                    {/* Duration for videos/clips */}
-                    {file.duration && (
-                      <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/70 rounded-md text-white text-xs font-medium">
-                        {file.duration}
-                      </div>
-                    )}
-
-                    {/* Play Icon for videos */}
-                    {(file.type === "video" || file.type === "clip") && (
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="p-4 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors">
-                          <Play className="w-8 h-8 text-white" />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Favorite Badge */}
-                    {file.favorite && (
-                      <div className="absolute top-3 right-3">
-                        <Heart className="w-5 h-5 text-pink-500 fill-current drop-shadow-lg" />
-                      </div>
-                    )}
-
-                    {/* Selection Checkbox - Only visible in selection mode */}
-                    {isSelectionMode && (
-                      <div className="absolute top-2 left-2">
-                        <div
-                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedFiles.includes(file.id)
-                            ? 'bg-white border-white'
-                            : 'border-white/70 bg-black/30'
-                            }`}
-                        >
-                          {selectedFiles.includes(file.id) && (
-                            <Check className="w-4 h-4 text-black" />
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Duration for videos */}
-                    {file.duration && (
-                      <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/70 rounded text-white text-xs font-medium">
-                        {file.duration}
-                      </div>
-                    )}
-
-                    {/* Play Icon for videos */}
-                    {(file.type === "video" || file.type === "clip") && !file.duration && (
-                      <div className="absolute bottom-1 right-1">
-                        <Play className="w-4 h-4 text-white drop-shadow-lg" fill="white" />
-                      </div>
-                    )}
-
-                    {/* Share icon bottom right */}
-                    {!isSelectionMode && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShareFileId(file.id);
-                          setShowShareModal(true);
-                        }}
-                        className="absolute bottom-1 right-1 p-1 text-white/80 hover:text-white"
-                      >
-                        <Share2 className="w-4 h-4 drop-shadow-lg" />
-                      </button>
-                    )}
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-1.5 sm:gap-2 pt-1.5 sm:pt-2 file-actions">
-                      {/* Share Button (was Save) */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShareFileId(file.id);
-                          setShowShareModal(true);
-                        }}
-                        className="flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl transition-all mobile-touch-target bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-400 hover:to-emerald-400"
-                      >
-                        <Share2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                        <span className="btn-text font-medium hidden sm:inline">
-                          Share
-                        </span>
-                      </button>
-                      {/* Download Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownloadFile(file.id);
-                        }}
-                        className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-400 hover:to-cyan-400 transition-colors mobile-touch-target"
-                        title="ดาวน์โหลด"
-                      >
-                        <Download className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </button>
-                      {/* Delete Button (was Share/LINE) */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteFile(file.id);
-                        }}
-                        className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-white/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors mobile-touch-target"
-                        title="ลบไฟล์"
-                      >
-                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </button>
-                    </div>
-                  </div>
+                      <Share2 className="w-4 h-4 drop-shadow-lg" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
           )}
+
+          {/* File Selection Mode Bottom Action Bar - Slide up animation */}
+          <div
+            className={`fixed bottom-0 left-0 right-0 bg-black border-t border-white/10 z-50 safe-area-bottom transform transition-transform duration-300 ease-out ${isFileSelectionMode ? 'translate-y-0' : 'translate-y-full'
+              }`}
+          >
+            <div className="flex items-center justify-around py-3 px-4">
+              {/* Add to Album */}
+              <button
+                onClick={() => {
+                  if (selectedFiles.length > 0) {
+                    alert(`เพิ่ม ${selectedFiles.length} รายการไปยังอัลบั้ม`);
+                  }
+                }}
+                className="flex flex-col items-center gap-1 px-4 py-2"
+              >
+                <FolderPlus className="w-6 h-6 text-white" />
+                <span className="text-white text-xs">สร้าง</span>
+              </button>
+
+              {/* Share */}
+              <button
+                onClick={() => {
+                  if (selectedFiles.length > 0) {
+                    setShareFileId(selectedFiles[0]);
+                    setShowShareModal(true);
+                  }
+                }}
+                className="flex flex-col items-center gap-1 px-4 py-2"
+              >
+                <Share2 className="w-6 h-6 text-white" />
+                <span className="text-white text-xs">แชร์</span>
+              </button>
+
+              {/* Delete */}
+              <button
+                onClick={() => {
+                  if (selectedFiles.length > 0) {
+                    setConfirmModal({
+                      isOpen: true,
+                      type: 'delete',
+                      title: 'ลบไฟล์ที่เลือก',
+                      message: `คุณต้องการลบ ${selectedFiles.length} ไฟล์ที่เลือกหรือไม่?`,
+                      onConfirm: () => {
+                        selectedFiles.forEach(id => handleDeleteFile(id));
+                        setSelectedFiles([]);
+                        setIsFileSelectionMode(false);
+                        closeConfirmModal();
+                      },
+                      confirmText: 'ลบ',
+                      cancelText: 'ยกเลิก',
+                    });
+                  }
+                }}
+                className="flex flex-col items-center gap-1 px-4 py-2"
+              >
+                <Trash2 className="w-6 h-6 text-white" />
+                <span className="text-white text-xs">ลบ</span>
+              </button>
+
+              {/* More Options */}
+              <button
+                onClick={() => setShowHeaderMenu(true)}
+                className="flex flex-col items-center gap-1 px-4 py-2"
+              >
+                <MoreVertical className="w-6 h-6 text-white" />
+                <span className="text-white text-xs">เพิ่มเติม</span>
+              </button>
+            </div>
+          </div>
 
           {/* Lightbox Modal */}
           {showLightbox && filteredFiles[lightboxIndex] && (
@@ -3755,75 +3681,69 @@ const AllFilesGalleryPage = () => {
             </div>
           )}
 
-          {/* Selection Mode Bottom Action Bar - Samsung Gallery Style */}
-          {isSelectionMode && (
-            <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-white/10 z-50">
-              <div className="flex items-center justify-around py-3 px-4">
-                {/* Create/Add */}
-                <button
-                  onClick={() => {
-                    // Add to folder functionality
-                    if (selectedFiles.length > 0) {
-                      alert(`เพิ่ม ${selectedFiles.length} รายการไปยังอัลบั้ม`);
-                    }
-                  }}
-                  className="flex flex-col items-center gap-1 px-4 py-2"
-                >
-                  <FolderPlus className="w-6 h-6 text-white" />
-                  <span className="text-white text-xs">สร้าง</span>
-                </button>
+          {/* Folder Action Sheet - Samsung Gallery Style */}
+          {folderActionSheet.isOpen && (
+            <div
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center"
+              onClick={() => setFolderActionSheet({ isOpen: false, folderId: null, folderName: '' })}
+            >
+              <div
+                className="w-full max-w-lg bg-slate-900 rounded-t-3xl overflow-hidden animate-slide-up"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="p-5 border-b border-white/10">
+                  <div className="w-12 h-1 bg-white/30 rounded-full mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-white text-center">
+                    {folderActionSheet.folderName}
+                  </h3>
+                </div>
 
-                {/* Share */}
-                <button
-                  onClick={() => {
-                    if (selectedFiles.length > 0) {
-                      setShareFileId(selectedFiles[0]);
-                      setShowShareModal(true);
-                    }
-                  }}
-                  className="flex flex-col items-center gap-1 px-4 py-2"
-                >
-                  <Share2 className="w-6 h-6 text-white" />
-                  <span className="text-white text-xs">แชร์</span>
-                </button>
+                {/* Actions */}
+                <div className="p-4 space-y-2">
+                  {/* Edit Name */}
+                  <button
+                    onClick={() => {
+                      const folder = displayFolders.find(f => f.id === folderActionSheet.folderId);
+                      if (folder) {
+                        handleStartEditSubFolder(folder);
+                      }
+                      setFolderActionSheet({ isOpen: false, folderId: null, folderName: '' });
+                    }}
+                    className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                      <Pencil className="w-6 h-6 text-blue-400" />
+                    </div>
+                    <span className="text-white text-lg">แก้ไขชื่อ</span>
+                  </button>
 
-                {/* Delete */}
-                <button
-                  onClick={() => {
-                    if (selectedFiles.length > 0) {
-                      setConfirmModal({
-                        isOpen: true,
-                        type: 'delete',
-                        title: 'ลบไฟล์ที่เลือก',
-                        message: `คุณต้องการลบ ${selectedFiles.length} ไฟล์ที่เลือกหรือไม่?`,
-                        onConfirm: () => {
-                          selectedFiles.forEach(id => handleDeleteFile(id));
-                          setSelectedFiles([]);
-                          setIsSelectionMode(false);
-                          setConfirmModal(prev => ({ ...prev, isOpen: false }));
-                        },
-                        confirmText: 'ลบ',
-                        cancelText: 'ยกเลิก',
-                      });
-                    }
-                  }}
-                  className="flex flex-col items-center gap-1 px-4 py-2"
-                >
-                  <Trash2 className="w-6 h-6 text-white" />
-                  <span className="text-white text-xs">ลบ</span>
-                </button>
+                  {/* Delete */}
+                  <button
+                    onClick={() => {
+                      if (folderActionSheet.folderId) {
+                        handleDeleteSubFolder(folderActionSheet.folderId);
+                      }
+                      setFolderActionSheet({ isOpen: false, folderId: null, folderName: '' });
+                    }}
+                    className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-white/5 hover:bg-red-500/20 transition-colors"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                      <Trash2 className="w-6 h-6 text-red-400" />
+                    </div>
+                    <span className="text-red-400 text-lg">ลบโฟลเดอร์</span>
+                  </button>
+                </div>
 
-                {/* More Options */}
-                <button
-                  onClick={() => {
-                    // More options menu
-                    setShowHeaderMenu(true);
-                  }}
-                  className="flex flex-col items-center gap-1 px-4 py-2"
-                >
-                  <MoreVertical className="w-6 h-6 text-white" />
-                  <span className="text-white text-xs">เพิ่มเติม</span>
-                </button>
+                {/* Cancel Button */}
+                <div className="p-4 pt-0">
+                  <button
+                    onClick={() => setFolderActionSheet({ isOpen: false, folderId: null, folderName: '' })}
+                    className="w-full py-4 rounded-2xl bg-white/10 text-white font-medium text-lg hover:bg-white/20 transition-colors"
+                  >
+                    ยกเลิก
+                  </button>
+                </div>
               </div>
             </div>
           )}

@@ -1294,7 +1294,7 @@ export default function CRMAdvancedPage() {
 
     // Empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(<div key={`empty-${i}`} className="p-2"></div>);
+      days.push(<div key={`empty-${i}`} className="min-h-[80px] sm:min-h-[100px] border-b border-r border-gray-700"></div>);
     }
 
     // Days of the month
@@ -1306,28 +1306,26 @@ export default function CRMAdvancedPage() {
       const isToday = dateStr === today;
       const isSelected = dateStr === selectedDate;
       const hasRecords = dayRecords.length > 0;
-      const dayColor = getDayColor(dateStr);
+      const dayOfWeek = new Date(year, month, day).getDay();
+      const isSunday = dayOfWeek === 0;
 
       days.push(
         <div
           key={day}
           onClick={() => handleDateClick(dateStr)}
           className={`
-            min-h-[100px] p-2 border-2 cursor-pointer transition-all
-            ${isToday ? "ring-4 ring-yellow-400 ring-offset-2" : ""}
-            ${isSelected ? "ring-4 ring-white ring-offset-2" : ""}
-            ${dayColor.bg} ${dayColor.border}
-            ${hasRecords ? "shadow-lg" : ""}
-            hover:shadow-xl hover:scale-105
+            min-h-[80px] sm:min-h-[100px] p-1 border-b border-r border-gray-700 cursor-pointer transition-all
+            ${isToday ? "bg-gray-800" : ""}
+            ${isSelected ? "bg-blue-900/50" : ""}
+            hover:bg-gray-800/50
           `}
         >
-          <div className={`font-bold ${dayColor.text} text-sm mb-1`}>{day}</div>
+          <div className={`text-xs sm:text-sm font-medium mb-1 ${isSunday ? "text-red-400" : "text-gray-300"} ${isToday ? "bg-white text-black rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center" : ""}`}>
+            {day}
+          </div>
           {hasRecords && (
-            <div className="space-y-1">
-              <div className="text-xs bg-emerald-500 text-white px-2 py-1 rounded-full font-bold">
-                {dayRecords.length} รายการ
-              </div>
-              {dayRecords.slice(0, 2).map((record) => (
+            <div className="space-y-0.5">
+              {dayRecords.slice(0, 3).map((record) => (
                 <button
                   key={record.id}
                   type="button"
@@ -1335,15 +1333,15 @@ export default function CRMAdvancedPage() {
                     event.stopPropagation();
                     openCustomerModal(record);
                   }}
-                  className="block w-full truncate rounded bg-white/90 px-2 py-1 text-left text-xs text-blue-700 transition hover:bg-blue-100"
+                  className="block w-full truncate rounded-sm bg-emerald-600 px-1 py-0.5 text-left text-[8px] sm:text-[10px] text-white font-medium hover:bg-emerald-500 transition"
                   title={`${record.customer_name} - ${record.status}`}
                 >
                   {record.customer_name}
                 </button>
               ))}
-              {dayRecords.length > 2 && (
-                <div className="text-xs text-white/80 font-medium">
-                  +{dayRecords.length - 2} เพิ่มเติม
+              {dayRecords.length > 3 && (
+                <div className="text-[8px] sm:text-[10px] text-gray-400 pl-1">
+                  +{dayRecords.length - 3} เพิ่มเติม
                 </div>
               )}
             </div>
@@ -1726,16 +1724,16 @@ export default function CRMAdvancedPage() {
         <div className="w-full overflow-hidden">
           {/* Calendar View */}
           {viewMode === "calendar" && (
-            <div className="px-8 pb-8">
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 shadow-2xl">
+            <div className="px-2 sm:px-8 pb-8">
+              <div className="bg-black/90 backdrop-blur-md rounded-lg sm:rounded-2xl overflow-hidden shadow-2xl">
                 {/* Calendar Header */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-700">
                   <button
                     onClick={handlePrevMonth}
-                    className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-lg transition-all shadow-lg font-medium"
+                    className="p-1 sm:p-2 hover:bg-gray-800 rounded-full transition-all"
                   >
                     <svg
-                      className="w-6 h-6"
+                      className="w-5 h-5 sm:w-6 sm:h-6 text-gray-300"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -1749,22 +1747,19 @@ export default function CRMAdvancedPage() {
                     </svg>
                   </button>
                   <div className="text-center">
-                    <h2 className="text-2xl font-bold text-white">
+                    <h2 className="text-lg sm:text-2xl font-bold text-white">
                       {currentMonth.toLocaleDateString("th-TH", {
                         year: "numeric",
-                        month: "long",
-                      })}
+                        month: "short",
+                      }).replace(" ", ".")} 
                     </h2>
-                    <p className="text-sm text-white/80 mt-1">
-                      {records.length} รายการในเดือนนี้
-                    </p>
                   </div>
                   <button
                     onClick={handleNextMonth}
-                    className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-lg transition-all shadow-lg font-medium"
+                    className="p-1 sm:p-2 hover:bg-gray-800 rounded-full transition-all"
                   >
                     <svg
-                      className="w-6 h-6"
+                      className="w-5 h-5 sm:w-6 sm:h-6 text-gray-300"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -1780,12 +1775,12 @@ export default function CRMAdvancedPage() {
                 </div>
 
                 {/* Calendar Grid */}
-                <div className="grid grid-cols-7 gap-2">
+                <div className="grid grid-cols-7">
                   {/* Day Headers */}
-                  {["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"].map((day) => (
+                  {["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."].map((day, index) => (
                     <div
                       key={day}
-                      className="text-center font-bold text-white py-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg"
+                      className={`text-center text-[10px] sm:text-xs font-medium py-2 border-b border-r border-gray-700 ${index === 0 ? "text-red-400" : "text-gray-400"}`}
                     >
                       {day}
                     </div>
@@ -1793,71 +1788,6 @@ export default function CRMAdvancedPage() {
 
                   {/* Calendar Days */}
                   {renderCalendar()}
-                </div>
-
-                {/* Legend */}
-                <div className="mt-6 space-y-3">
-                  <div className="text-center text-white font-bold text-lg mb-3">
-                    🌈 สีประจำวัน
-                  </div>
-                  <div className="grid grid-cols-7 gap-2">
-                    <div className="flex flex-col items-center gap-2 bg-white/20 px-3 py-2 rounded-lg ">
-                      <div className="w-8 h-8 bg-red-400/50 border-2 border-red-400 rounded"></div>
-                      <span className="text-white text-xs font-medium">
-                        อาทิตย์
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2 bg-white/20 px-3 py-2 rounded-lg">
-                      <div className="w-8 h-8 bg-yellow-400/50 border-2 border-yellow-400 rounded"></div>
-                      <span className="text-white text-xs font-medium">
-                        จันทร์
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2 bg-white/20 px-3 py-2 rounded-lg">
-                      <div className="w-8 h-8 bg-pink-400/50 border-2 border-pink-400 rounded"></div>
-                      <span className="text-white text-xs font-medium">
-                        อังคาร
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2 bg-white/20 px-3 py-2 rounded-lg">
-                      <div className="w-8 h-8 bg-green-400/50 border-2 border-green-400 rounded"></div>
-                      <span className="text-white text-xs font-medium">
-                        พุธ
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2 bg-white/20 px-3 py-2 rounded-lg">
-                      <div className="w-8 h-8 bg-orange-400/50 border-2 border-orange-400 rounded"></div>
-                      <span className="text-white text-xs font-medium">
-                        พฤหัส
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2 bg-white/20 px-3 py-2 rounded-lg">
-                      <div className="w-8 h-8 bg-blue-400/50 border-2 border-blue-400 rounded"></div>
-                      <span className="text-white text-xs font-medium">
-                        ศุกร์
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2 bg-white/20 px-3 py-2 rounded-lg">
-                      <div className="w-8 h-8 bg-purple-400/50 border-2 border-purple-400 rounded"></div>
-                      <span className="text-white text-xs font-medium">
-                        เสาร์
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-3 justify-center mt-4">
-                    <div className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg">
-                      <div className="w-4 h-4 bg-white/50 ring-4 ring-yellow-400 rounded"></div>
-                      <span className="text-white text-sm font-medium">
-                        วันนี้
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg">
-                      <div className="w-4 h-4 bg-white/50 ring-4 ring-white rounded"></div>
-                      <span className="text-white text-sm font-medium">
-                        วันที่เลือก
-                      </span>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>

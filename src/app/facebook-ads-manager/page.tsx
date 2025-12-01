@@ -1855,943 +1855,1674 @@ export default function FacebookAdsManagerPage() {
 
       {/* Main Content Layout */}
       <div className="px-3 sm:px-6 py-3 sm:py-6">
-        {/* Performance Cards and Tables in 3-Column Layout */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          {/* Column 1: เงินคงเหลือ + ใช้จ่ายรวม */}
-          <div className="flex flex-col">
-            {/* Card */}
-            <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-2xl">
-              <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                <div className="text-center">
-                  <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-2">
-                    💵 เงินคงเหลือ
-                  </div>
-                  <div className="text-xl sm:text-3xl font-bold">
-                    {facebookBalanceLoading ? (
-                      <span className="text-2xl">⏳</span>
-                    ) : (
-                      `฿${facebookBalance.toLocaleString("th-TH", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}`
-                    )}
+        {/* Page 1 Content */}
+        {selectedPage === 1 && (
+          <>
+            {/* Performance Cards and Tables in 3-Column Layout */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              {/* Column 1: เงินคงเหลือ + ใช้จ่ายรวม */}
+              <div className="flex flex-col">
+                {/* Card */}
+                <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-2xl">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                    <div className="text-center">
+                      <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-2">
+                        💵 เงินคงเหลือ
+                      </div>
+                      <div className="text-xl sm:text-3xl font-bold">
+                        {facebookBalanceLoading ? (
+                          <span className="text-2xl">⏳</span>
+                        ) : (
+                          `฿${facebookBalance.toLocaleString("th-TH", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}`
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-2">
+                        💰 ใช้จ่ายรวม
+                      </div>
+                      <div className="text-xl sm:text-3xl font-bold">
+                        {formatCurrency(
+                          insights.reduce(
+                            (sum, ad) => sum + parseFloat(ad.spend || "0"),
+                            0
+                          )
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="text-center">
-                  <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-2">
-                    💰 ใช้จ่ายรวม
-                  </div>
-                  <div className="text-xl sm:text-3xl font-bold">
-                    {formatCurrency(
-                      insights.reduce(
-                        (sum, ad) => sum + parseFloat(ad.spend || "0"),
-                        0
-                      )
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* Table */}
-            <div className="bg-white rounded-b-2xl sm:rounded-b-3xl shadow-2xl overflow-hidden border border-gray-100 border-t-0 flex-1 mt-0">
-              <div className="overflow-y-auto max-h-[120px]">
-                <table className="w-full min-w-max text-xs">
-                  <thead className="bg-blue-50 sticky top-0">
-                    <tr>
-                      <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
-                        วันที่
-                      </th>
-                      <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
-                        จ่ายแล้ว
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dailySummaryLoading ? (
-                      <tr>
-                        <td
-                          colSpan={2}
-                          className="px-2 py-4 text-center text-xs"
-                        >
-                          ⏳
-                        </td>
-                      </tr>
-                    ) : (
-                      (() => {
-                        const dailyData = new Map<string, { spend: number }>();
-                        dailySummaryData.forEach((ad) => {
-                          const date = ad.date_start;
-                          const existing = dailyData.get(date) || { spend: 0 };
-                          existing.spend += parseFloat(ad.spend || "0");
-                          dailyData.set(date, existing);
-                        });
-                        const sortedDates = Array.from(dailyData.keys()).sort(
-                          (a, b) =>
-                            new Date(b).getTime() - new Date(a).getTime()
-                        );
-                        const last30Days = sortedDates.slice(1, 31);
-                        return last30Days.map((date) => {
-                          const data = dailyData.get(date)!;
-                          return (
-                            <tr
-                              key={date}
-                              className="hover:bg-blue-50 border-b"
+                {/* Table */}
+                <div className="bg-white rounded-b-2xl sm:rounded-b-3xl shadow-2xl overflow-hidden border border-gray-100 border-t-0 flex-1 mt-0">
+                  <div className="overflow-y-auto max-h-[120px]">
+                    <table className="w-full min-w-max text-xs">
+                      <thead className="bg-blue-50 sticky top-0">
+                        <tr>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
+                            วันที่
+                          </th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
+                            จ่ายแล้ว
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dailySummaryLoading ? (
+                          <tr>
+                            <td
+                              colSpan={2}
+                              className="px-2 py-4 text-center text-xs"
                             >
-                              <td className="px-2 py-2 text-center text-xs text-gray-900">
-                                {new Date(date).toLocaleDateString("th-TH", {
-                                  month: "short",
-                                  day: "numeric",
-                                })}
-                              </td>
-                              <td className="px-2 py-2 text-center text-xs font-semibold text-blue-600">
-                                {formatCurrency(data.spend)}
-                              </td>
-                            </tr>
-                          );
-                        });
-                      })()
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          {/* Column 2: New Inbox & Total Inbox */}
-          <div className="flex flex-col">
-            {/* Card */}
-            <div className="bg-gradient-to-br from-teal-500 via-teal-600 to-cyan-600 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-2xl">
-              <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                <div className="text-center">
-                  <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-3">
-                    New Inbox
-                  </div>
-                  <div className="text-xl sm:text-4xl font-bold">
-                    {getTotalResults()}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-3">
-                    Total Inbox
-                  </div>
-                  <div className="text-xl sm:text-4xl font-bold">
-                    {getTotalMessagingConnection()}
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* Table */}
-            <div className="bg-white rounded-b-2xl sm:rounded-b-3xl shadow-2xl overflow-hidden border border-gray-100 border-t-0 flex-1 mt-0">
-              <div className="overflow-y-auto max-h-[120px]">
-                <table className="w-full min-w-max text-xs">
-                  <thead className="bg-teal-50 sticky top-0">
-                    <tr>
-                      <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
-                        วันที่
-                      </th>
-                      <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
-                        New Inbox
-                      </th>
-                      <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
-                        Total Inbox
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dailySummaryLoading ? (
-                      <tr>
-                        <td
-                          colSpan={3}
-                          className="px-2 py-4 text-center text-xs"
-                        >
-                          ⏳
-                        </td>
-                      </tr>
-                    ) : (
-                      (() => {
-                        const dailyData = new Map<
-                          string,
-                          { newInbox: number; totalInbox: number }
-                        >();
-                        dailySummaryData.forEach((ad) => {
-                          const date = ad.date_start;
-                          const existing = dailyData.get(date) || {
-                            newInbox: 0,
-                            totalInbox: 0,
-                          };
-                          existing.newInbox += getResultsByActionType(
-                            ad.actions,
-                            "onsite_conversion.messaging_first_reply"
-                          );
-                          existing.totalInbox += getResultsByActionType(
-                            ad.actions,
-                            "onsite_conversion.total_messaging_connection"
-                          );
-                          dailyData.set(date, existing);
-                        });
-                        const sortedDates = Array.from(dailyData.keys()).sort(
-                          (a, b) =>
-                            new Date(b).getTime() - new Date(a).getTime()
-                        );
-                        const last30Days = sortedDates.slice(1, 31);
-                        return last30Days.map((date) => {
-                          const data = dailyData.get(date)!;
-                          return (
-                            <tr
-                              key={date}
-                              className="hover:bg-teal-50 border-b"
-                            >
-                              <td className="px-2 py-2 text-center text-xs text-gray-900">
-                                {new Date(date).toLocaleDateString("th-TH", {
-                                  month: "short",
-                                  day: "numeric",
-                                })}
-                              </td>
-                              <td className="px-2 py-2 text-center text-xs font-semibold text-green-600">
-                                {data.newInbox}
-                              </td>
-                              <td className="px-2 py-2 text-center text-xs font-semibold text-teal-600">
-                                {data.totalInbox}
-                              </td>
-                            </tr>
-                          );
-                        });
-                      })()
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          {/* Column 3: ชื่อ - เบอร์ */}
-          <div className="flex flex-col">
-            {/* Card */}
-            <div className="bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-2xl text-center">
-              <div className="text-base sm:text-xl font-semibold mb-2 sm:mb-3 opacity-90">
-                📞 ชื่อ - เบอร์
-              </div>
-              <div className="text-2xl sm:text-4xl font-bold">
-                {phoneCountLoading ? (
-                  <span className="text-3xl">⏳</span>
-                ) : (
-                  <div>{phoneCountData.total.toLocaleString()}</div>
-                )}
-              </div>
-            </div>
-            {/* Table */}
-            <div className="bg-white rounded-b-2xl sm:rounded-b-3xl shadow-2xl overflow-hidden border border-gray-100 border-t-0 flex-1 mt-0">
-              <div className="overflow-y-auto max-h-[120px]">
-                <table className="w-full min-w-max text-xs">
-                  <thead className="bg-purple-50 sticky top-0">
-                    <tr>
-                      <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
-                        วันที่
-                      </th>
-                      <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
-                        เบอร์
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {phoneLeadsLoading ? (
-                      <tr>
-                        <td
-                          colSpan={2}
-                          className="px-2 py-4 text-center text-xs"
-                        >
-                          ⏳
-                        </td>
-                      </tr>
-                    ) : (
-                      Object.entries(phoneLeadsData)
-                        .sort(
-                          ([dateA], [dateB]) =>
-                            new Date(dateB).getTime() -
-                            new Date(dateA).getTime()
-                        )
-                        .slice(1)
-                        .map(([date, count]) => (
-                          <tr
-                            key={date}
-                            className="hover:bg-purple-50 border-b"
-                          >
-                            <td className="px-2 py-2 text-center text-xs text-gray-900">
-                              {new Date(date).toLocaleDateString("th-TH", {
-                                month: "short",
-                                day: "numeric",
-                              })}
-                            </td>
-                            <td className="px-2 py-2 text-center text-xs font-semibold text-purple-600">
-                              {count}
+                              ⏳
                             </td>
                           </tr>
-                        ))
-                    )}
-                  </tbody>
-                </table>
+                        ) : (
+                          (() => {
+                            const dailyData = new Map<string, { spend: number }>();
+                            dailySummaryData.forEach((ad) => {
+                              const date = ad.date_start;
+                              const existing = dailyData.get(date) || { spend: 0 };
+                              existing.spend += parseFloat(ad.spend || "0");
+                              dailyData.set(date, existing);
+                            });
+                            const sortedDates = Array.from(dailyData.keys()).sort(
+                              (a, b) =>
+                                new Date(b).getTime() - new Date(a).getTime()
+                            );
+                            const last30Days = sortedDates.slice(1, 31);
+                            return last30Days.map((date) => {
+                              const data = dailyData.get(date)!;
+                              return (
+                                <tr
+                                  key={date}
+                                  className="hover:bg-blue-50 border-b"
+                                >
+                                  <td className="px-2 py-2 text-center text-xs text-gray-900">
+                                    {new Date(date).toLocaleDateString("th-TH", {
+                                      month: "short",
+                                      day: "numeric",
+                                    })}
+                                  </td>
+                                  <td className="px-2 py-2 text-center text-xs font-semibold text-blue-600">
+                                    {formatCurrency(data.spend)}
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
 
-        {/* TOP Ads Section - Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-8">
-          {/* Left Column - TOP Ads Table */}
-          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 border border-gray-100">
-            <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 px-4 sm:px-8 py-4 sm:py-6 -m-4 sm:-m-8 mb-4 sm:mb-8 relative overflow-hidden rounded-t-2xl sm:rounded-t-3xl">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 transition-opacity duration-500"></div>
-            </div>
-            <div className="flex flex-col gap-3 mb-3 sm:mb-4">
-              <h2 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-2">
-                🏆 TOP {topAdsLimit === "all" ? "ทั้งหมด" : topAdsLimit} Ads{" "}
-                <span className="bg-gradient-to-r from-yellow-400 via-orange-400 to-red-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full text-base sm:text-xl font-bold shadow-xl">
-                  นักเตะยอดเยี่ยม
-                </span>
-              </h2>
-              <div className="flex flex-col sm:flex-row gap-2 w-full">
-                {/* Sort By Buttons */}
-                <div className="flex gap-2 flex-1">
-                  <button
-                    onClick={() => setTopAdsSortBy("leads")}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdsSortBy === "leads"
-                      ? "bg-purple-600 text-white shadow-lg"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                      }`}
-                  >
-                    <span className="hidden sm:inline">
-                      💬 Total Inbox (มาก → น้อย)
-                    </span>
-                    <span className="sm:hidden">💬 Inbox</span>
-                  </button>
-                  <button
-                    onClick={() => setTopAdsSortBy("phone")}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdsSortBy === "phone"
-                      ? "bg-purple-600 text-white shadow-lg"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                      }`}
-                  >
-                    <span className="hidden sm:inline">
-                      📞 ชื่อ - เบอร์ (มาก → น้อย)
-                    </span>
-                    <span className="sm:hidden">📞 เบอร์</span>
-                  </button>
-                  <button
-                    onClick={() => setTopAdsSortBy("cost")}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdsSortBy === "cost"
-                      ? "bg-purple-600 text-white shadow-lg"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                      }`}
-                  >
-                    <span className="hidden sm:inline">
-                      💰 ต้นทุน (น้อย → มาก)
-                    </span>
-                    <span className="sm:hidden">💰 Cost</span>
-                  </button>
-                  <button
-                    onClick={() => setTopAdsSortBy("thruplay")}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdsSortBy === "thruplay"
-                      ? "bg-purple-600 text-white shadow-lg"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                      }`}
-                  >
-                    <span className="hidden sm:inline">
-                      🎬 ThruPlay (มาก → น้อย)
-                    </span>
-                    <span className="sm:hidden">🎬 ThruPlay</span>
-                  </button>
+              {/* Column 2: New Inbox & Total Inbox */}
+              <div className="flex flex-col">
+                {/* Card */}
+                <div className="bg-gradient-to-br from-teal-500 via-teal-600 to-cyan-600 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-2xl">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                    <div className="text-center">
+                      <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-3">
+                        New Inbox
+                      </div>
+                      <div className="text-xl sm:text-4xl font-bold">
+                        {getTotalResults()}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-3">
+                        Total Inbox
+                      </div>
+                      <div className="text-xl sm:text-4xl font-bold">
+                        {getTotalMessagingConnection()}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                {/* Top Ads Limit Dropdown */}
-                <select
-                  value={topAdsLimit}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setTopAdsLimit(
-                      value === "all"
-                        ? "all"
-                        : (Number(value) as 5 | 10 | 15 | 20 | 30)
-                    );
-                  }}
-                  className="flex-1 sm:flex-none sm:min-w-[140px] px-3 py-2 rounded-lg font-medium text-xs sm:text-sm bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-800 hover:from-yellow-500 hover:to-orange-500 transition-all border-2 border-yellow-500 shadow-lg cursor-pointer"
-                >
-                  <option value={5}>⭐ Top 5</option>
-                  <option value={10}>⭐ Top 10</option>
-                  <option value={15}>⭐ Top 15</option>
-                  <option value={20}>⭐ Top 20</option>
-                  <option value={30}>⭐ Top 30</option>
-                  <option value="all">⭐ Top ทั้งหมด</option>
-                </select>
+                {/* Table */}
+                <div className="bg-white rounded-b-2xl sm:rounded-b-3xl shadow-2xl overflow-hidden border border-gray-100 border-t-0 flex-1 mt-0">
+                  <div className="overflow-y-auto max-h-[120px]">
+                    <table className="w-full min-w-max text-xs">
+                      <thead className="bg-teal-50 sticky top-0">
+                        <tr>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
+                            วันที่
+                          </th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
+                            New Inbox
+                          </th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
+                            Total Inbox
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dailySummaryLoading ? (
+                          <tr>
+                            <td
+                              colSpan={3}
+                              className="px-2 py-4 text-center text-xs"
+                            >
+                              ⏳
+                            </td>
+                          </tr>
+                        ) : (
+                          (() => {
+                            const dailyData = new Map<
+                              string,
+                              { newInbox: number; totalInbox: number }
+                            >();
+                            dailySummaryData.forEach((ad) => {
+                              const date = ad.date_start;
+                              const existing = dailyData.get(date) || {
+                                newInbox: 0,
+                                totalInbox: 0,
+                              };
+                              existing.newInbox += getResultsByActionType(
+                                ad.actions,
+                                "onsite_conversion.messaging_first_reply"
+                              );
+                              existing.totalInbox += getResultsByActionType(
+                                ad.actions,
+                                "onsite_conversion.total_messaging_connection"
+                              );
+                              dailyData.set(date, existing);
+                            });
+                            const sortedDates = Array.from(dailyData.keys()).sort(
+                              (a, b) =>
+                                new Date(b).getTime() - new Date(a).getTime()
+                            );
+                            const last30Days = sortedDates.slice(1, 31);
+                            return last30Days.map((date) => {
+                              const data = dailyData.get(date)!;
+                              return (
+                                <tr
+                                  key={date}
+                                  className="hover:bg-teal-50 border-b"
+                                >
+                                  <td className="px-2 py-2 text-center text-xs text-gray-900">
+                                    {new Date(date).toLocaleDateString("th-TH", {
+                                      month: "short",
+                                      day: "numeric",
+                                    })}
+                                  </td>
+                                  <td className="px-2 py-2 text-center text-xs font-semibold text-green-600">
+                                    {data.newInbox}
+                                  </td>
+                                  <td className="px-2 py-2 text-center text-xs font-semibold text-teal-600">
+                                    {data.totalInbox}
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 3: ชื่อ - เบอร์ */}
+              <div className="flex flex-col">
+                {/* Card */}
+                <div className="bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-2xl text-center">
+                  <div className="text-base sm:text-xl font-semibold mb-2 sm:mb-3 opacity-90">
+                    📞 ชื่อ - เบอร์
+                  </div>
+                  <div className="text-2xl sm:text-4xl font-bold">
+                    {phoneCountLoading ? (
+                      <span className="text-3xl">⏳</span>
+                    ) : (
+                      <div>{phoneCountData.total.toLocaleString()}</div>
+                    )}
+                  </div>
+                </div>
+                {/* Table */}
+                <div className="bg-white rounded-b-2xl sm:rounded-b-3xl shadow-2xl overflow-hidden border border-gray-100 border-t-0 flex-1 mt-0">
+                  <div className="overflow-y-auto max-h-[120px]">
+                    <table className="w-full min-w-max text-xs">
+                      <thead className="bg-purple-50 sticky top-0">
+                        <tr>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
+                            วันที่
+                          </th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
+                            เบอร์
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {phoneLeadsLoading ? (
+                          <tr>
+                            <td
+                              colSpan={2}
+                              className="px-2 py-4 text-center text-xs"
+                            >
+                              ⏳
+                            </td>
+                          </tr>
+                        ) : (
+                          Object.entries(phoneLeadsData)
+                            .sort(
+                              ([dateA], [dateB]) =>
+                                new Date(dateB).getTime() -
+                                new Date(dateA).getTime()
+                            )
+                            .slice(1)
+                            .map(([date, count]) => (
+                              <tr
+                                key={date}
+                                className="hover:bg-purple-50 border-b"
+                              >
+                                <td className="px-2 py-2 text-center text-xs text-gray-900">
+                                  {new Date(date).toLocaleDateString("th-TH", {
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
+                                </td>
+                                <td className="px-2 py-2 text-center text-xs font-semibold text-purple-600">
+                                  {count}
+                                </td>
+                              </tr>
+                            ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              {/* Loading State */}
-              {creativesLoading && adCreatives.size === 0 && (
-                <div className="bg-blue-50 border-l-4 border-blue-500 p-3 mb-4 rounded">
-                  <p className="text-blue-700 text-sm font-medium">
-                    ⏳ กำลังโหลดรูปภาพโฆษณา...
-                  </p>
+
+            {/* TOP Ads Section - Two Column Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-8">
+              {/* Left Column - TOP Ads Table */}
+              <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 border border-gray-100">
+                <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 px-4 sm:px-8 py-4 sm:py-6 -m-4 sm:-m-8 mb-4 sm:mb-8 relative overflow-hidden rounded-t-2xl sm:rounded-t-3xl">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 transition-opacity duration-500"></div>
                 </div>
-              )}
-              {/* Success State */}
-              {/* {!creativesLoading && adCreatives.size > 0 && (
+                <div className="flex flex-col gap-3 mb-3 sm:mb-4">
+                  <h2 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-2">
+                    🏆 TOP {topAdsLimit === "all" ? "ทั้งหมด" : topAdsLimit} Ads{" "}
+                    <span className="bg-gradient-to-r from-yellow-400 via-orange-400 to-red-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full text-base sm:text-xl font-bold shadow-xl">
+                      นักเตะยอดเยี่ยม
+                    </span>
+                  </h2>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full">
+                    {/* Sort By Buttons */}
+                    <div className="flex gap-2 flex-1">
+                      <button
+                        onClick={() => setTopAdsSortBy("leads")}
+                        className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdsSortBy === "leads"
+                          ? "bg-purple-600 text-white shadow-lg"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          }`}
+                      >
+                        <span className="hidden sm:inline">
+                          💬 Total Inbox (มาก → น้อย)
+                        </span>
+                        <span className="sm:hidden">💬 Inbox</span>
+                      </button>
+                      <button
+                        onClick={() => setTopAdsSortBy("phone")}
+                        className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdsSortBy === "phone"
+                          ? "bg-purple-600 text-white shadow-lg"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          }`}
+                      >
+                        <span className="hidden sm:inline">
+                          📞 ชื่อ - เบอร์ (มาก → น้อย)
+                        </span>
+                        <span className="sm:hidden">📞 เบอร์</span>
+                      </button>
+                      <button
+                        onClick={() => setTopAdsSortBy("cost")}
+                        className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdsSortBy === "cost"
+                          ? "bg-purple-600 text-white shadow-lg"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          }`}
+                      >
+                        <span className="hidden sm:inline">
+                          💰 ต้นทุน (น้อย → มาก)
+                        </span>
+                        <span className="sm:hidden">💰 Cost</span>
+                      </button>
+                      <button
+                        onClick={() => setTopAdsSortBy("thruplay")}
+                        className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdsSortBy === "thruplay"
+                          ? "bg-purple-600 text-white shadow-lg"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          }`}
+                      >
+                        <span className="hidden sm:inline">
+                          🎬 ThruPlay (มาก → น้อย)
+                        </span>
+                        <span className="sm:hidden">🎬 ThruPlay</span>
+                      </button>
+                    </div>
+                    {/* Top Ads Limit Dropdown */}
+                    <select
+                      value={topAdsLimit}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setTopAdsLimit(
+                          value === "all"
+                            ? "all"
+                            : (Number(value) as 5 | 10 | 15 | 20 | 30)
+                        );
+                      }}
+                      className="flex-1 sm:flex-none sm:min-w-[140px] px-3 py-2 rounded-lg font-medium text-xs sm:text-sm bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-800 hover:from-yellow-500 hover:to-orange-500 transition-all border-2 border-yellow-500 shadow-lg cursor-pointer"
+                    >
+                      <option value={5}>⭐ Top 5</option>
+                      <option value={10}>⭐ Top 10</option>
+                      <option value={15}>⭐ Top 15</option>
+                      <option value={20}>⭐ Top 20</option>
+                      <option value={30}>⭐ Top 30</option>
+                      <option value="all">⭐ Top ทั้งหมด</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  {/* Loading State */}
+                  {creativesLoading && adCreatives.size === 0 && (
+                    <div className="bg-blue-50 border-l-4 border-blue-500 p-3 mb-4 rounded">
+                      <p className="text-blue-700 text-sm font-medium">
+                        ⏳ กำลังโหลดรูปภาพโฆษณา...
+                      </p>
+                    </div>
+                  )}
+                  {/* Success State */}
+                  {/* {!creativesLoading && adCreatives.size > 0 && (
                   <div className="bg-green-50 border-l-4 border-green-500 p-3 mb-4 rounded">
                     <p className="text-green-700 text-sm font-medium">
                       ✅ โหลดรูปภาพสำเร็จ {adCreatives.size} รายการ
                     </p>
                   </div>
                 )} */}
-              <table className="w-full" key={`table-${adCreatives.size}`}>
-                <thead>
-                  <tr className="border-b-2 border-gradient-to-r from-blue-200 via-purple-200 to-pink-200">
-                    <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
-                      #
-                    </th>
-                    <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
-                      Ad Image
-                    </th>
-                    <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
-                      จ่ายแล้ว
-                    </th>
-                    <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
-                      New Inbox
-                    </th>
-                    <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
-                      Total Inbox
-                    </th>
-                    <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
-                      ชื่อ - เบอร์
-                    </th>
-                    <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
-                      ThruPlay
-                    </th>
-                    <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
-                      ต้นทุน Inbox
-                    </th>
-                  </tr>
-                </thead>
-                <tbody key={`tbody-${adCreatives.size}-${Date.now()}`}>
-                  {getTopAdsFilteredInsights()
-                    .sort((a, b) => {
-                      if (topAdsSortBy === "leads") {
-                        // เรียงตาม Total Inbox จากมากไปน้อย
-                        const totalInboxA = getResultsByActionType(
-                          a.actions,
-                          "onsite_conversion.total_messaging_connection"
-                        );
-                        const totalInboxB = getResultsByActionType(
-                          b.actions,
-                          "onsite_conversion.total_messaging_connection"
-                        );
-                        return totalInboxB - totalInboxA;
-                      } else if (topAdsSortBy === "phone") {
-                        // เรียงตาม ชื่อ - เบอร์ จากมากไปน้อย
-                        const phoneLeadsA = topAdsPhoneLeads.get(a.ad_id) || 0;
-                        const phoneLeadsB = topAdsPhoneLeads.get(b.ad_id) || 0;
-                        return phoneLeadsB - phoneLeadsA;
-                      } else if (topAdsSortBy === "thruplay") {
-                        // เรียงตาม ThruPlay จากมากไปน้อย
-                        const thruplayA = a.actions?.find(
-                          (action) => action.action_type === "video_view"
-                        );
-                        const thruplayB = b.actions?.find(
-                          (action) => action.action_type === "video_view"
-                        );
-                        const valueA = thruplayA
-                          ? parseFloat(thruplayA.value)
-                          : 0;
-                        const valueB = thruplayB
-                          ? parseFloat(thruplayB.value)
-                          : 0;
-                        return valueB - valueA;
-                      } else {
-                        // เรียงตาม cost per messaging connection จากน้อยไปมาก
-                        const costA = a.cost_per_action_type?.find(
-                          (cost) =>
-                            cost.action_type ===
-                            "onsite_conversion.total_messaging_connection"
-                        );
-                        const costB = b.cost_per_action_type?.find(
-                          (cost) =>
-                            cost.action_type ===
-                            "onsite_conversion.total_messaging_connection"
-                        );
-                        const valueA = costA
-                          ? parseFloat(costA.value)
-                          : Infinity;
-                        const valueB = costB
-                          ? parseFloat(costB.value)
-                          : Infinity;
-                        return valueA - valueB;
-                      }
-                    })
-                    .slice(0, topAdsLimit === "all" ? undefined : topAdsLimit)
-                    .map((ad, index) => {
-                      const creative = adCreatives.get(ad.ad_id);
-                      console.log(
-                        `🖼️ [Render TOP ${index + 1}] Ad:`,
-                        ad.ad_id,
-                        ad.ad_name?.substring(0, 30),
-                        "| Creative:",
-                        creative
-                          ? {
-                            id: creative.id,
-                            has_thumbnail: !!creative.thumbnail_url,
-                            has_image: !!creative.image_url,
-                            thumbnail_preview:
-                              creative.thumbnail_url?.substring(0, 60),
+                  <table className="w-full" key={`table-${adCreatives.size}`}>
+                    <thead>
+                      <tr className="border-b-2 border-gradient-to-r from-blue-200 via-purple-200 to-pink-200">
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          #
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          Ad Image
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          จ่ายแล้ว
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          New Inbox
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          Total Inbox
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          ชื่อ - เบอร์
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          ThruPlay
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          ต้นทุน Inbox
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody key={`tbody-${adCreatives.size}-${Date.now()}`}>
+                      {getTopAdsFilteredInsights()
+                        .sort((a, b) => {
+                          if (topAdsSortBy === "leads") {
+                            // เรียงตาม Total Inbox จากมากไปน้อย
+                            const totalInboxA = getResultsByActionType(
+                              a.actions,
+                              "onsite_conversion.total_messaging_connection"
+                            );
+                            const totalInboxB = getResultsByActionType(
+                              b.actions,
+                              "onsite_conversion.total_messaging_connection"
+                            );
+                            return totalInboxB - totalInboxA;
+                          } else if (topAdsSortBy === "phone") {
+                            // เรียงตาม ชื่อ - เบอร์ จากมากไปน้อย
+                            const phoneLeadsA = topAdsPhoneLeads.get(a.ad_id) || 0;
+                            const phoneLeadsB = topAdsPhoneLeads.get(b.ad_id) || 0;
+                            return phoneLeadsB - phoneLeadsA;
+                          } else if (topAdsSortBy === "thruplay") {
+                            // เรียงตาม ThruPlay จากมากไปน้อย
+                            const thruplayA = a.actions?.find(
+                              (action) => action.action_type === "video_view"
+                            );
+                            const thruplayB = b.actions?.find(
+                              (action) => action.action_type === "video_view"
+                            );
+                            const valueA = thruplayA
+                              ? parseFloat(thruplayA.value)
+                              : 0;
+                            const valueB = thruplayB
+                              ? parseFloat(thruplayB.value)
+                              : 0;
+                            return valueB - valueA;
+                          } else {
+                            // เรียงตาม cost per messaging connection จากน้อยไปมาก
+                            const costA = a.cost_per_action_type?.find(
+                              (cost) =>
+                                cost.action_type ===
+                                "onsite_conversion.total_messaging_connection"
+                            );
+                            const costB = b.cost_per_action_type?.find(
+                              (cost) =>
+                                cost.action_type ===
+                                "onsite_conversion.total_messaging_connection"
+                            );
+                            const valueA = costA
+                              ? parseFloat(costA.value)
+                              : Infinity;
+                            const valueB = costB
+                              ? parseFloat(costB.value)
+                              : Infinity;
+                            return valueA - valueB;
                           }
-                          : "NO CREATIVE DATA"
-                      );
-                      console.log(
-                        "📦 [Render] adCreatives Map:",
-                        "size=",
-                        adCreatives.size,
-                        "| Has this ad?",
-                        adCreatives.has(ad.ad_id),
-                        "| All ad IDs in map:",
-                        Array.from(adCreatives.keys())
-                      );
-                      return (
-                        <tr
-                          key={ad.ad_id}
-                          className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:via-purple-50 hover:to-pink-50 transition-all duration-300 hover:shadow-md"
-                        >
-                          <td className="py-2 px-1 text-center">
-                            <div className="text-gray-700 font-bold text-lg">
-                              {index + 1}
-                            </div>
-                          </td>
-                          <td className="py-2 px-1 text-center">
-                            <div
-                              className="relative group cursor-pointer flex justify-center items-center"
+                        })
+                        .slice(0, topAdsLimit === "all" ? undefined : topAdsLimit)
+                        .map((ad, index) => {
+                          const creative = adCreatives.get(ad.ad_id);
+                          console.log(
+                            `🖼️ [Render TOP ${index + 1}] Ad:`,
+                            ad.ad_id,
+                            ad.ad_name?.substring(0, 30),
+                            "| Creative:",
+                            creative
+                              ? {
+                                id: creative.id,
+                                has_thumbnail: !!creative.thumbnail_url,
+                                has_image: !!creative.image_url,
+                                thumbnail_preview:
+                                  creative.thumbnail_url?.substring(0, 60),
+                              }
+                              : "NO CREATIVE DATA"
+                          );
+                          console.log(
+                            "📦 [Render] adCreatives Map:",
+                            "size=",
+                            adCreatives.size,
+                            "| Has this ad?",
+                            adCreatives.has(ad.ad_id),
+                            "| All ad IDs in map:",
+                            Array.from(adCreatives.keys())
+                          );
+                          return (
+                            <tr
+                              key={ad.ad_id}
+                              className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:via-purple-50 hover:to-pink-50 transition-all duration-300 hover:shadow-md"
+                            >
+                              <td className="py-2 px-1 text-center">
+                                <div className="text-gray-700 font-bold text-lg">
+                                  {index + 1}
+                                </div>
+                              </td>
+                              <td className="py-2 px-1 text-center">
+                                <div
+                                  className="relative group cursor-pointer flex justify-center items-center"
+                                  onClick={() => {
+                                    setSelectedAdForPreview(ad);
+                                    setShowVideoModal(true);
+                                  }}
+                                >
+                                  {(() => {
+                                    const videoId =
+                                      creative?.object_story_spec?.video_data
+                                        ?.video_id || creative?.video_id;
+                                    const thumbnailUrl =
+                                      creative?.thumbnail_url ||
+                                      creative?.image_url;
+                                    const localVideoPath = videoId ? `/images/video/${videoId}.mp4` : null;
+
+                                    // ถ้ามี videoId - แสดง video preview ที่เล่นอัตโนมัติ 3 วิ เมื่อ hover
+                                    if (videoId && localVideoPath) {
+                                      return (
+                                        <div className="w-20 h-20 flex-shrink-0 relative overflow-hidden rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                                          {/* Video Preview - เล่นอัตโนมัติ loop ไม่เกิน 3 วิ */}
+                                          <video
+                                            src={localVideoPath}
+                                            className="w-full h-full object-cover"
+                                            muted
+                                            loop
+                                            playsInline
+                                            autoPlay
+                                            onLoadedMetadata={(e) => {
+                                              const video = e.currentTarget;
+                                              // จำกัดให้เล่นแค่ 3 วินาทีแรก
+                                              video.currentTime = 0;
+                                              const checkTime = () => {
+                                                if (video.currentTime >= 3) {
+                                                  video.currentTime = 0;
+                                                }
+                                              };
+                                              video.addEventListener('timeupdate', checkTime);
+                                            }}
+                                            onError={(e) => {
+                                              // ถ้าโหลดวิดีโอไม่ได้ แสดง thumbnail แทน
+                                              const video = e.currentTarget;
+                                              video.style.display = 'none';
+                                              const parent = video.parentElement;
+                                              if (parent && thumbnailUrl) {
+                                                const img = document.createElement('img');
+                                                img.src = thumbnailUrl;
+                                                img.className = 'w-full h-full object-cover';
+                                                img.alt = 'Ad preview';
+                                                parent.appendChild(img);
+                                              }
+                                            }}
+                                          />
+                                          {/* Play icon overlay */}
+                                          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <span className="text-white text-2xl drop-shadow-lg">▶️</span>
+                                          </div>
+                                        </div>
+                                      );
+                                    }
+
+                                    // แสดง thumbnail พร้อม play icon สำหรับวิดีโอ
+                                    if (thumbnailUrl) {
+                                      return (
+                                        <div className="w-20 h-20 flex-shrink-0 relative">
+                                          <img
+                                            src={thumbnailUrl}
+                                            alt="Ad preview"
+                                            className="w-full h-full object-cover rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                                            onError={(e) => {
+                                              e.currentTarget.src =
+                                                "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23e5e7eb'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%239ca3af' font-size='12'%3ENo Image%3C/text%3E%3C/svg%3E";
+                                            }}
+                                          />
+                                          {videoId && (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg">
+                                              <span className="text-white text-2xl">▶️</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    }
+                                    // ถ้าไม่มีทั้งวิดีโอและรูปภาพ
+                                    return (
+                                      <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
+                                        <span className="text-gray-400 text-xs">
+                                          📷
+                                        </span>
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                              </td>
+                              <td className="py-2 px-1 text-center text-gray-700 font-semibold text-xl">
+                                {formatCurrency(ad.spend)}
+                              </td>
+                              <td className="py-2 px-1 text-center font-semibold text-green-700 text-xl">
+                                {getResultsByActionType(
+                                  ad.actions,
+                                  "onsite_conversion.messaging_first_reply"
+                                )}
+                              </td>
+                              <td className="py-2 px-1 text-center font-semibold text-blue-700 text-xl">
+                                {getResultsByActionType(
+                                  ad.actions,
+                                  "onsite_conversion.total_messaging_connection"
+                                )}
+                              </td>
+                              <td className="py-2 px-1 text-center font-semibold text-purple-700 text-xl">
+                                {topAdsPhoneLeadsLoading ? (
+                                  <span className="text-sm">⏳</span>
+                                ) : (
+                                  topAdsPhoneLeads.get(ad.ad_id) || 0
+                                )}
+                              </td>
+                              <td className="py-2 px-1 text-center text-gray-700 text-xl">
+                                {(() => {
+                                  const thruplay = ad.actions?.find(
+                                    (action) => action.action_type === "video_view"
+                                  );
+                                  return thruplay
+                                    ? formatNumber(thruplay.value)
+                                    : "—";
+                                })()}
+                              </td>
+                              <td className="py-2 px-1 text-center text-gray-700 text-xl">
+                                {(() => {
+                                  const costPerMessaging =
+                                    ad.cost_per_action_type?.find(
+                                      (cost) =>
+                                        cost.action_type ===
+                                        "onsite_conversion.total_messaging_connection"
+                                    );
+                                  return costPerMessaging
+                                    ? formatCurrency(costPerMessaging.value)
+                                    : "—";
+                                })()}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Right Column - TOP Ad Set Table */}
+              <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 border border-gray-100">
+                <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 px-4 sm:px-8 py-4 sm:py-6 -m-4 sm:-m-8 mb-4 sm:mb-8 relative overflow-hidden rounded-t-2xl sm:rounded-t-3xl">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 transition-opacity duration-500"></div>
+                </div>
+                <div className="flex flex-col gap-3 mb-3 sm:mb-4">
+                  <h2 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-2">
+                    🏆 TOP {topAdSetLimit === "all" ? "ทั้งหมด" : topAdSetLimit} Ad
+                    Set{" "}
+                    <span className="bg-gradient-to-r from-yellow-400 via-orange-400 to-red-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full text-base sm:text-xl font-bold shadow-xl">
+                      พื้นที่ลูกค้ายอดเยี่ยม
+                    </span>
+                  </h2>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full">
+                    {/* Sort By Buttons */}
+                    <div className="flex gap-2 flex-1">
+                      <button
+                        onClick={() => setTopAdSetSortBy("leads")}
+                        className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdSetSortBy === "leads"
+                          ? "bg-purple-600 text-white shadow-lg"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          }`}
+                      >
+                        <span className="hidden sm:inline">
+                          💬 Total Inbox (มาก → น้อย)
+                        </span>
+                        <span className="sm:hidden">💬 Inbox</span>
+                      </button>
+                      <button
+                        onClick={() => setTopAdSetSortBy("phone")}
+                        className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdSetSortBy === "phone"
+                          ? "bg-purple-600 text-white shadow-lg"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          }`}
+                      >
+                        <span className="hidden sm:inline">
+                          📞 ชื่อ - เบอร์ (มาก → น้อย)
+                        </span>
+                        <span className="sm:hidden">📞 เบอร์</span>
+                      </button>
+                      <button
+                        onClick={() => setTopAdSetSortBy("thruplay")}
+                        className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdSetSortBy === "thruplay"
+                          ? "bg-purple-600 text-white shadow-lg"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          }`}
+                      >
+                        <span className="hidden sm:inline">
+                          🎬 ThruPlay (มาก → น้อย)
+                        </span>
+                        <span className="sm:hidden">🎬 ThruPlay</span>
+                      </button>
+                    </div>
+                    {/* Top Ad Set Limit Dropdown */}
+                    <select
+                      value={topAdSetLimit}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setTopAdSetLimit(
+                          value === "all"
+                            ? "all"
+                            : (Number(value) as 5 | 10 | 15 | 20 | 30)
+                        );
+                      }}
+                      className="flex-1 sm:flex-none sm:min-w-[140px] px-3 py-2 rounded-lg font-medium text-xs sm:text-sm bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-800 hover:from-yellow-500 hover:to-orange-500 transition-all border-2 border-yellow-500 shadow-lg cursor-pointer"
+                    >
+                      <option value={5}>⭐ Top 5</option>
+                      <option value={10}>⭐ Top 10</option>
+                      <option value={15}>⭐ Top 15</option>
+                      <option value={20}>⭐ Top 20</option>
+                      <option value={30}>⭐ Top 30</option>
+                      <option value="all">⭐ Top ทั้งหมด</option>
+                    </select>
+                  </div>
+                  {/* Campaign Type Filter Buttons (TOF/MOF/BOF) */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        const newFilter = new Set(adSetCampaignFilter);
+                        if (newFilter.has("TOF")) {
+                          newFilter.delete("TOF");
+                        } else {
+                          newFilter.add("TOF");
+                        }
+                        setAdSetCampaignFilter(newFilter);
+                      }}
+                      className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${adSetCampaignFilter.has("TOF")
+                        ? "bg-blue-600 text-white shadow-lg"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        }`}
+                    >
+                      TOF
+                    </button>
+                    <button
+                      onClick={() => {
+                        const newFilter = new Set(adSetCampaignFilter);
+                        if (newFilter.has("MOF")) {
+                          newFilter.delete("MOF");
+                        } else {
+                          newFilter.add("MOF");
+                        }
+                        setAdSetCampaignFilter(newFilter);
+                      }}
+                      className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${adSetCampaignFilter.has("MOF")
+                        ? "bg-green-600 text-white shadow-lg"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        }`}
+                    >
+                      MOF
+                    </button>
+                    <button
+                      onClick={() => {
+                        const newFilter = new Set(adSetCampaignFilter);
+                        if (newFilter.has("BOF")) {
+                          newFilter.delete("BOF");
+                        } else {
+                          newFilter.add("BOF");
+                        }
+                        setAdSetCampaignFilter(newFilter);
+                      }}
+                      className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${adSetCampaignFilter.has("BOF")
+                        ? "bg-orange-600 text-white shadow-lg"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        }`}
+                    >
+                      BOF
+                    </button>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  {adsetInsightsLoading && adsetInsights.length === 0 && (
+                    <div className="bg-blue-50 border-l-4 border-blue-500 p-3 mb-4 rounded">
+                      <p className="text-blue-700 text-sm font-medium">
+                        ⏳ กำลังโหลดข้อมูล Ad Set...
+                      </p>
+                    </div>
+                  )}
+                  <table className="w-full" key={`table2-${adsetInsights.length}`}>
+                    <thead>
+                      <tr className="border-b-2 border-gradient-to-r from-blue-200 via-purple-200 to-pink-200">
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          #
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          Ad Set
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          จ่ายแล้ว
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          New Inbox
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          Total Inbox
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          ชื่อ - เบอร์
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          ThruPlay
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody key={`tbody2-${adsetInsights.length}-${Date.now()}`}>
+                      {adsetInsights
+                        .filter((adset) => {
+                          // If no filter selected, show all
+                          if (adSetCampaignFilter.size === 0) return true;
+                          // Get first 3 characters of campaign name (uppercase)
+                          const campaignPrefix = (adset.campaign_name || "")
+                            .substring(0, 3)
+                            .toUpperCase();
+                          return adSetCampaignFilter.has(campaignPrefix);
+                        })
+                        .sort((a, b) => {
+                          if (topAdSetSortBy === "leads") {
+                            const totalInboxA = getResultsByActionType(
+                              a.actions,
+                              "onsite_conversion.total_messaging_connection"
+                            );
+                            const totalInboxB = getResultsByActionType(
+                              b.actions,
+                              "onsite_conversion.total_messaging_connection"
+                            );
+                            return totalInboxB - totalInboxA;
+                          } else if (topAdSetSortBy === "phone") {
+                            // Sort by phone leads (highest first)
+                            const phoneLeadsA = getPhoneLeadsByAdSetId(a.adset_id);
+                            const phoneLeadsB = getPhoneLeadsByAdSetId(b.adset_id);
+                            return phoneLeadsB - phoneLeadsA;
+                          } else {
+                            // Sort by thruplay (highest first)
+                            const thruplayA = a.actions?.find(
+                              (action) => action.action_type === "video_view"
+                            );
+                            const thruplayB = b.actions?.find(
+                              (action) => action.action_type === "video_view"
+                            );
+                            const valueA = thruplayA
+                              ? parseFloat(thruplayA.value)
+                              : 0;
+                            const valueB = thruplayB
+                              ? parseFloat(thruplayB.value)
+                              : 0;
+                            return valueB - valueA;
+                          }
+                        })
+                        .slice(
+                          0,
+                          topAdSetLimit === "all" ? undefined : topAdSetLimit
+                        )
+                        .map((adset, index) => {
+                          // Calculate cost per inbox
+                          const spend = parseFloat(adset.spend || "0");
+                          const totalInbox = getResultsByActionType(
+                            adset.actions,
+                            "onsite_conversion.total_messaging_connection"
+                          );
+                          const costPerInbox =
+                            totalInbox > 0 ? spend / totalInbox : 0;
+
+                          return (
+                            <tr
+                              key={adset.adset_id}
+                              className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:via-purple-50 hover:to-pink-50 transition-all duration-300 hover:shadow-md cursor-pointer"
                               onClick={() => {
-                                setSelectedAdForPreview(ad);
-                                setShowVideoModal(true);
+                                setSelectedAdSet(adset);
+                                setShowAdSetModal(true);
                               }}
                             >
-                              {(() => {
-                                const videoId =
-                                  creative?.object_story_spec?.video_data
-                                    ?.video_id || creative?.video_id;
-                                const thumbnailUrl =
-                                  creative?.thumbnail_url ||
-                                  creative?.image_url;
-                                const localVideoPath = videoId ? `/images/video/${videoId}.mp4` : null;
-
-                                // ถ้ามี videoId - แสดง video preview ที่เล่นอัตโนมัติ 3 วิ เมื่อ hover
-                                if (videoId && localVideoPath) {
-                                  return (
-                                    <div className="w-20 h-20 flex-shrink-0 relative overflow-hidden rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                                      {/* Video Preview - เล่นอัตโนมัติ loop ไม่เกิน 3 วิ */}
-                                      <video
-                                        src={localVideoPath}
-                                        className="w-full h-full object-cover"
-                                        muted
-                                        loop
-                                        playsInline
-                                        autoPlay
-                                        onLoadedMetadata={(e) => {
-                                          const video = e.currentTarget;
-                                          // จำกัดให้เล่นแค่ 3 วินาทีแรก
-                                          video.currentTime = 0;
-                                          const checkTime = () => {
-                                            if (video.currentTime >= 3) {
-                                              video.currentTime = 0;
-                                            }
-                                          };
-                                          video.addEventListener('timeupdate', checkTime);
-                                        }}
-                                        onError={(e) => {
-                                          // ถ้าโหลดวิดีโอไม่ได้ แสดง thumbnail แทน
-                                          const video = e.currentTarget;
-                                          video.style.display = 'none';
-                                          const parent = video.parentElement;
-                                          if (parent && thumbnailUrl) {
-                                            const img = document.createElement('img');
-                                            img.src = thumbnailUrl;
-                                            img.className = 'w-full h-full object-cover';
-                                            img.alt = 'Ad preview';
-                                            parent.appendChild(img);
-                                          }
-                                        }}
-                                      />
-                                      {/* Play icon overlay */}
-                                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <span className="text-white text-2xl drop-shadow-lg">▶️</span>
-                                      </div>
-                                    </div>
+                              <td className="py-2 px-1 text-center">
+                                <div className="text-gray-700 font-bold text-lg">
+                                  {index + 1}
+                                </div>
+                              </td>
+                              <td className="py-2 px-1 text-center">
+                                <div
+                                  className="text-gray-700 font-medium text-sm max-w-[150px] truncate mx-auto hover:text-purple-600"
+                                  title={adset.adset_name}
+                                >
+                                  {adset.adset_name || "—"}
+                                </div>
+                              </td>
+                              <td className="py-2 px-1 text-center text-gray-700 font-semibold text-xl">
+                                {formatCurrency(adset.spend)}
+                              </td>
+                              <td className="py-2 px-1 text-center font-semibold text-green-700 text-xl">
+                                {getResultsByActionType(
+                                  adset.actions,
+                                  "onsite_conversion.messaging_first_reply"
+                                )}
+                              </td>
+                              <td className="py-2 px-1 text-center font-semibold text-blue-700 text-xl">
+                                {getResultsByActionType(
+                                  adset.actions,
+                                  "onsite_conversion.total_messaging_connection"
+                                )}
+                              </td>
+                              <td className="py-2 px-1 text-center font-semibold text-purple-700 text-xl">
+                                {topAdsPhoneLeadsLoading ? (
+                                  <span className="text-sm">⏳</span>
+                                ) : (
+                                  getPhoneLeadsByAdSetId(adset.adset_id)
+                                )}
+                              </td>
+                              <td className="py-2 px-1 text-center text-gray-700 text-xl">
+                                {(() => {
+                                  const thruplay = adset.actions?.find(
+                                    (action) => action.action_type === "video_view"
                                   );
-                                }
-
-                                // แสดง thumbnail พร้อม play icon สำหรับวิดีโอ
-                                if (thumbnailUrl) {
-                                  return (
-                                    <div className="w-20 h-20 flex-shrink-0 relative">
-                                      <img
-                                        src={thumbnailUrl}
-                                        alt="Ad preview"
-                                        className="w-full h-full object-cover rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                                        onError={(e) => {
-                                          e.currentTarget.src =
-                                            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23e5e7eb'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%239ca3af' font-size='12'%3ENo Image%3C/text%3E%3C/svg%3E";
-                                        }}
-                                      />
-                                      {videoId && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg">
-                                          <span className="text-white text-2xl">▶️</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                }
-                                // ถ้าไม่มีทั้งวิดีโอและรูปภาพ
-                                return (
-                                  <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
-                                    <span className="text-gray-400 text-xs">
-                                      📷
-                                    </span>
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                          </td>
-                          <td className="py-2 px-1 text-center text-gray-700 font-semibold text-xl">
-                            {formatCurrency(ad.spend)}
-                          </td>
-                          <td className="py-2 px-1 text-center font-semibold text-green-700 text-xl">
-                            {getResultsByActionType(
-                              ad.actions,
-                              "onsite_conversion.messaging_first_reply"
-                            )}
-                          </td>
-                          <td className="py-2 px-1 text-center font-semibold text-blue-700 text-xl">
-                            {getResultsByActionType(
-                              ad.actions,
-                              "onsite_conversion.total_messaging_connection"
-                            )}
-                          </td>
-                          <td className="py-2 px-1 text-center font-semibold text-purple-700 text-xl">
-                            {topAdsPhoneLeadsLoading ? (
-                              <span className="text-sm">⏳</span>
-                            ) : (
-                              topAdsPhoneLeads.get(ad.ad_id) || 0
-                            )}
-                          </td>
-                          <td className="py-2 px-1 text-center text-gray-700 text-xl">
-                            {(() => {
-                              const thruplay = ad.actions?.find(
-                                (action) => action.action_type === "video_view"
-                              );
-                              return thruplay
-                                ? formatNumber(thruplay.value)
-                                : "—";
-                            })()}
-                          </td>
-                          <td className="py-2 px-1 text-center text-gray-700 text-xl">
-                            {(() => {
-                              const costPerMessaging =
-                                ad.cost_per_action_type?.find(
-                                  (cost) =>
-                                    cost.action_type ===
-                                    "onsite_conversion.total_messaging_connection"
-                                );
-                              return costPerMessaging
-                                ? formatCurrency(costPerMessaging.value)
-                                : "—";
-                            })()}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Right Column - TOP Ad Set Table */}
-          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 border border-gray-100">
-            <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 px-4 sm:px-8 py-4 sm:py-6 -m-4 sm:-m-8 mb-4 sm:mb-8 relative overflow-hidden rounded-t-2xl sm:rounded-t-3xl">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 transition-opacity duration-500"></div>
-            </div>
-            <div className="flex flex-col gap-3 mb-3 sm:mb-4">
-              <h2 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-2">
-                🏆 TOP {topAdSetLimit === "all" ? "ทั้งหมด" : topAdSetLimit} Ad
-                Set{" "}
-                <span className="bg-gradient-to-r from-yellow-400 via-orange-400 to-red-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full text-base sm:text-xl font-bold shadow-xl">
-                  พื้นที่ลูกค้ายอดเยี่ยม
-                </span>
-              </h2>
-              <div className="flex flex-col sm:flex-row gap-2 w-full">
-                {/* Sort By Buttons */}
-                <div className="flex gap-2 flex-1">
-                  <button
-                    onClick={() => setTopAdSetSortBy("leads")}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdSetSortBy === "leads"
-                      ? "bg-purple-600 text-white shadow-lg"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                      }`}
-                  >
-                    <span className="hidden sm:inline">
-                      💬 Total Inbox (มาก → น้อย)
-                    </span>
-                    <span className="sm:hidden">💬 Inbox</span>
-                  </button>
-                  <button
-                    onClick={() => setTopAdSetSortBy("phone")}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdSetSortBy === "phone"
-                      ? "bg-purple-600 text-white shadow-lg"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                      }`}
-                  >
-                    <span className="hidden sm:inline">
-                      📞 ชื่อ - เบอร์ (มาก → น้อย)
-                    </span>
-                    <span className="sm:hidden">📞 เบอร์</span>
-                  </button>
-                  <button
-                    onClick={() => setTopAdSetSortBy("thruplay")}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${topAdSetSortBy === "thruplay"
-                      ? "bg-purple-600 text-white shadow-lg"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                      }`}
-                  >
-                    <span className="hidden sm:inline">
-                      🎬 ThruPlay (มาก → น้อย)
-                    </span>
-                    <span className="sm:hidden">🎬 ThruPlay</span>
-                  </button>
+                                  return thruplay
+                                    ? formatNumber(thruplay.value)
+                                    : "—";
+                                })()}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
                 </div>
-                {/* Top Ad Set Limit Dropdown */}
-                <select
-                  value={topAdSetLimit}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setTopAdSetLimit(
-                      value === "all"
-                        ? "all"
-                        : (Number(value) as 5 | 10 | 15 | 20 | 30)
-                    );
-                  }}
-                  className="flex-1 sm:flex-none sm:min-w-[140px] px-3 py-2 rounded-lg font-medium text-xs sm:text-sm bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-800 hover:from-yellow-500 hover:to-orange-500 transition-all border-2 border-yellow-500 shadow-lg cursor-pointer"
-                >
-                  <option value={5}>⭐ Top 5</option>
-                  <option value={10}>⭐ Top 10</option>
-                  <option value={15}>⭐ Top 15</option>
-                  <option value={20}>⭐ Top 20</option>
-                  <option value={30}>⭐ Top 30</option>
-                  <option value="all">⭐ Top ทั้งหมด</option>
-                </select>
-              </div>
-              {/* Campaign Type Filter Buttons (TOF/MOF/BOF) */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    const newFilter = new Set(adSetCampaignFilter);
-                    if (newFilter.has("TOF")) {
-                      newFilter.delete("TOF");
-                    } else {
-                      newFilter.add("TOF");
-                    }
-                    setAdSetCampaignFilter(newFilter);
-                  }}
-                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${adSetCampaignFilter.has("TOF")
-                    ? "bg-blue-600 text-white shadow-lg"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                >
-                  TOF
-                </button>
-                <button
-                  onClick={() => {
-                    const newFilter = new Set(adSetCampaignFilter);
-                    if (newFilter.has("MOF")) {
-                      newFilter.delete("MOF");
-                    } else {
-                      newFilter.add("MOF");
-                    }
-                    setAdSetCampaignFilter(newFilter);
-                  }}
-                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${adSetCampaignFilter.has("MOF")
-                    ? "bg-green-600 text-white shadow-lg"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                >
-                  MOF
-                </button>
-                <button
-                  onClick={() => {
-                    const newFilter = new Set(adSetCampaignFilter);
-                    if (newFilter.has("BOF")) {
-                      newFilter.delete("BOF");
-                    } else {
-                      newFilter.add("BOF");
-                    }
-                    setAdSetCampaignFilter(newFilter);
-                  }}
-                  className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${adSetCampaignFilter.has("BOF")
-                    ? "bg-orange-600 text-white shadow-lg"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                >
-                  BOF
-                </button>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              {adsetInsightsLoading && adsetInsights.length === 0 && (
-                <div className="bg-blue-50 border-l-4 border-blue-500 p-3 mb-4 rounded">
-                  <p className="text-blue-700 text-sm font-medium">
-                    ⏳ กำลังโหลดข้อมูล Ad Set...
-                  </p>
-                </div>
-              )}
-              <table className="w-full" key={`table2-${adsetInsights.length}`}>
-                <thead>
-                  <tr className="border-b-2 border-gradient-to-r from-blue-200 via-purple-200 to-pink-200">
-                    <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
-                      #
-                    </th>
-                    <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
-                      Ad Set
-                    </th>
-                    <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
-                      จ่ายแล้ว
-                    </th>
-                    <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
-                      New Inbox
-                    </th>
-                    <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
-                      Total Inbox
-                    </th>
-                    <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
-                      ชื่อ - เบอร์
-                    </th>
-                    <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
-                      ThruPlay
-                    </th>
-                  </tr>
-                </thead>
-                <tbody key={`tbody2-${adsetInsights.length}-${Date.now()}`}>
-                  {adsetInsights
-                    .filter((adset) => {
-                      // If no filter selected, show all
-                      if (adSetCampaignFilter.size === 0) return true;
-                      // Get first 3 characters of campaign name (uppercase)
-                      const campaignPrefix = (adset.campaign_name || "")
-                        .substring(0, 3)
-                        .toUpperCase();
-                      return adSetCampaignFilter.has(campaignPrefix);
-                    })
-                    .sort((a, b) => {
-                      if (topAdSetSortBy === "leads") {
-                        const totalInboxA = getResultsByActionType(
-                          a.actions,
-                          "onsite_conversion.total_messaging_connection"
-                        );
-                        const totalInboxB = getResultsByActionType(
-                          b.actions,
-                          "onsite_conversion.total_messaging_connection"
-                        );
-                        return totalInboxB - totalInboxA;
-                      } else if (topAdSetSortBy === "phone") {
-                        // Sort by phone leads (highest first)
-                        const phoneLeadsA = getPhoneLeadsByAdSetId(a.adset_id);
-                        const phoneLeadsB = getPhoneLeadsByAdSetId(b.adset_id);
-                        return phoneLeadsB - phoneLeadsA;
-                      } else {
-                        // Sort by thruplay (highest first)
-                        const thruplayA = a.actions?.find(
-                          (action) => action.action_type === "video_view"
-                        );
-                        const thruplayB = b.actions?.find(
-                          (action) => action.action_type === "video_view"
-                        );
-                        const valueA = thruplayA
-                          ? parseFloat(thruplayA.value)
-                          : 0;
-                        const valueB = thruplayB
-                          ? parseFloat(thruplayB.value)
-                          : 0;
-                        return valueB - valueA;
-                      }
-                    })
-                    .slice(
-                      0,
-                      topAdSetLimit === "all" ? undefined : topAdSetLimit
-                    )
-                    .map((adset, index) => {
-                      // Calculate cost per inbox
-                      const spend = parseFloat(adset.spend || "0");
-                      const totalInbox = getResultsByActionType(
-                        adset.actions,
-                        "onsite_conversion.total_messaging_connection"
-                      );
-                      const costPerInbox =
-                        totalInbox > 0 ? spend / totalInbox : 0;
+          </>
+        )}
 
-                      return (
-                        <tr
-                          key={adset.adset_id}
-                          className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:via-purple-50 hover:to-pink-50 transition-all duration-300 hover:shadow-md cursor-pointer"
-                          onClick={() => {
-                            setSelectedAdSet(adset);
-                            setShowAdSetModal(true);
-                          }}
-                        >
-                          <td className="py-2 px-1 text-center">
-                            <div className="text-gray-700 font-bold text-lg">
-                              {index + 1}
-                            </div>
-                          </td>
-                          <td className="py-2 px-1 text-center">
-                            <div
-                              className="text-gray-700 font-medium text-sm max-w-[150px] truncate mx-auto hover:text-purple-600"
-                              title={adset.adset_name}
-                            >
-                              {adset.adset_name || "—"}
-                            </div>
-                          </td>
-                          <td className="py-2 px-1 text-center text-gray-700 font-semibold text-xl">
-                            {formatCurrency(adset.spend)}
-                          </td>
-                          <td className="py-2 px-1 text-center font-semibold text-green-700 text-xl">
-                            {getResultsByActionType(
-                              adset.actions,
-                              "onsite_conversion.messaging_first_reply"
-                            )}
-                          </td>
-                          <td className="py-2 px-1 text-center font-semibold text-blue-700 text-xl">
-                            {getResultsByActionType(
-                              adset.actions,
-                              "onsite_conversion.total_messaging_connection"
-                            )}
-                          </td>
-                          <td className="py-2 px-1 text-center font-semibold text-purple-700 text-xl">
-                            {topAdsPhoneLeadsLoading ? (
-                              <span className="text-sm">⏳</span>
-                            ) : (
-                              getPhoneLeadsByAdSetId(adset.adset_id)
-                            )}
-                          </td>
-                          <td className="py-2 px-1 text-center text-gray-700 text-xl">
-                            {(() => {
-                              const thruplay = adset.actions?.find(
-                                (action) => action.action_type === "video_view"
-                              );
-                              return thruplay
-                                ? formatNumber(thruplay.value)
-                                : "—";
-                            })()}
-                          </td>
+        {/* Page 2 Content - Same structure as Page 1 */}
+        {selectedPage === 2 && (
+          <>
+            {/* Performance Cards and Tables in 3-Column Layout */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              {/* Column 1: เงินคงเหลือ + ใช้จ่ายรวม */}
+              <div className="flex flex-col">
+                {/* Card */}
+                <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-2xl">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                    <div className="text-center">
+                      <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-2">
+                        💵 เงินคงเหลือ (Page 2)
+                      </div>
+                      <div className="text-xl sm:text-3xl font-bold">
+                        {facebookBalanceLoading ? (
+                          <span className="text-2xl">⏳</span>
+                        ) : (
+                          `฿${facebookBalance.toLocaleString("th-TH", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}`
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-2">
+                        💰 ใช้จ่ายรวม
+                      </div>
+                      <div className="text-xl sm:text-3xl font-bold">
+                        {formatCurrency(
+                          insights.reduce(
+                            (sum, ad) => sum + parseFloat(ad.spend || "0"),
+                            0
+                          )
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Table */}
+                <div className="bg-white rounded-b-2xl sm:rounded-b-3xl shadow-2xl overflow-hidden border border-gray-100 border-t-0 flex-1 mt-0">
+                  <div className="overflow-y-auto max-h-[120px]">
+                    <table className="w-full min-w-max text-xs">
+                      <thead className="bg-blue-50 sticky top-0">
+                        <tr>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
+                            วันที่
+                          </th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
+                            จ่ายแล้ว
+                          </th>
                         </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
+                      </thead>
+                      <tbody>
+                        {dailySummaryLoading ? (
+                          <tr>
+                            <td colSpan={2} className="px-2 py-4 text-center text-xs">⏳</td>
+                          </tr>
+                        ) : (
+                          (() => {
+                            const dailyData = new Map<string, { spend: number }>();
+                            dailySummaryData.forEach((ad) => {
+                              const date = ad.date_start;
+                              const existing = dailyData.get(date) || { spend: 0 };
+                              existing.spend += parseFloat(ad.spend || "0");
+                              dailyData.set(date, existing);
+                            });
+                            const sortedDates = Array.from(dailyData.keys()).sort(
+                              (a, b) => new Date(b).getTime() - new Date(a).getTime()
+                            );
+                            const last30Days = sortedDates.slice(1, 31);
+                            return last30Days.map((date) => {
+                              const data = dailyData.get(date)!;
+                              return (
+                                <tr key={date} className="hover:bg-blue-50 border-b">
+                                  <td className="px-2 py-2 text-center text-xs text-gray-900">
+                                    {new Date(date).toLocaleDateString("th-TH", { month: "short", day: "numeric" })}
+                                  </td>
+                                  <td className="px-2 py-2 text-center text-xs font-semibold text-blue-600">
+                                    {formatCurrency(data.spend)}
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 2: New Inbox & Total Inbox */}
+              <div className="flex flex-col">
+                {/* Card */}
+                <div className="bg-gradient-to-br from-teal-500 via-teal-600 to-cyan-600 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-2xl">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                    <div className="text-center">
+                      <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-3">
+                        New Inbox
+                      </div>
+                      <div className="text-xl sm:text-4xl font-bold">
+                        {getTotalResults()}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-3">
+                        Total Inbox
+                      </div>
+                      <div className="text-xl sm:text-4xl font-bold">
+                        {getTotalMessagingConnection()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Table */}
+                <div className="bg-white rounded-b-2xl sm:rounded-b-3xl shadow-2xl overflow-hidden border border-gray-100 border-t-0 flex-1 mt-0">
+                  <div className="overflow-y-auto max-h-[120px]">
+                    <table className="w-full min-w-max text-xs">
+                      <thead className="bg-teal-50 sticky top-0">
+                        <tr>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">วันที่</th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">New Inbox</th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">Total Inbox</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dailySummaryLoading ? (
+                          <tr><td colSpan={3} className="px-2 py-4 text-center text-xs">⏳</td></tr>
+                        ) : (
+                          (() => {
+                            const dailyData = new Map<string, { newInbox: number; totalInbox: number }>();
+                            dailySummaryData.forEach((ad) => {
+                              const date = ad.date_start;
+                              const existing = dailyData.get(date) || { newInbox: 0, totalInbox: 0 };
+                              existing.newInbox += getResultsByActionType(ad.actions, "onsite_conversion.messaging_first_reply");
+                              existing.totalInbox += getResultsByActionType(ad.actions, "onsite_conversion.total_messaging_connection");
+                              dailyData.set(date, existing);
+                            });
+                            const sortedDates = Array.from(dailyData.keys()).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+                            const last30Days = sortedDates.slice(1, 31);
+                            return last30Days.map((date) => {
+                              const data = dailyData.get(date)!;
+                              return (
+                                <tr key={date} className="hover:bg-teal-50 border-b">
+                                  <td className="px-2 py-2 text-center text-xs text-gray-900">
+                                    {new Date(date).toLocaleDateString("th-TH", { month: "short", day: "numeric" })}
+                                  </td>
+                                  <td className="px-2 py-2 text-center text-xs font-semibold text-green-600">{data.newInbox}</td>
+                                  <td className="px-2 py-2 text-center text-xs font-semibold text-teal-600">{data.totalInbox}</td>
+                                </tr>
+                              );
+                            });
+                          })()
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 3: ชื่อ - เบอร์ */}
+              <div className="flex flex-col">
+                {/* Card */}
+                <div className="bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-2xl text-center">
+                  <div className="text-base sm:text-xl font-semibold mb-2 sm:mb-3 opacity-90">📞 ชื่อ - เบอร์</div>
+                  <div className="text-2xl sm:text-4xl font-bold">
+                    {phoneCountLoading ? <span className="text-3xl">⏳</span> : <div>{phoneCountData.total.toLocaleString()}</div>}
+                  </div>
+                </div>
+                {/* Table */}
+                <div className="bg-white rounded-b-2xl sm:rounded-b-3xl shadow-2xl overflow-hidden border border-gray-100 border-t-0 flex-1 mt-0">
+                  <div className="overflow-y-auto max-h-[120px]">
+                    <table className="w-full min-w-max text-xs">
+                      <thead className="bg-purple-50 sticky top-0">
+                        <tr>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">วันที่</th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">เบอร์</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {phoneLeadsLoading ? (
+                          <tr><td colSpan={2} className="px-2 py-4 text-center text-xs">⏳</td></tr>
+                        ) : (
+                          Object.entries(phoneLeadsData)
+                            .sort(([dateA], [dateB]) => new Date(dateB).getTime() - new Date(dateA).getTime())
+                            .slice(1)
+                            .map(([date, count]) => (
+                              <tr key={date} className="hover:bg-purple-50 border-b">
+                                <td className="px-2 py-2 text-center text-xs text-gray-900">
+                                  {new Date(date).toLocaleDateString("th-TH", { month: "short", day: "numeric" })}
+                                </td>
+                                <td className="px-2 py-2 text-center text-xs font-semibold text-purple-600">{count}</td>
+                              </tr>
+                            ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+
+            {/* TOP Ads Section - Two Column Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-8">
+              {/* Placeholder for Page 2 specific content */}
+              <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 border border-gray-100">
+                <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 px-4 sm:px-8 py-4 sm:py-6 -m-4 sm:-m-8 mb-4 sm:mb-8 relative overflow-hidden rounded-t-2xl sm:rounded-t-3xl">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 transition-opacity duration-500"></div>
+                </div>
+                <div className="flex flex-col gap-3 mb-3 sm:mb-4">
+                  <h2 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-2">
+                    📊 Page 2 - Analytics Dashboard
+                  </h2>
+                  <p className="text-gray-600 text-sm">Page 2 content area - Same structure as Page 1</p>
+                </div>
+                <div className="p-8 text-center text-gray-500">
+                  <div className="text-6xl mb-4">📈</div>
+                  <p className="text-lg">Page 2 specific content will be displayed here</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 border border-gray-100">
+                <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 px-4 sm:px-8 py-4 sm:py-6 -m-4 sm:-m-8 mb-4 sm:mb-8 relative overflow-hidden rounded-t-2xl sm:rounded-t-3xl">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 transition-opacity duration-500"></div>
+                </div>
+                <div className="flex flex-col gap-3 mb-3 sm:mb-4">
+                  <h2 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-2">
+                    📋 Page 2 - Reports
+                  </h2>
+                  <p className="text-gray-600 text-sm">Page 2 reports area</p>
+                </div>
+                <div className="p-8 text-center text-gray-500">
+                  <div className="text-6xl mb-4">📊</div>
+                  <p className="text-lg">Page 2 reports will be displayed here</p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Page 3 Content - Same structure as Page 1 */}
+        {selectedPage === 3 && (
+          <>
+            {/* Performance Cards and Tables in 3-Column Layout */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              {/* Column 1: เงินคงเหลือ + ใช้จ่ายรวม */}
+              <div className="flex flex-col">
+                {/* Card */}
+                <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-2xl">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                    <div className="text-center">
+                      <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-2">
+                        💵 เงินคงเหลือ (Page 3)
+                      </div>
+                      <div className="text-xl sm:text-3xl font-bold">
+                        {facebookBalanceLoading ? (
+                          <span className="text-2xl">⏳</span>
+                        ) : (
+                          `฿${facebookBalance.toLocaleString("th-TH", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}`
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-2">
+                        💰 ใช้จ่ายรวม
+                      </div>
+                      <div className="text-xl sm:text-3xl font-bold">
+                        {formatCurrency(
+                          insights.reduce(
+                            (sum, ad) => sum + parseFloat(ad.spend || "0"),
+                            0
+                          )
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Table */}
+                <div className="bg-white rounded-b-2xl sm:rounded-b-3xl shadow-2xl overflow-hidden border border-gray-100 border-t-0 flex-1 mt-0">
+                  <div className="overflow-y-auto max-h-[120px]">
+                    <table className="w-full min-w-max text-xs">
+                      <thead className="bg-blue-50 sticky top-0">
+                        <tr>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
+                            วันที่
+                          </th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
+                            จ่ายแล้ว
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dailySummaryLoading ? (
+                          <tr>
+                            <td colSpan={2} className="px-2 py-4 text-center text-xs">⏳</td>
+                          </tr>
+                        ) : (
+                          (() => {
+                            const dailyData = new Map<string, { spend: number }>();
+                            dailySummaryData.forEach((ad) => {
+                              const date = ad.date_start;
+                              const existing = dailyData.get(date) || { spend: 0 };
+                              existing.spend += parseFloat(ad.spend || "0");
+                              dailyData.set(date, existing);
+                            });
+                            const sortedDates = Array.from(dailyData.keys()).sort(
+                              (a, b) => new Date(b).getTime() - new Date(a).getTime()
+                            );
+                            const last30Days = sortedDates.slice(1, 31);
+                            return last30Days.map((date) => {
+                              const data = dailyData.get(date)!;
+                              return (
+                                <tr key={date} className="hover:bg-blue-50 border-b">
+                                  <td className="px-2 py-2 text-center text-xs text-gray-900">
+                                    {new Date(date).toLocaleDateString("th-TH", { month: "short", day: "numeric" })}
+                                  </td>
+                                  <td className="px-2 py-2 text-center text-xs font-semibold text-blue-600">
+                                    {formatCurrency(data.spend)}
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 2: New Inbox & Total Inbox */}
+              <div className="flex flex-col">
+                {/* Card */}
+                <div className="bg-gradient-to-br from-teal-500 via-teal-600 to-cyan-600 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-2xl">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                    <div className="text-center">
+                      <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-3">
+                        New Inbox
+                      </div>
+                      <div className="text-xl sm:text-4xl font-bold">
+                        {getTotalResults()}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-3">
+                        Total Inbox
+                      </div>
+                      <div className="text-xl sm:text-4xl font-bold">
+                        {getTotalMessagingConnection()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Table */}
+                <div className="bg-white rounded-b-2xl sm:rounded-b-3xl shadow-2xl overflow-hidden border border-gray-100 border-t-0 flex-1 mt-0">
+                  <div className="overflow-y-auto max-h-[120px]">
+                    <table className="w-full min-w-max text-xs">
+                      <thead className="bg-teal-50 sticky top-0">
+                        <tr>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">วันที่</th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">New Inbox</th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">Total Inbox</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dailySummaryLoading ? (
+                          <tr><td colSpan={3} className="px-2 py-4 text-center text-xs">⏳</td></tr>
+                        ) : (
+                          (() => {
+                            const dailyData = new Map<string, { newInbox: number; totalInbox: number }>();
+                            dailySummaryData.forEach((ad) => {
+                              const date = ad.date_start;
+                              const existing = dailyData.get(date) || { newInbox: 0, totalInbox: 0 };
+                              existing.newInbox += getResultsByActionType(ad.actions, "onsite_conversion.messaging_first_reply");
+                              existing.totalInbox += getResultsByActionType(ad.actions, "onsite_conversion.total_messaging_connection");
+                              dailyData.set(date, existing);
+                            });
+                            const sortedDates = Array.from(dailyData.keys()).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+                            const last30Days = sortedDates.slice(1, 31);
+                            return last30Days.map((date) => {
+                              const data = dailyData.get(date)!;
+                              return (
+                                <tr key={date} className="hover:bg-teal-50 border-b">
+                                  <td className="px-2 py-2 text-center text-xs text-gray-900">
+                                    {new Date(date).toLocaleDateString("th-TH", { month: "short", day: "numeric" })}
+                                  </td>
+                                  <td className="px-2 py-2 text-center text-xs font-semibold text-green-600">{data.newInbox}</td>
+                                  <td className="px-2 py-2 text-center text-xs font-semibold text-teal-600">{data.totalInbox}</td>
+                                </tr>
+                              );
+                            });
+                          })()
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 3: ชื่อ - เบอร์ */}
+              <div className="flex flex-col">
+                {/* Card */}
+                <div className="bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-2xl text-center">
+                  <div className="text-base sm:text-xl font-semibold mb-2 sm:mb-3 opacity-90">📞 ชื่อ - เบอร์</div>
+                  <div className="text-2xl sm:text-4xl font-bold">
+                    {phoneCountLoading ? <span className="text-3xl">⏳</span> : <div>{phoneCountData.total.toLocaleString()}</div>}
+                  </div>
+                </div>
+                {/* Table */}
+                <div className="bg-white rounded-b-2xl sm:rounded-b-3xl shadow-2xl overflow-hidden border border-gray-100 border-t-0 flex-1 mt-0">
+                  <div className="overflow-y-auto max-h-[120px]">
+                    <table className="w-full min-w-max text-xs">
+                      <thead className="bg-purple-50 sticky top-0">
+                        <tr>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">วันที่</th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">เบอร์</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {phoneLeadsLoading ? (
+                          <tr><td colSpan={2} className="px-2 py-4 text-center text-xs">⏳</td></tr>
+                        ) : (
+                          Object.entries(phoneLeadsData)
+                            .sort(([dateA], [dateB]) => new Date(dateB).getTime() - new Date(dateA).getTime())
+                            .slice(1)
+                            .map(([date, count]) => (
+                              <tr key={date} className="hover:bg-purple-50 border-b">
+                                <td className="px-2 py-2 text-center text-xs text-gray-900">
+                                  {new Date(date).toLocaleDateString("th-TH", { month: "short", day: "numeric" })}
+                                </td>
+                                <td className="px-2 py-2 text-center text-xs font-semibold text-purple-600">{count}</td>
+                              </tr>
+                            ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* TOP Ads Section - Two Column Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-8">
+              {/* Placeholder for Page 3 specific content */}
+              <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 border border-gray-100">
+                <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 px-4 sm:px-8 py-4 sm:py-6 -m-4 sm:-m-8 mb-4 sm:mb-8 relative overflow-hidden rounded-t-2xl sm:rounded-t-3xl">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 transition-opacity duration-500"></div>
+                </div>
+                <div className="flex flex-col gap-3 mb-3 sm:mb-4">
+                  <h2 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent flex items-center gap-2">
+                    🌐 Page 3 - Campaign Overview
+                  </h2>
+                  <p className="text-gray-600 text-sm">Page 3 content area - Same structure as Page 1</p>
+                </div>
+                <div className="p-8 text-center text-gray-500">
+                  <div className="text-6xl mb-4">🎯</div>
+                  <p className="text-lg">Page 3 specific content will be displayed here</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 border border-gray-100">
+                <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 px-4 sm:px-8 py-4 sm:py-6 -m-4 sm:-m-8 mb-4 sm:mb-8 relative overflow-hidden rounded-t-2xl sm:rounded-t-3xl">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 transition-opacity duration-500"></div>
+                </div>
+                <div className="flex flex-col gap-3 mb-3 sm:mb-4">
+                  <h2 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent flex items-center gap-2">
+                    📊 Page 3 - Performance Metrics
+                  </h2>
+                  <p className="text-gray-600 text-sm">Page 3 metrics area</p>
+                </div>
+                <div className="p-8 text-center text-gray-500">
+                  <div className="text-6xl mb-4">📉</div>
+                  <p className="text-lg">Page 3 metrics will be displayed here</p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Page 4 Content - Same structure as Page 1 */}
+        {selectedPage === 4 && (
+          <>
+            {/* Performance Cards and Tables in 3-Column Layout */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              {/* Column 1: เงินคงเหลือ + ใช้จ่ายรวม */}
+              <div className="flex flex-col">
+                {/* Card */}
+                <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-2xl">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                    <div className="text-center">
+                      <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-2">
+                        💵 เงินคงเหลือ (Page 4)
+                      </div>
+                      <div className="text-xl sm:text-3xl font-bold">
+                        {facebookBalanceLoading ? (
+                          <span className="text-2xl">⏳</span>
+                        ) : (
+                          `฿${facebookBalance.toLocaleString("th-TH", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}`
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-2">
+                        💰 ใช้จ่ายรวม
+                      </div>
+                      <div className="text-xl sm:text-3xl font-bold">
+                        {formatCurrency(
+                          insights.reduce(
+                            (sum, ad) => sum + parseFloat(ad.spend || "0"),
+                            0
+                          )
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Table */}
+                <div className="bg-white rounded-b-2xl sm:rounded-b-3xl shadow-2xl overflow-hidden border border-gray-100 border-t-0 flex-1 mt-0">
+                  <div className="overflow-y-auto max-h-[120px]">
+                    <table className="w-full min-w-max text-xs">
+                      <thead className="bg-blue-50 sticky top-0">
+                        <tr>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
+                            วันที่
+                          </th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
+                            จ่ายแล้ว
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dailySummaryLoading ? (
+                          <tr>
+                            <td colSpan={2} className="px-2 py-4 text-center text-xs">⏳</td>
+                          </tr>
+                        ) : (
+                          (() => {
+                            const dailyData = new Map<string, { spend: number }>();
+                            dailySummaryData.forEach((ad) => {
+                              const date = ad.date_start;
+                              const existing = dailyData.get(date) || { spend: 0 };
+                              existing.spend += parseFloat(ad.spend || "0");
+                              dailyData.set(date, existing);
+                            });
+                            const sortedDates = Array.from(dailyData.keys()).sort(
+                              (a, b) => new Date(b).getTime() - new Date(a).getTime()
+                            );
+                            const last30Days = sortedDates.slice(1, 31);
+                            return last30Days.map((date) => {
+                              const data = dailyData.get(date)!;
+                              return (
+                                <tr key={date} className="hover:bg-blue-50 border-b">
+                                  <td className="px-2 py-2 text-center text-xs text-gray-900">
+                                    {new Date(date).toLocaleDateString("th-TH", { month: "short", day: "numeric" })}
+                                  </td>
+                                  <td className="px-2 py-2 text-center text-xs font-semibold text-blue-600">
+                                    {formatCurrency(data.spend)}
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 2: New Inbox & Total Inbox */}
+              <div className="flex flex-col">
+                {/* Card */}
+                <div className="bg-gradient-to-br from-teal-500 via-teal-600 to-cyan-600 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-2xl">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                    <div className="text-center">
+                      <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-3">
+                        New Inbox
+                      </div>
+                      <div className="text-xl sm:text-4xl font-bold">
+                        {getTotalResults()}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-3">
+                        Total Inbox
+                      </div>
+                      <div className="text-xl sm:text-4xl font-bold">
+                        {getTotalMessagingConnection()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Table */}
+                <div className="bg-white rounded-b-2xl sm:rounded-b-3xl shadow-2xl overflow-hidden border border-gray-100 border-t-0 flex-1 mt-0">
+                  <div className="overflow-y-auto max-h-[120px]">
+                    <table className="w-full min-w-max text-xs">
+                      <thead className="bg-teal-50 sticky top-0">
+                        <tr>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">วันที่</th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">New Inbox</th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">Total Inbox</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dailySummaryLoading ? (
+                          <tr><td colSpan={3} className="px-2 py-4 text-center text-xs">⏳</td></tr>
+                        ) : (
+                          (() => {
+                            const dailyData = new Map<string, { newInbox: number; totalInbox: number }>();
+                            dailySummaryData.forEach((ad) => {
+                              const date = ad.date_start;
+                              const existing = dailyData.get(date) || { newInbox: 0, totalInbox: 0 };
+                              existing.newInbox += getResultsByActionType(ad.actions, "onsite_conversion.messaging_first_reply");
+                              existing.totalInbox += getResultsByActionType(ad.actions, "onsite_conversion.total_messaging_connection");
+                              dailyData.set(date, existing);
+                            });
+                            const sortedDates = Array.from(dailyData.keys()).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+                            const last30Days = sortedDates.slice(1, 31);
+                            return last30Days.map((date) => {
+                              const data = dailyData.get(date)!;
+                              return (
+                                <tr key={date} className="hover:bg-teal-50 border-b">
+                                  <td className="px-2 py-2 text-center text-xs text-gray-900">
+                                    {new Date(date).toLocaleDateString("th-TH", { month: "short", day: "numeric" })}
+                                  </td>
+                                  <td className="px-2 py-2 text-center text-xs font-semibold text-green-600">{data.newInbox}</td>
+                                  <td className="px-2 py-2 text-center text-xs font-semibold text-teal-600">{data.totalInbox}</td>
+                                </tr>
+                              );
+                            });
+                          })()
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 3: ชื่อ - เบอร์ */}
+              <div className="flex flex-col">
+                {/* Card */}
+                <div className="bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-2xl text-center">
+                  <div className="text-base sm:text-xl font-semibold mb-2 sm:mb-3 opacity-90">📞 ชื่อ - เบอร์</div>
+                  <div className="text-2xl sm:text-4xl font-bold">
+                    {phoneCountLoading ? <span className="text-3xl">⏳</span> : <div>{phoneCountData.total.toLocaleString()}</div>}
+                  </div>
+                </div>
+                {/* Table */}
+                <div className="bg-white rounded-b-2xl sm:rounded-b-3xl shadow-2xl overflow-hidden border border-gray-100 border-t-0 flex-1 mt-0">
+                  <div className="overflow-y-auto max-h-[120px]">
+                    <table className="w-full min-w-max text-xs">
+                      <thead className="bg-purple-50 sticky top-0">
+                        <tr>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">วันที่</th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">เบอร์</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {phoneLeadsLoading ? (
+                          <tr><td colSpan={2} className="px-2 py-4 text-center text-xs">⏳</td></tr>
+                        ) : (
+                          Object.entries(phoneLeadsData)
+                            .sort(([dateA], [dateB]) => new Date(dateB).getTime() - new Date(dateA).getTime())
+                            .slice(1)
+                            .map(([date, count]) => (
+                              <tr key={date} className="hover:bg-purple-50 border-b">
+                                <td className="px-2 py-2 text-center text-xs text-gray-900">
+                                  {new Date(date).toLocaleDateString("th-TH", { month: "short", day: "numeric" })}
+                                </td>
+                                <td className="px-2 py-2 text-center text-xs font-semibold text-purple-600">{count}</td>
+                              </tr>
+                            ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* TOP Ads Section - Two Column Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-8">
+              {/* Placeholder for Page 4 specific content */}
+              <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 border border-gray-100">
+                <div className="bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 px-4 sm:px-8 py-4 sm:py-6 -m-4 sm:-m-8 mb-4 sm:mb-8 relative overflow-hidden rounded-t-2xl sm:rounded-t-3xl">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 transition-opacity duration-500"></div>
+                </div>
+                <div className="flex flex-col gap-3 mb-3 sm:mb-4">
+                  <h2 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent flex items-center gap-2">
+                    ⚙️ Page 4 - Settings & Configuration
+                  </h2>
+                  <p className="text-gray-600 text-sm">Page 4 content area - Same structure as Page 1</p>
+                </div>
+                <div className="p-8 text-center text-gray-500">
+                  <div className="text-6xl mb-4">🔧</div>
+                  <p className="text-lg">Page 4 specific content will be displayed here</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 border border-gray-100">
+                <div className="bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 px-4 sm:px-8 py-4 sm:py-6 -m-4 sm:-m-8 mb-4 sm:mb-8 relative overflow-hidden rounded-t-2xl sm:rounded-t-3xl">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 transition-opacity duration-500"></div>
+                </div>
+                <div className="flex flex-col gap-3 mb-3 sm:mb-4">
+                  <h2 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent flex items-center gap-2">
+                    📝 Page 4 - Additional Info
+                  </h2>
+                  <p className="text-gray-600 text-sm">Page 4 additional area</p>
+                </div>
+                <div className="p-8 text-center text-gray-500">
+                  <div className="text-6xl mb-4">📋</div>
+                  <p className="text-lg">Page 4 additional content will be displayed here</p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
-    </div>
+    </div >
   );
 }

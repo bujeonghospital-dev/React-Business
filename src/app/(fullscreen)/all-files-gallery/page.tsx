@@ -602,6 +602,16 @@ const AllFilesGalleryPage = () => {
   const [aiProcessingFiles, setAIProcessingFiles] = useState<number[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareFileId, setShareFileId] = useState<number | null>(null);
+  const [showLineSendModal, setShowLineSendModal] = useState(false);
+  const [lineSendUserId, setLineSendUserId] = useState("");
+  const [lineSendStatus, setLineSendStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
+  const [lineSendError, setLineSendError] = useState("");
+  // LINE Groups management
+  const [lineGroups, setLineGroups] = useState<Array<{ id: string; name: string }>>([]);
+  const [showLineGroupModal, setShowLineGroupModal] = useState(false);
+  const [newGroupId, setNewGroupId] = useState("");
+  const [newGroupName, setNewGroupName] = useState("");
+  const [selectedLineGroup, setSelectedLineGroup] = useState<string | null>(null);
   const [isGlobalDropActive, setIsGlobalDropActive] = useState(false);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [showHeaderSearch, setShowHeaderSearch] = useState(false);
@@ -643,6 +653,54 @@ const AllFilesGalleryPage = () => {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const isMountedRef = useRef(true);
   const thumbnailGenerationRef = useRef<Set<number>>(new Set());
+
+  // Load LINE groups from localStorage on mount
+  useEffect(() => {
+    const savedGroups = localStorage.getItem('lineGroups');
+    if (savedGroups) {
+      try {
+        const parsed = JSON.parse(savedGroups);
+        setLineGroups(parsed);
+        // Set first group as default if exists
+        if (parsed.length > 0) {
+          setSelectedLineGroup(parsed[0].id);
+        }
+      } catch (e) {
+        console.error('Error parsing LINE groups:', e);
+      }
+    } else {
+      // Add default group (กล่องแชท AI)
+      const defaultGroups = [{ id: "C31a793e94485a393a7eb55cb36e6ecfd", name: "กล่องแชท AI" }];
+      setLineGroups(defaultGroups);
+      setSelectedLineGroup(defaultGroups[0].id);
+      localStorage.setItem('lineGroups', JSON.stringify(defaultGroups));
+    }
+  }, []);
+
+  // Save LINE groups to localStorage when changed
+  const saveLineGroups = (groups: Array<{ id: string; name: string }>) => {
+    setLineGroups(groups);
+    localStorage.setItem('lineGroups', JSON.stringify(groups));
+  };
+
+  // Add new LINE group
+  const addLineGroup = () => {
+    if (!newGroupId.trim() || !newGroupName.trim()) return;
+    const newGroups = [...lineGroups, { id: newGroupId.trim(), name: newGroupName.trim() }];
+    saveLineGroups(newGroups);
+    setNewGroupId("");
+    setNewGroupName("");
+    setSelectedLineGroup(newGroupId.trim());
+  };
+
+  // Remove LINE group
+  const removeLineGroup = (groupId: string) => {
+    const newGroups = lineGroups.filter(g => g.id !== groupId);
+    saveLineGroups(newGroups);
+    if (selectedLineGroup === groupId && newGroups.length > 0) {
+      setSelectedLineGroup(newGroups[0].id);
+    }
+  };
 
   // File progress tracking for upload/download animations
   const {
@@ -2088,6 +2146,106 @@ const AllFilesGalleryPage = () => {
     setShowShareModal(false);
   };
 
+  // Send video directly to LINE user via Messaging API (plays inline in LINE app)
+  const sendVideoToLineUser = async (fileId: number) => {
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+
+    if (!lineSendUserId.trim()) {
+      setLineSendError("กรุณาใส่ LINE User ID");
+      return;
+    }
+
+    setLineSendStatus("sending");
+    setLineSendError("");
+
+    try {
+      const response = await fetch('/api/line-send-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          videoPath: file.url,
+          lineUserId: lineSendUserId.trim(),
+          videoName: file.name,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setLineSendStatus("success");
+        // Reset after 2 seconds
+        setTimeout(() => {
+          setShowLineSendModal(false);
+          setLineSendUserId("");
+          setLineSendStatus("idle");
+          setShareFileId(null);
+        }, 2000);
+      } else {
+        setLineSendStatus("error");
+        setLineSendError(data.error || "ไม่สามารถส่งวิดีโอได้");
+      }
+    } catch (error) {
+      setLineSendStatus("error");
+      setLineSendError("เกิดข้อผิดพลาดในการเชื่อมต่อ");
+    }
+  };
+
+  // Send video directly to LINE Group
+  const sendVideoToLineGroup = async (fileId: number, groupId?: string) => {
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+
+    const targetGroupId = groupId || selectedLineGroup;
+    if (!targetGroupId) {
+      setLineSendError("กรุณาเลือกกลุ่ม LINE");
+      return;
+    }
+
+    setLineSendStatus("sending");
+    setLineSendError("");
+
+    try {
+      const response = await fetch('/api/line-send-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          videoPath: file.url,
+          lineGroupId: targetGroupId,
+          videoName: file.name,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setLineSendStatus("success");
+        // Reset after 2 seconds
+        setTimeout(() => {
+          setShowShareModal(false);
+          setShowLineGroupModal(false);
+          setLineSendStatus("idle");
+          setShareFileId(null);
+        }, 2000);
+      } else {
+        setLineSendStatus("error");
+        setLineSendError(data.error || "ไม่สามารถส่งวิดีโอได้");
+        // Reset after 3 seconds on error
+        setTimeout(() => {
+          setLineSendStatus("idle");
+          setLineSendError("");
+        }, 3000);
+      }
+    } catch (error) {
+      setLineSendStatus("error");
+      setLineSendError("เกิดข้อผิดพลาดในการเชื่อมต่อ");
+      setTimeout(() => {
+        setLineSendStatus("idle");
+        setLineSendError("");
+      }, 3000);
+    }
+  };
+
   // Download file handler with progress animation
   const handleDownloadFile = async (fileId: number) => {
     const file = files.find(f => f.id === fileId);
@@ -2953,7 +3111,7 @@ const AllFilesGalleryPage = () => {
 
                 {/* Share Options */}
                 <div className="p-5 space-y-2">
-                  {/* LINE Share */}
+                  {/* LINE Share - Link Preview */}
                   <button
                     onClick={() => shareFile(shareFileId, 'line')}
                     className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-green-500/10 hover:bg-green-500/20 transition-colors"
@@ -2961,15 +3119,82 @@ const AllFilesGalleryPage = () => {
                     <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
                       <Send className="w-6 h-6 text-white" />
                     </div>
-                    <span className="text-white text-lg">LINE</span>
+                    <div className="flex-1 text-left">
+                      <span className="text-white text-lg block">LINE (แชร์ลิงก์)</span>
+                      <span className="text-white/50 text-sm">เปิดในเบราว์เซอร์ LINE</span>
+                    </div>
                   </button>
 
-                  {/* WhatsApp Share */}
+                  {/* LINE Direct Send - Video plays inline */}
+                  {(files.find(f => f.id === shareFileId)?.type === 'video' ||
+                    files.find(f => f.id === shareFileId)?.type === 'clip') && (
+                      <div className="space-y-2">
+                        {/* Group selector */}
+                        <div className="flex items-center gap-2 px-2">
+                          <span className="text-white/60 text-sm">ส่งไปกลุ่ม:</span>
+                          <select
+                            value={selectedLineGroup || ""}
+                            onChange={(e) => setSelectedLineGroup(e.target.value)}
+                            className="flex-1 bg-slate-800 text-white text-sm rounded-lg px-3 py-2 border border-white/20 focus:border-green-500 focus:outline-none"
+                          >
+                            {lineGroups.map((group) => (
+                              <option key={group.id} value={group.id}>
+                                {group.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => setShowLineGroupModal(true)}
+                            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white/60 hover:text-white transition-colors"
+                            title="จัดการกลุ่ม"
+                          >
+                            <Plus className="w-5 h-5" />
+                          </button>
+                        </div>
+
+                        {/* Send button */}
+                        <button
+                          onClick={() => {
+                            if (shareFileId && selectedLineGroup) {
+                              sendVideoToLineGroup(shareFileId, selectedLineGroup);
+                            }
+                          }}
+                          disabled={lineSendStatus === "sending" || !selectedLineGroup}
+                          className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 transition-colors border border-green-500/30 disabled:opacity-50"
+                        >
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
+                            {lineSendStatus === "sending" ? (
+                              <RefreshCw className="w-6 h-6 text-white animate-spin" />
+                            ) : lineSendStatus === "success" ? (
+                              <Check className="w-6 h-6 text-white" />
+                            ) : (
+                              <Film className="w-6 h-6 text-white" />
+                            )}
+                          </div>
+                          <div className="flex-1 text-left">
+                            <span className="text-white text-lg block">
+                              {lineSendStatus === "sending" ? "กำลังส่ง..." :
+                                lineSendStatus === "success" ? "ส่งสำเร็จ! ✅" :
+                                  "ส่งวิดีโอตรงไป LINE ⭐"}
+                            </span>
+                            <span className="text-green-300 text-sm">
+                              {lineSendStatus === "sending" ? "รอสักครู่..." :
+                                lineSendStatus === "success" ? "ดูได้ในแชทเลย" :
+                                  lineGroups.find(g => g.id === selectedLineGroup)?.name || "เลือกกลุ่ม"}
+                            </span>
+                          </div>
+                        </button>
+                      </div>
+                    )}
+
+                  {/* WhatsApp Share - with direct video link */}
                   <button
                     onClick={() => {
                       const file = files.find(f => f.id === shareFileId);
                       if (file) {
-                        const text = encodeURIComponent(`Check out: ${file.name}`);
+                        // Use direct video URL for inline playback in WhatsApp/Telegram
+                        const directVideoUrl = `https://app.bjhbangkok.com${file.url}`;
+                        const text = encodeURIComponent(`🎬 ${file.name}\n\n${directVideoUrl}`);
                         window.open(`https://wa.me/?text=${text}`, '_blank');
                       }
                       setShowShareModal(false);
@@ -2980,8 +3205,73 @@ const AllFilesGalleryPage = () => {
                     <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center">
                       <MessageSquareQuote className="w-6 h-6 text-white" />
                     </div>
-                    <span className="text-white text-lg">WhatsApp</span>
+                    <div className="flex-1 text-left">
+                      <span className="text-white text-lg block">WhatsApp</span>
+                      <span className="text-emerald-300 text-sm">เล่น inline ได้เลย</span>
+                    </div>
                   </button>
+
+                  {/* Telegram Share - with direct video link */}
+                  <button
+                    onClick={() => {
+                      const file = files.find(f => f.id === shareFileId);
+                      if (file) {
+                        const directVideoUrl = `https://app.bjhbangkok.com${file.url}`;
+                        const text = encodeURIComponent(`🎬 ${file.name}`);
+                        const url = encodeURIComponent(directVideoUrl);
+                        window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank');
+                      }
+                      setShowShareModal(false);
+                      setShareFileId(null);
+                    }}
+                    className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center">
+                      <Send className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <span className="text-white text-lg block">Telegram</span>
+                      <span className="text-blue-300 text-sm">เล่น inline ได้เลย</span>
+                    </div>
+                  </button>
+
+                  {/* Copy Link */}
+                  <button
+                    onClick={() => shareFile(shareFileId, 'copy')}
+                    className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-purple-500/10 hover:bg-purple-500/20 transition-colors"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center">
+                      <Copy className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-white text-lg">คัดลอกลิงก์</span>
+                  </button>
+
+                  {/* Copy Direct Video URL */}
+                  {(files.find(f => f.id === shareFileId)?.type === 'video' ||
+                    files.find(f => f.id === shareFileId)?.type === 'clip') && (
+                      <button
+                        onClick={() => {
+                          const file = files.find(f => f.id === shareFileId);
+                          if (file) {
+                            const directVideoUrl = `https://app.bjhbangkok.com${file.url}`;
+                            navigator.clipboard.writeText(directVideoUrl);
+                            // Show toast or feedback
+                            alert('คัดลอก Video URL แล้ว! 📋');
+                          }
+                          setShowShareModal(false);
+                          setShareFileId(null);
+                        }}
+                        className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-orange-500/10 hover:bg-orange-500/20 transition-colors"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center">
+                          <Film className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <span className="text-white text-lg block">คัดลอก Video URL</span>
+                          <span className="text-orange-300 text-sm">ลิงก์ .mp4 โดยตรง</span>
+                        </div>
+                      </button>
+                    )}
 
                   {/* Other Apps Share */}
                   <button
@@ -3005,6 +3295,233 @@ const AllFilesGalleryPage = () => {
                     className="w-full py-4 rounded-2xl bg-white/10 text-white font-medium text-lg hover:bg-white/20 transition-colors"
                   >
                     ยกเลิก
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* LINE Send Video Modal */}
+          {showLineSendModal && shareFileId && (
+            <div
+              className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+              onClick={() => {
+                if (lineSendStatus !== "sending") {
+                  setShowLineSendModal(false);
+                  setLineSendUserId("");
+                  setLineSendStatus("idle");
+                  setLineSendError("");
+                }
+              }}
+            >
+              <div
+                className="w-full max-w-md bg-slate-900 rounded-3xl overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="p-5 border-b border-white/10 bg-gradient-to-r from-green-500/20 to-emerald-500/20">
+                  <h3 className="text-xl font-bold text-white text-center flex items-center justify-center gap-2">
+                    <Film className="w-6 h-6 text-green-400" />
+                    ส่งวิดีโอตรงไป LINE
+                  </h3>
+                  <p className="text-green-300/80 text-sm text-center mt-1">เล่นได้เลยในแอป LINE!</p>
+                </div>
+
+                {/* Content */}
+                <div className="p-5 space-y-4">
+                  {lineSendStatus === "success" ? (
+                    <div className="text-center py-8">
+                      <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
+                        <Check className="w-10 h-10 text-green-400" />
+                      </div>
+                      <p className="text-green-400 text-xl font-semibold">ส่งวิดีโอสำเร็จ!</p>
+                      <p className="text-white/60 text-sm mt-2">วิดีโอถูกส่งไปยัง LINE แล้ว</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Video Preview */}
+                      <div className="bg-black/30 rounded-xl p-3 flex items-center gap-3">
+                        <div className="w-16 h-16 rounded-lg bg-purple-500/20 flex items-center justify-center overflow-hidden">
+                          {files.find(f => f.id === shareFileId)?.thumbnail ? (
+                            <img
+                              src={files.find(f => f.id === shareFileId)?.thumbnail}
+                              alt="Video thumbnail"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Film className="w-8 h-8 text-purple-400" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-medium truncate">
+                            {files.find(f => f.id === shareFileId)?.name}
+                          </p>
+                          <p className="text-white/50 text-sm">
+                            {files.find(f => f.id === shareFileId)?.size}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* LINE User ID Input */}
+                      <div>
+                        <label className="block text-white/80 text-sm font-medium mb-2">
+                          LINE User ID ของผู้รับ
+                        </label>
+                        <input
+                          type="text"
+                          value={lineSendUserId}
+                          onChange={(e) => setLineSendUserId(e.target.value)}
+                          placeholder="U1234567890abcdef..."
+                          className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                          disabled={lineSendStatus === "sending"}
+                        />
+                        <p className="text-white/40 text-xs mt-2">
+                          💡 ผู้รับต้องเพิ่ม LINE Official Account ของคุณเป็นเพื่อนก่อน
+                        </p>
+                      </div>
+
+                      {/* Error Message */}
+                      {lineSendError && (
+                        <div className="bg-red-500/20 border border-red-500/30 rounded-xl p-3 flex items-center gap-2">
+                          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                          <p className="text-red-300 text-sm">{lineSendError}</p>
+                        </div>
+                      )}
+
+                      {/* Buttons */}
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          onClick={() => {
+                            setShowLineSendModal(false);
+                            setLineSendUserId("");
+                            setLineSendStatus("idle");
+                            setLineSendError("");
+                          }}
+                          disabled={lineSendStatus === "sending"}
+                          className="flex-1 py-3 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors disabled:opacity-50"
+                        >
+                          ยกเลิก
+                        </button>
+                        <button
+                          onClick={() => sendVideoToLineUser(shareFileId)}
+                          disabled={lineSendStatus === "sending" || !lineSendUserId.trim()}
+                          className="flex-1 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium hover:from-green-600 hover:to-emerald-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          {lineSendStatus === "sending" ? (
+                            <>
+                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              กำลังส่ง...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-5 h-5" />
+                              ส่งวิดีโอ
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* LINE Group Management Modal */}
+          {showLineGroupModal && (
+            <div
+              className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+              onClick={() => setShowLineGroupModal(false)}
+            >
+              <div
+                className="w-full max-w-md bg-slate-900 rounded-3xl overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="p-5 border-b border-white/10 bg-gradient-to-r from-green-500/20 to-emerald-500/20">
+                  <h3 className="text-xl font-bold text-white text-center flex items-center justify-center gap-2">
+                    <Send className="w-6 h-6 text-green-400" />
+                    จัดการกลุ่ม LINE
+                  </h3>
+                  <p className="text-green-300/80 text-sm text-center mt-1">เพิ่มหรือลบกลุ่มที่ต้องการส่งวิดีโอ</p>
+                </div>
+
+                {/* Content */}
+                <div className="p-5 space-y-4 max-h-96 overflow-y-auto custom-scrollbar">
+                  {/* Existing Groups */}
+                  <div className="space-y-2">
+                    <label className="block text-white/80 text-sm font-medium">กลุ่มที่บันทึกไว้</label>
+                    {lineGroups.length === 0 ? (
+                      <p className="text-white/40 text-sm">ยังไม่มีกลุ่ม</p>
+                    ) : (
+                      lineGroups.map((group) => (
+                        <div key={group.id} className="flex items-center gap-2 bg-white/5 rounded-xl p-3">
+                          <div className="flex-1">
+                            <p className="text-white font-medium">{group.name}</p>
+                            <p className="text-white/40 text-xs truncate">{group.id}</p>
+                          </div>
+                          <button
+                            onClick={() => removeLineGroup(group.id)}
+                            className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors"
+                            title="ลบกลุ่ม"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* How to get Group ID */}
+                  <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 space-y-2">
+                    <p className="text-green-400 font-medium flex items-center gap-2">
+                      <Info className="w-4 h-4" />
+                      วิธีหา Group ID
+                    </p>
+                    <ol className="text-white/70 text-sm space-y-1 list-decimal list-inside">
+                      <li>เปิดแอป LINE บนมือถือ</li>
+                      <li>เชิญ Bot เข้ากลุ่มที่ต้องการ</li>
+                      <li>พิมพ์ <code className="bg-white/10 px-1 rounded">!groupid</code> ในกลุ่ม</li>
+                      <li>Bot จะตอบกลับ Group ID มาให้</li>
+                      <li>คัดลอก ID มาใส่ด้านล่าง</li>
+                    </ol>
+                  </div>
+
+                  {/* Add New Group */}
+                  <div className="border-t border-white/10 pt-4 space-y-3">
+                    <label className="block text-white/80 text-sm font-medium">เพิ่มกลุ่มใหม่</label>
+                    <input
+                      type="text"
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      placeholder="ชื่อกลุ่ม (เช่น ทีมการตลาด)"
+                      className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-green-500"
+                    />
+                    <input
+                      type="text"
+                      value={newGroupId}
+                      onChange={(e) => setNewGroupId(e.target.value)}
+                      placeholder="Group ID (เช่น C31a793e94485a393...)"
+                      className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-green-500"
+                    />
+                    <button
+                      onClick={addLineGroup}
+                      disabled={!newGroupName.trim() || !newGroupId.trim()}
+                      className="w-full py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold hover:from-green-400 hover:to-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <Plus className="w-5 h-5" />
+                      เพิ่มกลุ่ม
+                    </button>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="p-4 border-t border-white/10">
+                  <button
+                    onClick={() => setShowLineGroupModal(false)}
+                    className="w-full py-3 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors"
+                  >
+                    ปิด
                   </button>
                 </div>
               </div>

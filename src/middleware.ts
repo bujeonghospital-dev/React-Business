@@ -18,6 +18,7 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/images") ||
     pathname.startsWith("/downloads") ||
     pathname.startsWith("/static") ||
+    pathname.startsWith("/share/video") || // LINE video share pages (public)
     pathname.includes(".");
 
   // If accessing any path without token (except public paths), redirect to login

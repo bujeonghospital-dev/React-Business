@@ -8,6 +8,14 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://app.bjhbangkok.com
 const CACHE_DIR = path.join(process.cwd(), "public", "cache", "line-videos");
 const VIDEO_ROOT = path.join(process.cwd(), "public", "images", "video");
 
+// Allowed video folders for security
+const ALLOWED_FOLDERS = ["/images/video/", "/marketing/"];
+
+// Check if path is in allowed folders
+const isAllowedPath = (normalizedPath: string): boolean => {
+  return ALLOWED_FOLDERS.some((folder) => normalizedPath.includes(folder));
+};
+
 // Generate cache filename from video path
 function getCacheFileName(videoPath: string): string {
   const hash = Buffer.from(videoPath).toString("base64url").slice(0, 32);
@@ -29,8 +37,8 @@ export async function GET(
     // Decode the ID to get original video path
     const videoPath = Buffer.from(id, "base64url").toString("utf-8");
 
-    // Security check
-    if (!videoPath.includes("/images/video/")) {
+    // Security check - allow videos from /images/video/ and /marketing/
+    if (!isAllowedPath(videoPath)) {
       return NextResponse.json({ error: "Invalid video ID" }, { status: 403 });
     }
 

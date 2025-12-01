@@ -10,28 +10,31 @@ const ALLOWED_FOLDERS = ["/images/video/", "/marketing/"];
 
 // Check if path is in allowed folders
 const isAllowedPath = (normalizedPath: string): boolean => {
-  return ALLOWED_FOLDERS.some(folder => normalizedPath.includes(folder));
+  return ALLOWED_FOLDERS.some((folder) => normalizedPath.includes(folder));
 };
 
 // Convert serve-video URL to direct path
 const normalizeVideoPath = (videoPath: string): string => {
   let normalizedPath = videoPath;
-  
+
   // Remove base URL
   if (normalizedPath.startsWith(BASE_URL)) {
     normalizedPath = normalizedPath.replace(BASE_URL, "");
   }
-  
+
   // Convert /api/serve-video/... to /images/video/...
   if (normalizedPath.includes("/api/serve-video/")) {
-    normalizedPath = normalizedPath.replace("/api/serve-video/", "/images/video/");
+    normalizedPath = normalizedPath.replace(
+      "/api/serve-video/",
+      "/images/video/"
+    );
   }
-  
+
   // Ensure leading slash
   if (!normalizedPath.startsWith("/")) {
     normalizedPath = "/" + normalizedPath;
   }
-  
+
   return normalizedPath;
 };
 
@@ -71,16 +74,15 @@ export async function POST(request: NextRequest) {
     // Extract filename without extension as video ID (for cleaner URLs)
     const fileName = path.basename(normalizedPath);
     const fileNameWithoutExt = path.basename(fileName, path.extname(fileName));
-    
-    // Use filename without extension as video ID for cleaner share URLs
-    const videoId = fileNameWithoutExt;
 
-    // Generate share URL using the /all-files-gallery/[videoId] route (with OG meta tags)
-    const shareUrl = `${BASE_URL}/all-files-gallery/${videoId}`;
+    // Use base64url encoded path for share URLs (supports full path including folders)
+    const lineVideoIdEncoded =
+      Buffer.from(normalizedPath).toString("base64url");
+
+    // Generate share URL using the /share/video/[id] route (public, with OG meta tags)
+    const shareUrl = `${BASE_URL}/share/video/${lineVideoIdEncoded}`;
 
     // LINE video URL (direct video serving for inline playback)
-    // Keep base64 encoding for internal API to preserve full path
-    const lineVideoIdEncoded = Buffer.from(normalizedPath).toString("base64url");
     const lineVideoUrl = `${BASE_URL}/api/line-video/${lineVideoIdEncoded}`;
 
     // Generate LINE share URL
@@ -98,7 +100,7 @@ export async function POST(request: NextRequest) {
       shareUrl,
       lineShareUrl,
       lineVideoUrl,
-      videoId,
+      videoId: lineVideoIdEncoded,
       videoName: videoName || path.basename(normalizedPath),
       fileSize: stats.size,
       fileSizeMB: Math.round(fileSizeMB * 100) / 100,

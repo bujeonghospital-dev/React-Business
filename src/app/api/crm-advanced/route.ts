@@ -61,7 +61,12 @@ export async function GET(request: NextRequest) {
         bl.consult_date,
         nc.id_all AS customer_id_all
       FROM "BJH-Server"."bjh_all_leads" bl
-      LEFT JOIN "BJH-Server".n_customer nc ON nc.id_all = bl.id::text
+      LEFT JOIN LATERAL (
+        SELECT nc_sub.id_all
+        FROM "BJH-Server".n_customer nc_sub
+        WHERE nc_sub.id_all = bl.id::text
+        LIMIT 1
+      ) nc ON true
       WHERE 
         1=1
     `;

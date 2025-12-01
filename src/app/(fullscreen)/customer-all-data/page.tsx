@@ -584,9 +584,9 @@ const CustomerAllDataPage = () => {
   };
   const filteredAndSortedData = useMemo(() => {
     if (tableData.length === 0) return [];
-    
+
     // Check if any filter is active - if not, return empty for performance
-    const hasActiveFilter = 
+    const hasActiveFilter =
       statusFilter !== "all" ||
       productFilter !== "all" ||
       contactFilter !== "all" ||
@@ -598,10 +598,10 @@ const CustomerAllDataPage = () => {
       getConsultApptDate ||
       getSurgeryApptDate ||
       searchTerm;
-    
+
     // Return empty array if no filters applied (for mobile performance)
     if (!hasActiveFilter) return [];
-    
+
     let filtered = [...tableData[0].data];
     // Filter by current user if not superadmin or admin
     if (
@@ -890,29 +890,29 @@ const CustomerAllDataPage = () => {
           <button
             onClick={() => setShowFilterSheet(true)}
             className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all text-sm font-medium ${hasActiveFilter
-                ? "bg-blue-500 text-white shadow-md"
-                : "bg-white text-slate-600 border border-slate-200 shadow-sm"
+              ? "bg-blue-500 text-white shadow-md"
+              : "bg-white text-slate-600 border border-slate-200 shadow-sm"
               }`}
           >
             <Filter className="w-5 h-5" />
             <span>ตัวกรอง</span>
             {hasActiveFilter && (
-                <span className="bg-white text-blue-500 px-2 py-0.5 rounded-full text-xs font-bold">
-                  {[
-                    statusFilter !== "all",
-                    productFilter !== "all",
-                    contactFilter !== "all",
-                    followUpLastDate,
-                    followUpNextDate,
-                    consultDate,
-                    surgeryDate,
-                    getNameDate,
-                    getConsultApptDate,
-                    getSurgeryApptDate,
-                    searchTerm
-                  ].filter(Boolean).length}
-                </span>
-              )}
+              <span className="bg-white text-blue-500 px-2 py-0.5 rounded-full text-xs font-bold">
+                {[
+                  statusFilter !== "all",
+                  productFilter !== "all",
+                  contactFilter !== "all",
+                  followUpLastDate,
+                  followUpNextDate,
+                  consultDate,
+                  surgeryDate,
+                  getNameDate,
+                  getConsultApptDate,
+                  getSurgeryApptDate,
+                  searchTerm
+                ].filter(Boolean).length}
+              </span>
+            )}
           </button>
         </div>
 
@@ -1167,8 +1167,8 @@ const CustomerAllDataPage = () => {
                   setShowStatusMenu(!showStatusMenu);
                 }}
                 className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${statusFilter !== "all"
-                    ? "bg-cyan-50 border-cyan-300 text-cyan-700"
-                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                  ? "bg-cyan-50 border-cyan-300 text-cyan-700"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
               >
                 <span>สถานะ</span>
@@ -1185,8 +1185,8 @@ const CustomerAllDataPage = () => {
                           setShowStatusMenu(false);
                         }}
                         className={`w-full text-left px-4 py-2.5 transition-all text-sm ${statusFilter === status.value
-                            ? "bg-cyan-50 text-cyan-700 font-medium"
-                            : "text-slate-600 hover:bg-slate-50"
+                          ? "bg-cyan-50 text-cyan-700 font-medium"
+                          : "text-slate-600 hover:bg-slate-50"
                           }`}
                       >
                         {statusFilter === status.value && "✓ "}
@@ -1206,8 +1206,8 @@ const CustomerAllDataPage = () => {
                   setShowProductMenu(!showProductMenu);
                 }}
                 className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${productFilter !== "all"
-                    ? "bg-indigo-50 border-indigo-300 text-indigo-700"
-                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                  ? "bg-indigo-50 border-indigo-300 text-indigo-700"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
               >
                 <span>สินค้า</span>
@@ -1224,8 +1224,8 @@ const CustomerAllDataPage = () => {
                           setShowProductMenu(false);
                         }}
                         className={`w-full text-left px-4 py-2.5 transition-all text-sm ${productFilter === product.value
-                            ? "bg-indigo-50 text-indigo-700 font-medium"
-                            : "text-slate-600 hover:bg-slate-50"
+                          ? "bg-indigo-50 text-indigo-700 font-medium"
+                          : "text-slate-600 hover:bg-slate-50"
                           }`}
                       >
                         {productFilter === product.value && "✓ "}
@@ -1246,8 +1246,8 @@ const CustomerAllDataPage = () => {
                     setShowContactMenu(!showContactMenu);
                   }}
                   className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${contactFilter !== "all"
-                      ? "bg-rose-50 border-rose-300 text-rose-700"
-                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                    ? "bg-rose-50 border-rose-300 text-rose-700"
+                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                     }`}
                 >
                   <span>ผู้ติดต่อ</span>
@@ -1264,8 +1264,8 @@ const CustomerAllDataPage = () => {
                             setShowContactMenu(false);
                           }}
                           className={`w-full text-left px-4 py-2.5 transition-all text-sm ${contactFilter === contact.value
-                              ? "bg-rose-50 text-rose-700 font-medium"
-                              : "text-slate-600 hover:bg-slate-50"
+                            ? "bg-rose-50 text-rose-700 font-medium"
+                            : "text-slate-600 hover:bg-slate-50"
                             }`}
                         >
                           {contactFilter === contact.value && "✓ "}
@@ -1286,8 +1286,8 @@ const CustomerAllDataPage = () => {
                   setShowFollowUpLastMenu(!showFollowUpLastMenu);
                 }}
                 className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${followUpLastDate
-                    ? "bg-emerald-50 border-emerald-300 text-emerald-700"
-                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                  ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
               >
                 <span>ติดตาม-ล่าสุด</span>
@@ -1317,8 +1317,8 @@ const CustomerAllDataPage = () => {
                   setShowFollowUpNextMenu(!showFollowUpNextMenu);
                 }}
                 className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${followUpNextDate
-                    ? "bg-violet-50 border-violet-300 text-violet-700"
-                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                  ? "bg-violet-50 border-violet-300 text-violet-700"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
               >
                 <span>ติดตาม-ถัดไป</span>
@@ -1348,8 +1348,8 @@ const CustomerAllDataPage = () => {
                   setShowConsultMenu(!showConsultMenu);
                 }}
                 className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${consultDate
-                    ? "bg-fuchsia-50 border-fuchsia-300 text-fuchsia-700"
-                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                  ? "bg-fuchsia-50 border-fuchsia-300 text-fuchsia-700"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
               >
                 <span>Consult</span>
@@ -1379,8 +1379,8 @@ const CustomerAllDataPage = () => {
                   setShowSurgeryMenu(!showSurgeryMenu);
                 }}
                 className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${surgeryDate
-                    ? "bg-orange-50 border-orange-300 text-orange-700"
-                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                  ? "bg-orange-50 border-orange-300 text-orange-700"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
               >
                 <span>ผ่าตัด</span>
@@ -1410,8 +1410,8 @@ const CustomerAllDataPage = () => {
                   setShowGetNameMenu(!showGetNameMenu);
                 }}
                 className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${getNameDate
-                    ? "bg-teal-50 border-teal-300 text-teal-700"
-                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                  ? "bg-teal-50 border-teal-300 text-teal-700"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
               >
                 <span>วันได้ชื่อ</span>
@@ -1441,8 +1441,8 @@ const CustomerAllDataPage = () => {
                   setShowGetConsultApptMenu(!showGetConsultApptMenu);
                 }}
                 className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${getConsultApptDate
-                    ? "bg-sky-50 border-sky-300 text-sky-700"
-                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                  ? "bg-sky-50 border-sky-300 text-sky-700"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
               >
                 <span>ได้นัด Consult</span>
@@ -1472,8 +1472,8 @@ const CustomerAllDataPage = () => {
                   setShowGetSurgeryApptMenu(!showGetSurgeryApptMenu);
                 }}
                 className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${getSurgeryApptDate
-                    ? "bg-amber-50 border-amber-300 text-amber-700"
-                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                  ? "bg-amber-50 border-amber-300 text-amber-700"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
               >
                 <span>ได้นัดผ่าตัด</span>
@@ -1498,24 +1498,24 @@ const CustomerAllDataPage = () => {
 
             {/* Clear All Filters */}
             {hasActiveFilter && (
-                <button
-                  onClick={() => {
-                    setStatusFilter("all");
-                    setProductFilter("all");
-                    setContactFilter("all");
-                    setFollowUpLastDate("");
-                    setFollowUpNextDate("");
-                    setConsultDate("");
-                    setSurgeryDate("");
-                    setGetNameDate("");
-                    setGetConsultApptDate("");
-                    setGetSurgeryApptDate("");
-                  }}
-                  className="px-4 py-2 bg-rose-500 text-white rounded-lg text-sm font-medium hover:bg-rose-600"
-                >
-                  ล้างทั้งหมด
-                </button>
-              )}
+              <button
+                onClick={() => {
+                  setStatusFilter("all");
+                  setProductFilter("all");
+                  setContactFilter("all");
+                  setFollowUpLastDate("");
+                  setFollowUpNextDate("");
+                  setConsultDate("");
+                  setSurgeryDate("");
+                  setGetNameDate("");
+                  setGetConsultApptDate("");
+                  setGetSurgeryApptDate("");
+                }}
+                className="px-4 py-2 bg-rose-500 text-white rounded-lg text-sm font-medium hover:bg-rose-600"
+              >
+                ล้างทั้งหมด
+              </button>
+            )}
           </div>
 
           {/* Results count and delete button */}
@@ -1564,8 +1564,8 @@ const CustomerAllDataPage = () => {
                       key={page}
                       onClick={() => setCurrentPage(page)}
                       className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${page === currentPage
-                          ? "bg-blue-500 text-white shadow-md"
-                          : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                        ? "bg-blue-500 text-white shadow-md"
+                        : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
                         }`}
                     >
                       {page}
@@ -1621,8 +1621,8 @@ const CustomerAllDataPage = () => {
                     key={page}
                     onClick={() => setCurrentPage(page)}
                     className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${page === currentPage
-                        ? "bg-blue-500 text-white shadow-md"
-                        : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                      ? "bg-blue-500 text-white shadow-md"
+                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
                       }`}
                   >
                     {page}
@@ -1653,17 +1653,17 @@ const CustomerAllDataPage = () => {
 
         {/* Mobile: Show message when no filter applied */}
         {!hasActiveFilter && (
-            <div className="md:hidden flex-1 flex flex-col items-center justify-center py-16">
-              <Filter className="w-16 h-16 text-slate-300 mb-4" />
-              <p className="text-slate-500 text-center text-sm">กรุณาเลือกตัวกรองเพื่อแสดงข้อมูล</p>
-              <button
-                onClick={() => setShowFilterSheet(true)}
-                className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-xl text-sm font-medium hover:bg-blue-600 transition-colors"
-              >
-                เลือกตัวกรอง
-              </button>
-            </div>
-          )}
+          <div className="md:hidden flex-1 flex flex-col items-center justify-center py-16">
+            <Filter className="w-16 h-16 text-slate-300 mb-4" />
+            <p className="text-slate-500 text-center text-sm">กรุณาเลือกตัวกรองเพื่อแสดงข้อมูล</p>
+            <button
+              onClick={() => setShowFilterSheet(true)}
+              className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-xl text-sm font-medium hover:bg-blue-600 transition-colors"
+            >
+              เลือกตัวกรอง
+            </button>
+          </div>
+        )}
 
         {/* Data Table - Desktop always shows, Mobile only when filter active */}
         {hasActiveFilter &&

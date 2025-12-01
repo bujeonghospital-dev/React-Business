@@ -585,6 +585,23 @@ const CustomerAllDataPage = () => {
   const filteredAndSortedData = useMemo(() => {
     if (tableData.length === 0) return [];
 
+    // Check if any filter is active - if not, return empty for performance
+    const hasActiveFilter =
+      statusFilter !== "all" ||
+      productFilter !== "all" ||
+      contactFilter !== "all" ||
+      followUpLastDate ||
+      followUpNextDate ||
+      consultDate ||
+      surgeryDate ||
+      getNameDate ||
+      getConsultApptDate ||
+      getSurgeryApptDate ||
+      searchTerm;
+
+    // Return empty array if no filters applied (for mobile performance)
+    if (!hasActiveFilter) return [];
+
     let filtered = [...tableData[0].data];
     // Filter by current user if not superadmin or admin
     if (

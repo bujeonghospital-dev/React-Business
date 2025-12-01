@@ -269,6 +269,7 @@ export default function RootLayout({
                     <DevMiniToolbar
                       position="bottom-left"
                       storageKey="my_dev_toolbar"
+                      hiddenPaths={["/all-files-gallery"]}
                     />
                   </Suspense>
                   {children}

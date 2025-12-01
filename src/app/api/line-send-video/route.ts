@@ -194,7 +194,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate video URL (must be HTTPS and publicly accessible)
-    const videoUrl = `${BASE_URL}${normalizedPath}`;
+    // Encode path for URL (spaces become %20, etc.)
+    const encodedPath = normalizedPath.split('/').map((segment: string) => encodeURIComponent(segment)).join('/');
+    const videoUrl = `${BASE_URL}${encodedPath}`;
 
     // Generate preview image URL
     const ext = path.extname(normalizedPath);
@@ -212,7 +214,8 @@ export async function POST(request: NextRequest) {
     for (const thumbPath of possibleThumbnails) {
       const thumbFullPath = path.join(process.cwd(), "public", thumbPath);
       if (fs.existsSync(thumbFullPath)) {
-        previewImageUrl = `${BASE_URL}${thumbPath}`;
+        const encodedThumbPath = thumbPath.split('/').map((segment: string) => encodeURIComponent(segment)).join('/');
+        previewImageUrl = `${BASE_URL}${encodedThumbPath}`;
         break;
       }
     }

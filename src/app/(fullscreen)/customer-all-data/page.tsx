@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
@@ -15,6 +15,7 @@ import {
 import { EditCustomerModal } from "@/components/EditCustomerModal";
 import { AddCustomerModal } from "@/components/AddCustomerModal";
 import UserMenu from "@/components/UserMenu";
+import { getLatestUpdatedAt } from "@/app/api/customer-data/utils";
 // Add custom styles for scrollbar (horizontal and vertical)
 const customScrollbarStyle = `
   .custom-scrollbar::-webkit-scrollbar {
@@ -74,6 +75,7 @@ interface TableSizeOption {
 const CustomerAllDataPage = () => {
   const router = useRouter();
   const [tableData, setTableData] = useState<TableData[]>([]);
+  const [lastUpdateTimestamp, setLastUpdateTimestamp] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -124,6 +126,7 @@ const CustomerAllDataPage = () => {
   );
   const [showTableSizeMenu, setShowTableSizeMenu] = useState(false);
   const [tableSize, setTableSize] = useState<number>(500);
+  const tableDataRef = useRef<TableData[]>([]);
   const fetchData = async () => {
     try {
       setIsLoading(true);
@@ -272,6 +275,10 @@ const CustomerAllDataPage = () => {
           data: filteredData,
         };
         setTableData([mergedTable]);
+        const latestTimestamp = getLatestUpdatedAt(result.data);
+        if (latestTimestamp) {
+          setLastUpdateTimestamp(latestTimestamp);
+        }
       } else {
         setTableData([]);
       }
@@ -320,6 +327,66 @@ const CustomerAllDataPage = () => {
       console.error("Error fetching table size options:", error);
     }
   };
+  const fetchRealtimeUpdates = useCallback(async () => {
+    if (!lastUpdateTimestamp || tableDataRef.current.length === 0) {
+      return;
+    }
+    try {
+      const response = await fetch(
+        `/api/customer-updates?since=${encodeURIComponent(lastUpdateTimestamp)}`
+      );
+      const result = await response.json();
+      if (!response.ok || result.success === false) {
+        return;
+      }
+      if (!Array.isArray(result.data) || result.data.length === 0) {
+        return;
+      }
+      const currentTable = tableDataRef.current[0];
+      if (!currentTable) {
+        return;
+      }
+      const mergedMap = new Map<any, Record<string, any>>();
+      currentTable.data.forEach((row) => {
+        if (row.id !== undefined && row.id !== null) {
+          mergedMap.set(row.id, row);
+        }
+      });
+      result.data.forEach((incoming: Record<string, any>) => {
+        if (incoming.id === undefined || incoming.id === null) {
+          return;
+        }
+        const existing = mergedMap.get(incoming.id);
+        mergedMap.set(
+          incoming.id,
+          existing ? { ...existing, ...incoming } : incoming
+        );
+      });
+      const updatedData = Array.from(mergedMap.values());
+      const mergedHeaders = [...currentTable.headers];
+      (result.columns || []).forEach((column: string) => {
+        if (!mergedHeaders.includes(column)) {
+          mergedHeaders.push(column);
+        }
+      });
+      setTableData([
+        {
+          ...currentTable,
+          headers: mergedHeaders,
+          data: updatedData,
+          rowCount: updatedData.length,
+        },
+      ]);
+      if (result.latestUpdatedAt) {
+        setLastUpdateTimestamp(result.latestUpdatedAt);
+      }
+    } catch (error) {
+      console.error("Error fetching realtime updates:", error);
+    }
+  }, [lastUpdateTimestamp]);
+  useEffect(() => {
+    tableDataRef.current = tableData;
+  }, [tableData]);
   useEffect(() => {
     // Check authentication and get user data
     const checkAuth = () => {
@@ -336,6 +403,14 @@ const CustomerAllDataPage = () => {
     fetchStatusOptions();
     fetchTableSizeOptions();
   }, []);
+  useEffect(() => {
+    if (!lastUpdateTimestamp || tableData.length === 0) {
+      return;
+    }
+    fetchRealtimeUpdates();
+    const interval = setInterval(fetchRealtimeUpdates, 8000);
+    return () => clearInterval(interval);
+  }, [lastUpdateTimestamp, fetchRealtimeUpdates, tableData.length]);
 
   // Close all menus when clicking outside
   useEffect(() => {

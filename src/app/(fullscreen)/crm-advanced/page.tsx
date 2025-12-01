@@ -297,6 +297,7 @@ export default function CRMAdvancedPage() {
   const [legacyRecords, setLegacyRecords] = useState<Appointment[]>([]);
   const [legacyLoading, setLegacyLoading] = useState(false);
   const [legacyError, setLegacyError] = useState<string | null>(null);
+  const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
 
   const dateFieldKeys: Array<keyof CustomerFormData> = [
     "birthdate",
@@ -1489,77 +1490,41 @@ export default function CRMAdvancedPage() {
 
   return (
     <div className="min-h-screen h-full w-full bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 p-0 m-0">
-      {/* Back Button */}
-      <div className="px-8 py-4">
-        <button
-          onClick={() => router.push("/home")}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl font-medium text-sm"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      {/* Top Bar - Back Button and View Mode Toggle */}
+      <div className="px-3 sm:px-8 py-3 sm:py-4">
+        <div className="flex items-center justify-between gap-2">
+          {/* Left Side - Back Button */}
+          <button
+            onClick={() => router.push("/home")}
+            className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl"
+            aria-label="กลับไปหน้าหลัก"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
-            />
-          </svg>
-          <span>กลับไปหน้าหลัก</span>
-        </button>
-      </div>
-
-      {/* View Mode Toggle and Date Filter */}
-      <div className="px-8 pb-4">
-        <div className="flex justify-between items-end gap-4 flex-wrap">
-          {/* Date Picker */}
-          <div className="flex items-end gap-2">
-            <div>
-              <label className="block text-white text-sm font-medium mb-2">
-                {/* เลือกวันที่ */}
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="px-4 py-2 rounded-lg bg-white/90 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-400"
-              />
-            </div>
-            <button
-              onClick={handleResetFilter}
-              className="px-4 py-2 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl font-medium flex items-center gap-2"
+            <svg
+              className="w-5 h-5 sm:w-6 sm:h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-              รีเซ็ต
-            </button>
-          </div>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+          </button>
 
-          {/* View Mode Buttons */}
-          <div className="flex gap-2">
+          {/* Right Side - View Mode Toggle */}
+          <div className="flex gap-1 sm:gap-2">
             <button
               onClick={() => setViewMode("table")}
-              className={`px-6 py-2 rounded-lg transition-all shadow-lg font-medium flex items-center gap-2 ${viewMode === "table"
+              className={`px-2 sm:px-4 py-2 rounded-lg transition-all shadow-lg font-medium flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 text-[10px] sm:text-sm ${viewMode === "table"
                 ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white"
                 : "bg-white/20 text-white hover:bg-white/30"
                 }`}
             >
               <svg
-                className="w-5 h-5"
+                className="w-4 h-4 sm:w-5 sm:h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -1571,17 +1536,17 @@ export default function CRMAdvancedPage() {
                   d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
                 />
               </svg>
-              แสดงแบบตาราง
+              <span className="hidden sm:inline">ตาราง</span>
             </button>
             <button
               onClick={() => setViewMode("calendar")}
-              className={`px-6 py-2 rounded-lg transition-all shadow-lg font-medium flex items-center gap-2 ${viewMode === "calendar"
+              className={`px-2 sm:px-4 py-2 rounded-lg transition-all shadow-lg font-medium flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 text-[10px] sm:text-sm ${viewMode === "calendar"
                 ? "bg-gradient-to-r from-purple-500 to-pink-600 text-white"
                 : "bg-white/20 text-white hover:bg-white/30"
                 }`}
             >
               <svg
-                className="w-5 h-5"
+                className="w-4 h-4 sm:w-5 sm:h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -1593,17 +1558,17 @@ export default function CRMAdvancedPage() {
                   d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                 />
               </svg>
-              แสดงแบบปฏิทิน
+              <span className="hidden sm:inline">ปฏิทิน</span>
             </button>
             <button
               onClick={() => setViewMode("calendar2")}
-              className={`px-6 py-2 rounded-lg transition-all shadow-lg font-medium flex items-center gap-2 ${viewMode === "calendar2"
+              className={`px-2 sm:px-4 py-2 rounded-lg transition-all shadow-lg font-medium flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 text-[10px] sm:text-sm ${viewMode === "calendar2"
                 ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white"
                 : "bg-white/20 text-white hover:bg-white/30"
                 }`}
             >
               <svg
-                className="w-5 h-5"
+                className="w-4 h-4 sm:w-5 sm:h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -1615,45 +1580,8 @@ export default function CRMAdvancedPage() {
                   d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                 />
               </svg>
-              ตารางเข้างาน
+              <span className="hidden sm:inline">เข้างาน</span>
             </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 shadow-2xl">
-        <div className="max-w-full px-8 py-8">
-          <div className="flex items-center justify-center gap-4">
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl">
-              <svg
-                className="w-10 h-10 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold text-white text-center drop-shadow-lg">
-                {viewMode === "calendar2"
-                  ? "ตารางเข้างาน"
-                  : "สรุปนัดลูกค้าผ่าตัด(CRM)"}
-              </h1>
-              <p className="text-center text-blue-100 mt-1 font-medium">
-                {new Date().toLocaleDateString("th-TH", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </p>
-            </div>
           </div>
         </div>
       </div>
@@ -2119,12 +2047,23 @@ export default function CRMAdvancedPage() {
           )}
           {/* Table Container */}
           {viewMode === "table" && (
-            <div className="space-y-5">
-              <div className="flex flex-wrap gap-3 justify-center">
+            <div className="space-y-3 sm:space-y-5 px-2 sm:px-0">
+              {/* Date Filter Row */}
+              <div className="flex justify-center">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="px-3 sm:px-4 py-2 rounded-lg bg-white/90 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm sm:text-base"
+                />
+              </div>
+
+              {/* Customer Segment Buttons Row */}
+              <div className="flex gap-2 sm:gap-3 justify-center">
                 <button
                   type="button"
                   onClick={() => setCustomerSegment("new")}
-                  className={`rounded-full px-6 py-2 text-sm font-semibold uppercase tracking-wide transition ${customerSegment === "new"
+                  className={`rounded-full px-4 sm:px-6 py-2 text-xs sm:text-sm font-semibold uppercase tracking-wide transition ${customerSegment === "new"
                     ? "bg-white text-blue-700 shadow-lg"
                     : "bg-white/40 text-white border border-white/40"
                     }`}
@@ -2134,7 +2073,7 @@ export default function CRMAdvancedPage() {
                 <button
                   type="button"
                   onClick={() => setCustomerSegment("old")}
-                  className={`rounded-full px-6 py-2 text-sm font-semibold uppercase tracking-wide transition ${customerSegment === "old"
+                  className={`rounded-full px-4 sm:px-6 py-2 text-xs sm:text-sm font-semibold uppercase tracking-wide transition ${customerSegment === "old"
                     ? "bg-slate-50 text-slate-900 shadow-lg"
                     : "bg-white/20 text-white border border-white/30"
                     }`}
@@ -2143,12 +2082,12 @@ export default function CRMAdvancedPage() {
                 </button>
               </div>
               {customerSegment === "new" ? (
-                <div className="overflow-x-auto w-full rounded-3xl border border-white/30 shadow-2xl transition bg-white">
+                <div className="overflow-x-auto w-full rounded-2xl sm:rounded-3xl border border-white/30 shadow-2xl transition bg-white">
                   {!loading && sortedByAppointment.length === 0 ? (
-                    <div className="flex justify-center items-center py-12">
-                      <div className="bg-white/20 backdrop-blur-md rounded-2xl p-8 shadow-2xl text-center">
+                    <div className="flex justify-center items-center py-8 sm:py-12">
+                      <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 sm:p-8 shadow-2xl text-center">
                         <svg
-                          className="w-16 h-16 text-white/50 mx-auto mb-4"
+                          className="w-12 h-12 sm:w-16 sm:h-16 text-white/50 mx-auto mb-4"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -2160,208 +2099,179 @@ export default function CRMAdvancedPage() {
                             d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
                           />
                         </svg>
-                        <h3 className="text-white font-bold text-xl mb-2">
+                        <h3 className="text-white font-bold text-lg sm:text-xl mb-2">
                           ไม่พบข้อมูล
                         </h3>
-                        <p className="text-white/80">
+                        <p className="text-white/80 text-sm sm:text-base">
                           ไม่มีรายการนัดหมายในช่วงเวลาที่เลือก
                         </p>
                       </div>
                     </div>
                   ) : (
-                    <table className="w-full border-collapse table-fixed">
-                      <thead>
-                        <tr className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500">
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            เวลาที่นัด
-                          </th>
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            สถานะ
-                          </th>
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            ชื่อลูกค้า
-                          </th>
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            เบอร์โทร
-                          </th>
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            ผลิตภัณฑ์ที่สนใจ
-                          </th>
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            หมอ
-                          </th>
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            ชื่อผู้ติดต่อ
-                          </th>
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            ยอดนำเสนอ
-                          </th>
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            ติดดาว
-                          </th>
-                          <th
-                            className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide"
-                            style={{ width: "200px" }}
-                          >
-                            ประเทศ
-                          </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white tracking-wide">
-                            หมายเหตุ
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sortedByAppointment.map((record, index) => (
-                          <tr
-                            key={record.id}
-                            className={`${index % 2 === 0
+                    <div className="divide-y divide-gray-200">
+                      {/* Table Header */}
+                      <div className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 grid grid-cols-7 sm:grid-cols-11 gap-0">
+                        <div className="px-1 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-white border-r border-white/20">
+                          เวลา
+                        </div>
+                        <div className="px-1 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-white border-r border-white/20">
+                          สถานะ
+                        </div>
+                        <div className="px-1 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-white border-r border-white/20">
+                          ชื่อ
+                        </div>
+                        <div className="px-1 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-white border-r border-white/20">
+                          เบอร์โทร
+                        </div>
+                        <div className="px-1 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-white border-r border-white/20">
+                          ผลิตภัณฑ์
+                        </div>
+                        <div className="px-1 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-white border-r border-white/20">
+                          หมอ
+                        </div>
+                        <div className="hidden sm:block px-1 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-white border-r border-white/20">
+                          ผู้ติดต่อ
+                        </div>
+                        <div className="px-1 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-white border-r border-white/20 sm:border-r">
+                          ยอด
+                        </div>
+                        <div className="hidden sm:block px-1 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-white border-r border-white/20">
+                          ดาว
+                        </div>
+                        <div className="hidden sm:block px-1 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-white border-r border-white/20">
+                          ประเทศ
+                        </div>
+                        <div className="hidden sm:block px-1 py-2 sm:py-3 text-center text-[8px] sm:text-xs font-bold text-white">
+                          หมายเหตุ
+                        </div>
+                      </div>
+
+                      {/* Table Rows */}
+                      {sortedByAppointment.map((record, index) => (
+                        <div key={record.id}>
+                          {/* Main Row - Clickable */}
+                          <div
+                            onClick={() => setExpandedRowId(expandedRowId === record.id ? null : record.id)}
+                            className={`grid grid-cols-7 sm:grid-cols-11 gap-0 cursor-pointer ${index % 2 === 0
                               ? "bg-gradient-to-r from-slate-50 to-blue-50"
                               : "bg-gradient-to-r from-blue-100 to-indigo-100"
                               } hover:bg-gradient-to-r hover:from-blue-200 hover:to-indigo-200 transition-all duration-200`}
                           >
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
+                            <div className="px-1 py-2 sm:py-3 text-[8px] sm:text-sm text-gray-800 border-r border-gray-200 text-center flex items-center justify-center">
                               {formatTimeDisplay(record.appointmentTime)}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
-                              <span className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-full text-xs font-bold shadow-lg transform hover:scale-105 transition-transform">
+                            </div>
+                            <div className="px-0.5 py-1 sm:py-2 text-[8px] sm:text-sm text-gray-800 border-r border-gray-200 text-center flex flex-col items-center justify-center">
+                              <span className="inline-block px-0.5 sm:px-2 py-0.5 sm:py-1 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-full text-[6px] sm:text-xs font-bold shadow">
                                 {record.status}
                               </span>
                               {record.status.trim() === "นัดพร้อมทำ" && record.hasCustomerProfile && (
-                                <div className="mt-2 inline-flex items-center justify-center rounded-full bg-emerald-500/90 text-white text-xs font-semibold px-4 py-2 shadow-lg">
-                                  เปิด OPD แล้ว
-                                </div>
+                                <span className="mt-0.5 inline-block rounded-full bg-emerald-500/90 text-white text-[5px] sm:text-[10px] font-semibold px-0.5 sm:px-2 py-0.5">
+                                  OPD
+                                </span>
                               )}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
+                            </div>
+                            <div className="px-0.5 py-2 sm:py-3 text-[8px] sm:text-sm text-gray-800 border-r border-gray-200 text-center flex items-center justify-center">
                               <button
                                 type="button"
-                                onClick={() => openCustomerModal(record)}
-                                className="inline-block font-semibold text-blue-600 underline-offset-2 transition hover:underline"
+                                onClick={(e) => { e.stopPropagation(); openCustomerModal(record); }}
+                                className="font-semibold text-blue-600 hover:underline text-[8px] sm:text-sm truncate max-w-full"
                               >
                                 {record.customer_name}
                               </button>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
+                            </div>
+                            <div className="px-0.5 py-2 sm:py-3 text-[7px] sm:text-sm text-gray-800 border-r border-gray-200 text-center flex items-center justify-center">
                               {record.phone}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
+                            </div>
+                            <div className="px-0.5 py-2 sm:py-3 text-[7px] sm:text-sm text-gray-800 border-r border-gray-200 text-center flex items-center justify-center truncate">
                               {record.interested_product}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 font-medium text-center">
+                            </div>
+                            <div className="px-0.5 py-2 sm:py-3 text-[7px] sm:text-sm text-gray-800 border-r border-gray-200 font-medium text-center flex items-center justify-center truncate">
                               {record.doctor}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
+                            </div>
+                            <div className="hidden sm:flex px-0.5 py-2 sm:py-3 text-[7px] sm:text-sm text-gray-800 border-r border-gray-200 text-center items-center justify-center truncate">
                               {record.contact_staff}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
+                            </div>
+                            <div className="px-0.5 py-2 sm:py-3 text-[7px] sm:text-sm text-gray-800 border-r border-gray-200 sm:border-r text-center flex items-center justify-center">
                               {record.proposed_amount.toLocaleString()}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 bg-gradient-to-r from-amber-100 to-yellow-100 text-center">
-                              <div className="flex items-center justify-center">
-                                {record.star_flag ? (
-                                  <svg
-                                    className="w-6 h-6 text-yellow-500 fill-current"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                                  </svg>
-                                ) : (
-                                  <svg
-                                    className="w-6 h-6 text-gray-400"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-                                    />
-                                  </svg>
-                                )}
+                            </div>
+                            <div className="hidden sm:flex px-1 py-2 sm:py-3 text-xs sm:text-sm text-gray-800 border-r border-gray-200 text-center items-center justify-center">
+                              {record.star_flag ? (
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 fill-current" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+                              ) : (
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
+                              )}
+                            </div>
+                            <div className="hidden sm:flex px-1 py-2 sm:py-3 text-xs sm:text-sm text-gray-800 border-r border-gray-200 text-center items-center justify-center">
+                              {record.country || "-"}
+                            </div>
+                            <div className="hidden sm:flex px-1 py-2 sm:py-3 text-xs sm:text-sm text-gray-800 text-center items-center justify-center">
+                              {record.note ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); openNoteModal(record); }}
+                                  className="text-blue-600 hover:underline text-xs truncate max-w-[80px]"
+                                >
+                                  ดูหมายเหตุ
+                                </button>
+                              ) : "-"}
+                            </div>
+                          </div>
+
+                          {/* Expanded Details - Mobile Only */}
+                          {expandedRowId === record.id && (
+                            <div className="sm:hidden bg-gradient-to-r from-indigo-50 to-purple-50 px-3 py-3 border-t border-indigo-200">
+                              <div className="grid grid-cols-4 gap-2 text-xs">
+                                <div>
+                                  <span className="font-semibold text-gray-600">ผู้ติดต่อ:</span>
+                                  <p className="text-gray-800 truncate">{record.contact_staff || "-"}</p>
+                                </div>
+                                <div>
+                                  <span className="font-semibold text-gray-600">ติดดาว:</span>
+                                  <p className="text-gray-800 flex items-center gap-1">
+                                    {record.star_flag ? (
+                                      <><svg className="w-4 h-4 text-yellow-500 fill-current" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg> ใช่</>
+                                    ) : "ไม่"}
+                                  </p>
+                                </div>
+                                <div>
+                                  <span className="font-semibold text-gray-600">ประเทศ:</span>
+                                  <p className="text-gray-800">{record.country || "-"}</p>
+                                </div>
+                                <div>
+                                  <span className="font-semibold text-gray-600">หมายเหตุ:</span>
+                                  <p className="text-gray-800">
+                                    {record.note ? (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); openNoteModal(record); }}
+                                        className="text-blue-600 hover:underline text-left"
+                                      >
+                                        {getNotePreview(record.note)}
+                                      </button>
+                                    ) : "-"}
+                                  </p>
+                                </div>
                               </div>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-700 text-center">
-                              {record.country}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-300 text-center">
-                              {(() => {
-                                const notePreview = getNotePreview(record.note);
-                                if (notePreview === "-") {
-                                  return "-";
-                                }
-                                return (
-                                  <button
-                                    type="button"
-                                    onClick={() => openNoteModal(record)}
-                                    className="w-full px-4 py-2 bg-white/70 hover:bg-white/90 text-blue-600 font-semibold rounded-lg shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                    title="กดเพื่อดูหมายเหตุทั้งหมด"
-                                  >
-                                    <span
-                                      className="block text-sm text-gray-800 text-left pl-2"
-                                      style={{
-                                        display: "-webkit-box",
-                                        WebkitLineClamp: 2,
-                                        WebkitBoxOrient: "vertical",
-                                        overflow: "hidden",
-                                      }}
-                                    >
-                                      {notePreview}
-                                    </span>
-                                    <span className="mt-1 block text-xs text-blue-500 text-left pl-2">
-                                      ดูเพิ่มเติม
-                                    </span>
-                                  </button>
-                                );
-                              })()}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               ) : (
-                <div className="overflow-x-auto w-full rounded-3xl border border-white/30 shadow-2xl transition bg-slate-50">
-                  <div className="flex flex-wrap items-center justify-between gap-4 px-6 pt-6 pb-2 text-slate-700">
-                    <div className="font-semibold">
+                <div className="overflow-x-auto w-full rounded-2xl sm:rounded-3xl border border-white/30 shadow-2xl transition bg-slate-50">
+                  <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 pt-4 sm:pt-6 pb-2 text-slate-700">
+                    <div className="font-semibold text-xs sm:text-base">
                       ข้อมูลลูกค้าเก่าวันที่ {legacySelectedDateLabel || legacySelectedDate}
                     </div>
                     <button
                       type="button"
                       onClick={() => fetchLegacyAppointments(legacySelectedDate)}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg shadow hover:from-purple-600 hover:to-indigo-600 transition"
+                      className="inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg shadow hover:from-purple-600 hover:to-indigo-600 transition text-xs sm:text-sm"
                     >
                       <svg
-                        className="w-4 h-4"
+                        className="w-3 h-3 sm:w-4 sm:h-4"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -2373,17 +2283,17 @@ export default function CRMAdvancedPage() {
                           d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                         />
                       </svg>
-                      รีโหลดข้อมูล
+                      รีโหลด
                     </button>
                   </div>
 
                   {legacyError && (
-                    <div className="bg-red-500/10 border border-red-200 text-red-700 rounded-2xl px-6 py-4 m-6 flex flex-wrap items-center justify-between gap-4">
-                      <span className="font-medium">{legacyError}</span>
+                    <div className="bg-red-500/10 border border-red-200 text-red-700 rounded-xl sm:rounded-2xl px-3 sm:px-6 py-3 sm:py-4 m-3 sm:m-6 flex flex-wrap items-center justify-between gap-2 sm:gap-4">
+                      <span className="font-medium text-xs sm:text-sm">{legacyError}</span>
                       <button
                         type="button"
                         onClick={() => fetchLegacyAppointments(legacySelectedDate)}
-                        className="px-4 py-2 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition"
+                        className="px-3 sm:px-4 py-1 sm:py-2 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition text-xs sm:text-sm"
                       >
                         ลองอีกครั้ง
                       </button>
@@ -2391,9 +2301,9 @@ export default function CRMAdvancedPage() {
                   )}
 
                   {legacyLoading ? (
-                    <div className="flex justify-center items-center py-12">
-                      <div className="bg-white/60 rounded-2xl p-8 shadow-2xl">
-                        <div className="flex items-center gap-4">
+                    <div className="flex justify-center items-center py-8 sm:py-12">
+                      <div className="bg-white/60 rounded-2xl p-4 sm:p-8 shadow-2xl">
+                        <div className="flex items-center gap-3 sm:gap-4">
                           <svg
                             className="animate-spin h-8 w-8 text-indigo-500"
                             xmlns="http://www.w3.org/2000/svg"
@@ -2421,10 +2331,10 @@ export default function CRMAdvancedPage() {
                       </div>
                     </div>
                   ) : legacyRecordsSorted.length === 0 ? (
-                    <div className="flex justify-center items-center py-12">
-                      <div className="bg-white/70 rounded-2xl p-8 shadow-2xl text-center">
+                    <div className="flex justify-center items-center py-8 sm:py-12">
+                      <div className="bg-white/70 rounded-2xl p-4 sm:p-8 shadow-2xl text-center">
                         <svg
-                          className="w-16 h-16 text-indigo-300 mx-auto mb-4"
+                          className="w-12 h-12 sm:w-16 sm:h-16 text-indigo-300 mx-auto mb-4"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -2436,46 +2346,46 @@ export default function CRMAdvancedPage() {
                             d="M9 17v-2a2 2 0 012-2h2a2 2 0 012 2v2m-6 0h6m-3-9h.01M4 6h16M4 10h16M4 14h16"
                           />
                         </svg>
-                        <h3 className="text-indigo-700 font-bold text-xl mb-2">
+                        <h3 className="text-indigo-700 font-bold text-lg sm:text-xl mb-2">
                           ไม่มีรายการลูกค้าเก่า
                         </h3>
-                        <p className="text-indigo-500">
+                        <p className="text-indigo-500 text-sm sm:text-base">
                           ไม่พบข้อมูลในวันที่เลือก ลองเปลี่ยนวันที่หรือรีโหลดอีกครั้ง
                         </p>
                       </div>
                     </div>
                   ) : (
-                    <table className="w-full border-collapse table-fixed">
+                    <table className="w-full border-collapse min-w-[700px]">
                       <thead>
                         <tr className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide">
+                          <th className="px-2 sm:px-4 py-3 sm:py-5 text-center text-xs sm:text-sm font-bold text-white border-r border-white/20 tracking-wide whitespace-nowrap">
                             เวลาที่นัด
                           </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide">
+                          <th className="px-2 sm:px-4 py-3 sm:py-5 text-center text-xs sm:text-sm font-bold text-white border-r border-white/20 tracking-wide whitespace-nowrap">
                             สถานะ
                           </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide">
+                          <th className="px-2 sm:px-4 py-3 sm:py-5 text-center text-xs sm:text-sm font-bold text-white border-r border-white/20 tracking-wide whitespace-nowrap">
                             ชื่อลูกค้า
                           </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide">
+                          <th className="px-2 sm:px-4 py-3 sm:py-5 text-center text-xs sm:text-sm font-bold text-white border-r border-white/20 tracking-wide whitespace-nowrap">
                             เบอร์โทร
                           </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide">
+                          <th className="px-2 sm:px-4 py-3 sm:py-5 text-center text-xs sm:text-sm font-bold text-white border-r border-white/20 tracking-wide whitespace-nowrap">
                             หัตถการ / บริการ
                           </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide">
+                          <th className="px-2 sm:px-4 py-3 sm:py-5 text-center text-xs sm:text-sm font-bold text-white border-r border-white/20 tracking-wide whitespace-nowrap">
                             แพทย์
                           </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide">
+                          <th className="px-2 sm:px-4 py-3 sm:py-5 text-center text-xs sm:text-sm font-bold text-white border-r border-white/20 tracking-wide whitespace-nowrap">
                             ผู้ดูแล
                           </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide">
+                          <th className="px-2 sm:px-4 py-3 sm:py-5 text-center text-xs sm:text-sm font-bold text-white border-r border-white/20 tracking-wide whitespace-nowrap">
                             รหัสนัด
                           </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white border-r border-white/20 tracking-wide">
+                          <th className="px-2 sm:px-4 py-3 sm:py-5 text-center text-xs sm:text-sm font-bold text-white border-r border-white/20 tracking-wide whitespace-nowrap">
                             ติดดาว
                           </th>
-                          <th className="px-6 py-5 text-center text-sm font-bold text-white tracking-wide">
+                          <th className="px-2 sm:px-4 py-3 sm:py-5 text-center text-xs sm:text-sm font-bold text-white tracking-wide whitespace-nowrap">
                             หมายเหตุ
                           </th>
                         </tr>
@@ -2498,36 +2408,36 @@ export default function CRMAdvancedPage() {
                                 : "bg-gradient-to-r from-purple-50 via-pink-50 to-rose-50"
                                 } hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 transition-all duration-200`}
                             >
-                              <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-200 text-center">
-                                <div className="font-semibold text-indigo-700 text-base">
+                              <td className="px-2 sm:px-4 py-2 sm:py-4 text-xs sm:text-sm text-gray-800 border-r border-gray-200 text-center">
+                                <div className="font-semibold text-indigo-700 text-sm sm:text-base">
                                   {timeLabel}
                                 </div>
-                                <div className="text-xs text-gray-500">{dateLabel}</div>
+                                <div className="text-[10px] sm:text-xs text-gray-500">{dateLabel}</div>
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-200 text-center">
-                                <span className="inline-block px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-xs font-bold shadow">
+                              <td className="px-2 sm:px-4 py-2 sm:py-4 text-xs sm:text-sm text-gray-800 border-r border-gray-200 text-center">
+                                <span className="inline-block px-2 sm:px-4 py-1 sm:py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-[10px] sm:text-xs font-bold shadow">
                                   {statusLabel}
                                 </span>
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-200 text-center">
+                              <td className="px-2 sm:px-4 py-2 sm:py-4 text-xs sm:text-sm text-gray-800 border-r border-gray-200 text-center">
                                 {getLegacyCustomerName(appointment)}
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-200 text-center">
+                              <td className="px-2 sm:px-4 py-2 sm:py-4 text-xs sm:text-sm text-gray-800 border-r border-gray-200 text-center whitespace-nowrap">
                                 {formatLegacyPhoneNumber(appointment.mobilephone)}
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-200 text-center">
+                              <td className="px-2 sm:px-4 py-2 sm:py-4 text-xs sm:text-sm text-gray-800 border-r border-gray-200 text-center">
                                 {productName}
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-200 text-center">
+                              <td className="px-2 sm:px-4 py-2 sm:py-4 text-xs sm:text-sm text-gray-800 border-r border-gray-200 text-center">
                                 {appointment.doctor_name || "-"}
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-200 text-center">
+                              <td className="px-2 sm:px-4 py-2 sm:py-4 text-xs sm:text-sm text-gray-800 border-r border-gray-200 text-center">
                                 {contactName}
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-200 text-center">
+                              <td className="px-2 sm:px-4 py-2 sm:py-4 text-xs sm:text-sm text-gray-800 border-r border-gray-200 text-center">
                                 {appointment.appoint_code || appointment.code || "-"}
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-800 border-r border-gray-200 bg-gradient-to-r from-amber-100 to-yellow-100 text-center">
+                              <td className="px-2 sm:px-4 py-2 sm:py-4 text-xs sm:text-sm text-gray-800 border-r border-gray-200 bg-gradient-to-r from-amber-100 to-yellow-100 text-center">
                                 <div className="flex items-center justify-center">
                                   {visitLinked ? (
                                     <svg
@@ -2553,9 +2463,9 @@ export default function CRMAdvancedPage() {
                                   )}
                                 </div>
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-800 text-left">
+                              <td className="px-2 sm:px-4 py-2 sm:py-4 text-xs sm:text-sm text-gray-800 text-left">
                                 <div
-                                  className="text-sm text-gray-700"
+                                  className="text-xs sm:text-sm text-gray-700"
                                   title={appointment.note || undefined}
                                   style={{
                                     display: "-webkit-box",
@@ -2579,21 +2489,21 @@ export default function CRMAdvancedPage() {
           )}
           {/* Footer Summary */}
           {viewMode === "table" && customerSegment === "new" && (
-            <div className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 px-8 py-6 border-t-4 border-indigo-600">
-              <div className="flex justify-between items-center">
-                <div className="text-base text-white flex items-center gap-2">
-                  <span className="bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm font-bold">
+            <div className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 px-3 sm:px-8 py-3 sm:py-6 border-t-4 border-indigo-600">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-4">
+                <div className="text-xs sm:text-base text-white flex items-center gap-1 sm:gap-2">
+                  <span className="bg-white/20 px-2 sm:px-4 py-1 sm:py-2 rounded-lg backdrop-blur-sm font-bold">
                     📊 ทั้งหมด:
                   </span>
-                  <span className="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold shadow-lg">
+                  <span className="bg-white text-blue-600 px-2 sm:px-4 py-1 sm:py-2 rounded-lg font-bold shadow-lg">
                     {records.length} รายการ
                   </span>
                 </div>
-                <div className="text-base text-white flex items-center gap-2">
-                  <span className="bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm font-bold">
-                    💎 รวมยอดนำเสนอ:
+                <div className="text-xs sm:text-base text-white flex items-center gap-1 sm:gap-2">
+                  <span className="bg-white/20 px-2 sm:px-4 py-1 sm:py-2 rounded-lg backdrop-blur-sm font-bold">
+                    💎 รวมยอด:
                   </span>
-                  <span className="bg-white text-purple-600 px-4 py-2 rounded-lg font-bold shadow-lg">
+                  <span className="bg-white text-purple-600 px-2 sm:px-4 py-1 sm:py-2 rounded-lg font-bold shadow-lg">
                     {records
                       .reduce((sum, r) => sum + r.proposedAmount, 0)
                       .toLocaleString()}{" "}
@@ -2604,21 +2514,21 @@ export default function CRMAdvancedPage() {
             </div>
           )}
           {viewMode === "table" && customerSegment === "old" && (
-            <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-8 py-6 border-t-4 border-purple-600">
-              <div className="flex flex-wrap justify-between items-center gap-4 text-white">
-                <div className="flex items-center gap-3 text-base">
-                  <span className="bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm font-bold">
+            <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-3 sm:px-8 py-3 sm:py-6 border-t-4 border-purple-600">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-4 text-white">
+                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-base">
+                  <span className="bg-white/20 px-2 sm:px-4 py-1 sm:py-2 rounded-lg backdrop-blur-sm font-bold">
                     📁 ลูกค้าเก่า:
                   </span>
-                  <span className="bg-white text-purple-600 px-4 py-2 rounded-lg font-bold shadow-lg">
+                  <span className="bg-white text-purple-600 px-2 sm:px-4 py-1 sm:py-2 rounded-lg font-bold shadow-lg">
                     {legacyRecordsSorted.length} รายการ
                   </span>
                 </div>
-                <div className="flex items-center gap-3 text-base">
-                  <span className="bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm font-bold">
+                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-base">
+                  <span className="bg-white/20 px-2 sm:px-4 py-1 sm:py-2 rounded-lg backdrop-blur-sm font-bold">
                     ⭐ เชื่อมต่อ VN:
                   </span>
-                  <span className="bg-white text-pink-600 px-4 py-2 rounded-lg font-bold shadow-lg">
+                  <span className="bg-white text-pink-600 px-2 sm:px-4 py-1 sm:py-2 rounded-lg font-bold shadow-lg">
                     {legacyRecordsSorted.filter((item) => item.vn && item.vn.trim()).length} รายการ
                   </span>
                 </div>

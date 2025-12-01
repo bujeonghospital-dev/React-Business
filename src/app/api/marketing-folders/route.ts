@@ -29,7 +29,7 @@ interface ApiFolderNode {
   children: ApiFolderNode[];
 }
 
-const marketingRoot = path.join(process.cwd(), "public", "marketing");
+const marketingRoot = path.join(process.cwd(), "public", "images", "video");
 
 const folderDefinitions = [
   { id: "ad-content", name: "Ad Content" },
@@ -173,7 +173,7 @@ const buildFolderNode = async (
       const urlSegments = fileSegments.map((segment) =>
         encodeURIComponent(segment)
       );
-      const url = `/marketing/${urlSegments.join("/")}`;
+      const url = `/api/serve-video/${urlSegments.join("/")}`;
       const fileType = getFileType(entry.name);
 
       // Determine thumbnail for the file

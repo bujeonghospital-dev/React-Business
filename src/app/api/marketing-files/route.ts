@@ -4,7 +4,7 @@ import path from "path";
 
 export const runtime = "nodejs";
 
-const marketingRoot = path.join(process.cwd(), "public", "marketing");
+const marketingRoot = path.join(process.cwd(), "public", "images", "video");
 
 const normalizeSegments = (value: string) =>
   value
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       savedFiles.push({
         name: fileEntry.name,
         path: relativePath,
-        url: `/marketing/${relativePath}`,
+        url: `/api/serve-video/${relativePath}`,
       });
     }
 
@@ -112,6 +112,8 @@ export async function DELETE(request: NextRequest) {
     const rawPath = typeof body.filePath === "string" ? body.filePath : "";
     const normalized = rawPath
       .replace(/^\/+/, "")
+      .replace(/^api\/serve-video\//, "")
+      .replace(/^images\/video\//, "")
       .replace(/^marketing\//, "");
     const rawSegments = normalizeSegments(normalized);
     const segments = rawSegments.map((segment) => {

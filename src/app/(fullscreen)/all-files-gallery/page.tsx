@@ -33,6 +33,7 @@ import {
   Copy,
   Share2,
   MoreHorizontal,
+  MoreVertical,
   Calendar,
   Clock,
   HardDrive,
@@ -52,13 +53,17 @@ import {
   ChevronDown,
   AlertCircle,
   Info,
+  FolderPlus,
+  ArrowRight,
 } from "lucide-react";
 import UserMenu from "@/components/UserMenu";
 import {
   FileProgressContainer,
   useFileProgress,
   type FileProgressItem,
+  setLoadingContextSuppressor,
 } from "@/components/FileProgress";
+import { useLoading } from "@/components/LoadingContext";
 
 // Custom scrollbar styles
 const customScrollbarStyle = `
@@ -323,7 +328,7 @@ const customScrollbarStyle = `
   }
 `;
 
-// File interface - files will be stored in /public/marketing/
+// File interface - files will be stored in /public/images/video/
 interface FileItem {
   id: number;
   name: string;
@@ -340,7 +345,7 @@ interface FileItem {
   needsThumbnailGeneration?: boolean;
 }
 
-// Initial empty files - users will upload files to /public/marketing/
+// Initial empty files - users will upload files to /public/images/video/
 const initialFiles: FileItem[] = [];
 
 // Recursive nested folder structure
@@ -542,10 +547,19 @@ const buildFoldersFromApi = (nodes: ApiFolderNode[]): MediaFolder[] => {
 };
 const AllFilesGalleryPage = () => {
   const router = useRouter();
+  const { setSuppressLoading } = useLoading();
   const [files, setFiles] = useState<FileItem[]>(initialFiles);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Connect LoadingContext suppressor to FileProgress hook
+  useEffect(() => {
+    setLoadingContextSuppressor(setSuppressLoading);
+    return () => {
+      setLoadingContextSuppressor(() => { });
+    };
+  }, [setSuppressLoading]);
   const [viewMode, setViewMode] = useState<"grid" | "list" | "masonry">("grid");
   const [filterType, setFilterType] = useState<
     "all" | "image" | "video" | "clip"
@@ -589,6 +603,16 @@ const AllFilesGalleryPage = () => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareFileId, setShareFileId] = useState<number | null>(null);
   const [isGlobalDropActive, setIsGlobalDropActive] = useState(false);
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+  const [showHeaderSearch, setShowHeaderSearch] = useState(false);
+  const [folderActionSheet, setFolderActionSheet] = useState<{
+    isOpen: boolean;
+    folderId: string | null;
+    folderName: string;
+  }>({ isOpen: false, folderId: null, folderName: '' });
+  const [isFileSelectionMode, setIsFileSelectionMode] = useState(false);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const fileLongPressRef = useRef<NodeJS.Timeout | null>(null);
 
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState<{
@@ -875,11 +899,21 @@ const AllFilesGalleryPage = () => {
     return [];
   }, [activeFolder, folderPath, currentNestedFolder]);
 
-  // Check if we can upload files (only at leaf folders)
+  // Check if we can upload files (at leaf folders OR at main folder root with no subfolders)
   const canUploadFiles = useMemo((): boolean => {
-    if (!currentNestedFolder) return false;
-    return isLeafFolder(currentNestedFolder);
-  }, [currentNestedFolder]);
+    // Case 1: We're inside a nested folder - check if it's a leaf
+    if (currentNestedFolder) {
+      return isLeafFolder(currentNestedFolder);
+    }
+
+    // Case 2: We're at the root of a main folder (no nested folder selected)
+    // Allow upload if the main folder has no subfolders (it's essentially a leaf)
+    if (activeFolder && folderPath.length === 0) {
+      return activeFolder.subFolders.length === 0;
+    }
+
+    return false;
+  }, [currentNestedFolder, activeFolder, folderPath]);
 
   // Build breadcrumb items for display
   const breadcrumbItems = useMemo(() => {
@@ -902,27 +936,30 @@ const AllFilesGalleryPage = () => {
   }, [activeFolder, folderPath]);
 
   const visibleFileIdSet = useMemo(() => {
+    // No folder selected - show NO files (only show folder grid)
     if (!activeFolder) {
-      return new Set(files.map((file) => file.id));
+      return new Set<number>();
     }
 
-    // If we're at a nested folder, show only its files (if it's a leaf)
+    // If we're at a nested folder that is a leaf, show only its files
     if (currentNestedFolder && isLeafFolder(currentNestedFolder)) {
       return new Set(currentNestedFolder.fileIds);
     }
 
-    // If no folder selected or at a non-leaf folder, show no files
-    if (folderPath.length > 0) {
+    // If we're inside a folder but it has subfolders, show no files (navigate deeper first)
+    if (currentNestedFolder && !isLeafFolder(currentNestedFolder)) {
       return new Set<number>();
     }
 
-    // At root of main folder, show all files (including root-level files)
-    const allIds = [
-      ...activeFolder.rootFileIds,
-      ...activeFolder.subFolders.flatMap((sub) => getAllFileIds(sub)),
-    ];
-    return new Set(allIds);
-  }, [activeFolder, currentNestedFolder, folderPath, files]);
+    // At root of main folder - check if it has subfolders
+    if (activeFolder.subFolders.length > 0) {
+      // Has subfolders, don't show files - user needs to navigate deeper
+      return new Set<number>();
+    }
+
+    // At root of main folder with no subfolders - show root files only
+    return new Set(activeFolder.rootFileIds);
+  }, [activeFolder, currentNestedFolder]);
 
   // Filtered และ Sorted files
   const filteredFiles = useMemo(() => {
@@ -1830,8 +1867,8 @@ const AllFilesGalleryPage = () => {
   };
 
   // Generate video share URL for LINE inline playback
-  // URL format: https://app.bjhbangkok.com/all-files-gallery/video/{base64url-encoded-path}
-  const generateVideoShareUrl = (file: FileItem): string => {
+  const generateVideoShareUrl = async (file: FileItem): Promise<{ shareUrl: string; needsTranscoding: boolean; fileSizeMB?: number }> => {
+    // For videos, create a special share URL that includes proper meta tags
     if (file.type === 'video' || file.type === 'clip') {
       // Extract the path from the URL (remove domain if present)
       let videoPath = file.url;
@@ -1843,26 +1880,102 @@ const AllFilesGalleryPage = () => {
         videoPath = '/' + videoPath;
       }
 
-      // Encode path as base64url for the video ID
-      const videoId = btoa(videoPath)
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
+      try {
+        const response = await fetch('/api/share-video', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ videoPath }),
+        });
 
-      return `${baseUrl}/all-files-gallery/video/${videoId}`;
+        if (response.ok) {
+          const data = await response.json();
+          return {
+            shareUrl: data.shareUrl,
+            needsTranscoding: data.needsTranscoding || false,
+            fileSizeMB: data.fileSizeMB
+          };
+        }
+      } catch (error) {
+        console.error('Error generating share URL:', error);
+      }
     }
-    return window.location.href;
+    // Fallback to current page URL
+    return { shareUrl: window.location.href, needsTranscoding: false };
+  };
+
+  // Transcode video for LINE compatibility
+  const transcodeForLine = async (file: FileItem): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/transcode-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoPath: file.url }),
+      });
+
+      if (!response.ok) return false;
+
+      const data = await response.json();
+
+      if (data.status === 'completed') {
+        return true;
+      }
+
+      // Poll for completion if processing
+      if (data.status === 'processing') {
+        const jobId = data.jobId;
+        let attempts = 0;
+        const maxAttempts = 60; // 5 minutes max
+
+        while (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 5000)); // Check every 5 seconds
+
+          const statusResponse = await fetch(`/api/transcode-video?jobId=${jobId}`);
+          const statusData = await statusResponse.json();
+
+          if (statusData.status === 'completed') {
+            return true;
+          }
+
+          if (statusData.status === 'error') {
+            console.error('Transcoding error:', statusData.error);
+            return false;
+          }
+
+          attempts++;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Transcode error:', error);
+      return false;
+    }
   };
 
   // Share to LINE handler with video support
-  const shareToLine = (fileId: number) => {
+  const shareToLine = async (fileId: number) => {
     const file = files.find(f => f.id === fileId);
     if (!file) return;
 
     // For videos, use special share URL for inline playback
-    const shareUrl = (file.type === 'video' || file.type === 'clip')
-      ? generateVideoShareUrl(file)
-      : window.location.href;
+    let shareUrl: string;
+    if (file.type === 'video' || file.type === 'clip') {
+      const result = await generateVideoShareUrl(file);
+      shareUrl = result.shareUrl;
+
+      // If file is large, trigger transcoding in background (don't wait)
+      if (result.needsTranscoding) {
+        console.log(`Video ${file.name} (${result.fileSizeMB}MB) may need transcoding for optimal LINE playback`);
+        // Start transcoding in background - don't block sharing
+        transcodeForLine(file).then(success => {
+          if (success) {
+            console.log('Transcoding completed for:', file.name);
+          }
+        });
+      }
+    } else {
+      shareUrl = window.location.href;
+    }
 
     const shareText = encodeURIComponent(`📹 ${file.name} - BJH Bangkok`);
     const encodedUrl = encodeURIComponent(shareUrl);
@@ -1890,9 +2003,11 @@ const AllFilesGalleryPage = () => {
     if (!file) return;
 
     // Get proper share URL for videos
-    const shareUrl = (file.type === 'video' || file.type === 'clip')
-      ? generateVideoShareUrl(file)
-      : window.location.href;
+    const shareResult = (file.type === 'video' || file.type === 'clip')
+      ? await generateVideoShareUrl(file)
+      : { shareUrl: window.location.href, needsTranscoding: false };
+
+    const shareUrl = shareResult.shareUrl;
 
     switch (platform) {
       case 'line':
@@ -1992,7 +2107,6 @@ const AllFilesGalleryPage = () => {
   const ThumbnailImage = ({ file, className, alt }: { file: FileItem; className: string; alt: string }) => {
     const [imgSrc, setImgSrc] = useState(file.thumbnail);
     const [hasError, setHasError] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
     const videoRef = useRef<HTMLVideoElement>(null);
 
     const isVideoType = file.type === 'video' || file.type === 'clip';
@@ -2000,21 +2114,14 @@ const AllFilesGalleryPage = () => {
     useEffect(() => {
       setImgSrc(file.thumbnail);
       setHasError(false);
-      setIsLoading(true);
     }, [file.thumbnail]);
 
     const handleError = () => {
       setHasError(true);
       setImgSrc(VIDEO_PLACEHOLDER);
-      setIsLoading(false);
-    };
-
-    const handleLoad = () => {
-      setIsLoading(false);
     };
 
     const handleVideoLoad = () => {
-      setIsLoading(false);
       // Seek to 1 second for better thumbnail
       if (videoRef.current) {
         videoRef.current.currentTime = 1;
@@ -2032,15 +2139,9 @@ const AllFilesGalleryPage = () => {
             playsInline
             preload="metadata"
             onLoadedData={handleVideoLoad}
-            onError={() => setIsLoading(false)}
             className={`${className} w-full h-full object-cover`}
             style={{ pointerEvents: 'none' }}
           />
-          {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-800 to-purple-900">
-              <div className="w-8 h-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
           {/* Play icon overlay */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="p-3 rounded-full bg-black/40 backdrop-blur-sm">
@@ -2051,20 +2152,15 @@ const AllFilesGalleryPage = () => {
       );
     }
 
-    // สำหรับรูปภาพ
+    // สำหรับรูปภาพ - แสดงทันทีโดยไม่ต้องรอ loading
     return (
-      <div className="relative w-full h-full">
-        {isLoading && (
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-purple-900 animate-pulse flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
+      <div className="relative w-full h-full bg-gradient-to-br from-slate-800/50 to-purple-900/50">
         <img
           src={imgSrc}
           alt={alt}
-          className={`${className} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
+          className={className}
           onError={handleError}
-          onLoad={handleLoad}
+          loading="eager"
         />
       </div>
     );
@@ -2134,40 +2230,291 @@ const AllFilesGalleryPage = () => {
           ))}
         </div>
 
-        <div className="relative z-10 p-3 md:p-6">
-          {/* Header Section */}
-          <div className="mb-4 md:mb-8">
-            {/* Back Button */}
-            <button
-              onClick={() => router.push("/home")}
-              className="group flex items-center gap-2 md:gap-3 px-3 md:px-5 py-2 md:py-2.5 mb-4 md:mb-6 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white rounded-xl transition-all duration-300 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 text-sm md:text-base"
-            >
-              <ArrowLeft className="w-4 h-4 md:w-5 md:h-5 group-hover:-translate-x-1 transition-transform" />
-              <span className="font-medium">กลับหน้าหลัก</span>
-            </button>
+        <div className="relative z-10 p-3 md:p-6 pb-20">
+          {/* Header Section - Gallery Style */}
+          {isFileSelectionMode ? (
+            /* File Selection Mode Header */
+            <div className="flex items-center justify-between mb-4 md:mb-6">
+              {/* Left: Select All Checkbox */}
+              <button
+                onClick={selectAll}
+                className="flex items-center gap-3"
+              >
+                <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${selectedFiles.length === filteredFiles.length && filteredFiles.length > 0 ? 'bg-white border-white' : 'border-white/70'}`}>
+                  {selectedFiles.length === filteredFiles.length && filteredFiles.length > 0 && (
+                    <Check className="w-5 h-5 text-black" />
+                  )}
+                </div>
+                <span className="text-white/70 text-sm">ทั้งหมด</span>
+              </button>
 
-            {/* Title Section */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 md:gap-6">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3 md:gap-4">
-                  <div className="p-2.5 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-pink-500 shadow-lg shadow-purple-500/50 animate-pulse-glow">
-                    <FolderOpen className="w-6 h-6 md:w-10 md:h-10 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="page-title font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-pink-400 to-orange-400 animate-gradient-shift">
-                      รวม File ทั้งหมด
+              {/* Center: Selection Count */}
+              <h1 className="text-lg font-medium text-white">
+                เลือก {selectedFiles.length} รายการแล้ว
+              </h1>
+
+              {/* Right: Cancel Button */}
+              <button
+                onClick={() => {
+                  setIsFileSelectionMode(false);
+                  setSelectedFiles([]);
+                }}
+                className="text-white font-medium px-2 py-1"
+              >
+                ยกเลิก
+              </button>
+            </div>
+          ) : (
+            /* Normal Mode Header */
+            <div className="flex items-center justify-between mb-4 md:mb-6">
+              {/* Left: Back Button + Folder Name */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    if (activeFolder) {
+                      // If in nested folder, go back one level
+                      if (folderPath.length > 0) {
+                        setFolderPath(prev => prev.slice(0, -1));
+                      } else {
+                        // Go back to main folder list
+                        setActiveFolderId(null);
+                        setFolderPath([]);
+                      }
+                    } else {
+                      router.push("/home");
+                    }
+                  }}
+                  className="p-2 md:p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all"
+                >
+                  <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
+                </button>
+
+                {/* Folder Name - shown when inside a folder */}
+                {activeFolder && (
+                  <div className="flex items-center gap-2">
+                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${activeFolder.gradient} flex items-center justify-center shadow-lg`}>
+                      {(() => {
+                        const Icon = activeFolder.icon;
+                        return <Icon className="w-5 h-5 text-white" />;
+                      })()}
+                    </div>
+                    <h1 className="text-lg md:text-xl font-bold text-white">
+                      {currentNestedFolder?.name || activeFolder.name}
                     </h1>
-                    <p className="page-subtitle text-purple-200/80 mt-1">
-                      📸 รูป • วิดีโอ • ไฟล์มีเดีย
-                    </p>
                   </div>
+                )}
+
+                {/* Title when no folder selected */}
+                {!activeFolder && (
+                  <h1 className="hidden md:block text-lg font-semibold text-white/90">
+                    อัลบั้มทั้งหมด
+                  </h1>
+                )}
+              </div>
+
+              {/* Right: Action Icons */}
+              <div className="flex items-center gap-1 sm:gap-2">
+                {/* Upload/Add Button */}
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="p-2 md:p-2.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all hover:scale-105"
+                  title="อัพโหลดไฟล์"
+                >
+                  <Plus className="w-5 h-5 md:w-6 md:h-6" />
+                </button>
+
+                {/* Search Button */}
+                <button
+                  onClick={() => setShowHeaderSearch(!showHeaderSearch)}
+                  className={`p-2 md:p-2.5 rounded-full transition-all ${showHeaderSearch ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 hover:bg-white/20 text-white'}`}
+                  title="ค้นหา"
+                >
+                  <Search className="w-5 h-5 md:w-6 md:h-6" />
+                </button>
+
+                {/* 3-Dot Menu */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowHeaderMenu(!showHeaderMenu)}
+                    className={`p-2 md:p-2.5 rounded-full transition-all ${showHeaderMenu ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 hover:bg-white/20 text-white'}`}
+                    title="เมนู"
+                  >
+                    <MoreVertical className="w-5 h-5 md:w-6 md:h-6" />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {showHeaderMenu && (
+                    <>
+                      {/* Backdrop to close menu */}
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setShowHeaderMenu(false)}
+                      />
+                      <div className="absolute right-0 top-full mt-2 w-56 bg-slate-800/95 backdrop-blur-xl border border-purple-500/30 rounded-xl shadow-2xl overflow-hidden z-50 animate-slide-up">
+                        {/* Create Folder Option */}
+                        <button
+                          onClick={() => {
+                            setShowHeaderMenu(false);
+                            if (activeFolder) {
+                              setIsCreatingSubFolder(true);
+                              setSubFolderDraftName("");
+                            } else {
+                              alert("กรุณาเลือกโฟลเดอร์หลักก่อนสร้างโฟลเดอร์ย่อย");
+                            }
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-white/90 hover:bg-white/10 transition-colors"
+                        >
+                          <FolderPlus className="w-5 h-5 text-cyan-400" />
+                          <span>สร้างโฟลเดอร์</span>
+                        </button>
+
+                        {/* Select All Option */}
+                        <button
+                          onClick={() => {
+                            setShowHeaderMenu(false);
+                            selectAll();
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-white/90 hover:bg-white/10 transition-colors"
+                        >
+                          <Check className="w-5 h-5 text-purple-400" />
+                          <span>{selectedFiles.length > 0 ? 'ยกเลิกการเลือก' : 'เลือกทั้งหมด'}</span>
+                        </button>
+
+                        {/* Distribute Files Randomly */}
+                        <button
+                          onClick={() => {
+                            setShowHeaderMenu(false);
+                            distributeFilesRandomly();
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-white/90 hover:bg-white/10 transition-colors"
+                        >
+                          <RefreshCw className="w-5 h-5 text-amber-400" />
+                          <span>สุ่มจัดเรียงไฟล์</span>
+                        </button>
+
+                        {/* Divider */}
+                        <div className="border-t border-white/10 my-1" />
+
+                        {/* View Mode Options */}
+                        <div className="px-4 py-2">
+                          <span className="text-xs text-purple-300/60 uppercase tracking-wider">มุมมอง</span>
+                        </div>
+                        <div className="flex items-center gap-1 px-4 pb-3">
+                          {[
+                            { mode: "grid" as const, icon: Grid, label: "Grid" },
+                            { mode: "masonry" as const, icon: LayoutGrid, label: "Masonry" },
+                            { mode: "list" as const, icon: List, label: "List" },
+                          ].map(({ mode, icon: Icon, label }) => (
+                            <button
+                              key={mode}
+                              onClick={() => {
+                                setViewMode(mode);
+                              }}
+                              className={`flex-1 p-2 rounded-lg transition-all ${viewMode === mode
+                                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                                : "bg-white/10 text-purple-300 hover:bg-white/20"
+                                }`}
+                              title={label}
+                            >
+                              <Icon className="w-4 h-4 mx-auto" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Desktop User Menu */}
+                <div className="hidden md:block ml-2">
+                  <UserMenu />
                 </div>
               </div>
-              <div className="hidden md:block">
-                <UserMenu />
+            </div>
+          )}
+
+          {/* Search Bar - Shows when search is active */}
+          {showHeaderSearch && (
+            <div className="mb-4 animate-slide-up space-y-3">
+              {/* Search Input */}
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-300" />
+                <input
+                  type="text"
+                  placeholder="ค้นหาไฟล์..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  autoFocus
+                  className="w-full pl-12 pr-12 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-purple-300/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 p-1 rounded-full bg-white/10 hover:bg-white/20 text-purple-300"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Filter Pills Row */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                {/* Type Filter Pills */}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {[
+                    { value: "all" as const, label: "ทั้งหมด", icon: FolderOpen },
+                    { value: "image" as const, label: "รูป", icon: ImageIcon },
+                    { value: "video" as const, label: "วิดีโอ", icon: FileVideo },
+                    { value: "clip" as const, label: "คลิป", icon: Film },
+                  ].map(({ value, label, icon: Icon }) => (
+                    <button
+                      key={value}
+                      onClick={() => setFilterType(value)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${filterType === value
+                        ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30"
+                        : "bg-white/10 text-purple-300 hover:bg-white/20"
+                        }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Divider */}
+                <div className="w-px h-6 bg-white/20 flex-shrink-0" />
+
+                {/* Favorites Toggle */}
+                <button
+                  onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${showFavoritesOnly
+                    ? "bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg shadow-pink-500/30"
+                    : "bg-white/10 text-purple-300 hover:bg-white/20"
+                    }`}
+                >
+                  <Heart className={`w-3.5 h-3.5 ${showFavoritesOnly ? "fill-current" : ""}`} />
+                  โปรด
+                </button>
+
+                {/* Sort Dropdown */}
+                <select
+                  value={`${sortBy}-${sortDirection}`}
+                  onChange={(e) => {
+                    const [sort, dir] = e.target.value.split("-");
+                    setSortBy(sort as any);
+                    setSortDirection(dir as any);
+                  }}
+                  className="px-3 py-1.5 bg-white/10 border border-white/20 rounded-full text-purple-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer flex-shrink-0"
+                >
+                  <option value="date-desc" className="bg-slate-800">ล่าสุด</option>
+                  <option value="date-asc" className="bg-slate-800">เก่าสุด</option>
+                  <option value="name-asc" className="bg-slate-800">A-Z</option>
+                  <option value="name-desc" className="bg-slate-800">Z-A</option>
+                  <option value="views-desc" className="bg-slate-800">ยอดวิว</option>
+                </select>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Folder Grid - Only show when no folder is selected */}
           {!activeFolder && (
@@ -2271,102 +2618,10 @@ const AllFilesGalleryPage = () => {
           )}
 
           {activeFolder && (
-            <div className="mb-8 space-y-5">
-              {/* Selected Folder Header Card */}
-              <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-purple-400/50 shadow-lg shadow-purple-500/20">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    {/* Back button */}
-                    <button
-                      onClick={() => {
-                        setActiveFolderId(null);
-                        setFolderPath([]);
-                      }}
-                      className="p-2 sm:p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all"
-                    >
-                      <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </button>
-
-                    {/* Folder icon and info */}
-                    <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br ${activeFolder.gradient} flex items-center justify-center shadow-lg`}>
-                        {(() => {
-                          const Icon = activeFolder.icon;
-                          return <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />;
-                        })()}
-                      </div>
-                      <div>
-                        <h2 className="text-lg sm:text-xl font-bold text-white">{activeFolder.name}</h2>
-                        <p className="text-purple-200/60 text-sm hidden sm:block">{activeFolder.description}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Folder stats */}
-                  <div className="flex items-center gap-3 sm:gap-4 text-sm text-purple-200/60">
-                    <span className="flex items-center gap-1.5">
-                      <FolderOpen className="w-4 h-4" />
-                      {displayFolders.length}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <FileVideo className="w-4 h-4" />
-                      {currentNestedFolder?.fileIds.length || 0}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Breadcrumb - show only if nested */}
-                {breadcrumbItems.length > 1 && (
-                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10 flex-wrap">
-                    {breadcrumbItems.map((item, index) => (
-                      <div key={item.id} className="flex items-center gap-2">
-                        {index > 0 && (
-                          <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-purple-300/50" />
-                        )}
-                        <button
-                          onClick={() => handleBreadcrumbClick(index)}
-                          className={`px-2 sm:px-3 py-1 rounded-lg text-sm transition-all ${index === breadcrumbItems.length - 1
-                            ? "bg-purple-500/30 text-white font-medium"
-                            : "text-purple-200/70 hover:text-white hover:bg-white/10"
-                            }`}
-                        >
-                          {item.name}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Action Buttons - Upload & Create Folder */}
-              <div className="flex justify-end gap-2 sm:gap-3">
-                {/* Upload Button */}
-                <button
-                  onClick={() => setShowUploadModal(true)}
-                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl btn-text font-semibold bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 transition-all duration-200"
-                >
-                  <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  อัพโหลด
-                </button>
-
-                {/* Create Folder Button */}
-                <button
-                  onClick={() => {
-                    setIsCreatingSubFolder((prev) => !prev);
-                    setSubFolderDraftName("");
-                    setEditingSubFolderId(null);
-                    setEditingSubFolderValue("");
-                  }}
-                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl btn-text font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all duration-200"
-                >
-                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  {isCreatingSubFolder ? "ยกเลิก" : "สร้างโฟลเดอร์"}
-                </button>
-              </div>
-
+            <div className="mb-6 md:mb-8 space-y-5">
               {/* Create Folder Form */}
               {isCreatingSubFolder && (
-                <div className="glass-card rounded-2xl p-5 border border-white/10 shadow-lg">
+                <div className="glass-card rounded-2xl p-5 border border-white/10 shadow-lg mb-4">
                   <div className="flex flex-col md:flex-row gap-3">
                     <input
                       type="text"
@@ -2385,272 +2640,134 @@ const AllFilesGalleryPage = () => {
                 </div>
               )}
 
-              {/* Nested Folders Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5">
-                {displayFolders.length === 0 ? (
-                  <div className="glass-card rounded-2xl p-4 sm:p-8 border-2 border-dashed border-purple-400/30 text-center col-span-full">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
-                      <FolderOpen className="w-6 h-6 sm:w-8 sm:h-8 text-purple-300/70" />
+              {/* Nested Folders Grid - 2 columns like screenshot */}
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-5">
+                {displayFolders.map((subFolder, index) => {
+                  const isEditing = editingSubFolderId === subFolder.id;
+                  const hasChildren = subFolder.children.length > 0;
+                  const isLeaf = isLeafFolder(subFolder);
+                  const subFolderCount = subFolder.children.length;
+                  const fileCount = subFolder.fileIds.length;
+
+                  return (
+                    <div
+                      key={subFolder.id}
+                      onClick={() => {
+                        if (!isEditing) {
+                          handleNestedFolderSelect(subFolder.id);
+                        }
+                      }}
+                      onTouchStart={() => {
+                        if (!isEditing) {
+                          longPressTimerRef.current = setTimeout(() => {
+                            setFolderActionSheet({
+                              isOpen: true,
+                              folderId: subFolder.id,
+                              folderName: subFolder.name,
+                            });
+                          }, 500);
+                        }
+                      }}
+                      onTouchEnd={() => {
+                        if (longPressTimerRef.current) {
+                          clearTimeout(longPressTimerRef.current);
+                          longPressTimerRef.current = null;
+                        }
+                      }}
+                      onTouchMove={() => {
+                        if (longPressTimerRef.current) {
+                          clearTimeout(longPressTimerRef.current);
+                          longPressTimerRef.current = null;
+                        }
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        if (!isEditing) {
+                          setFolderActionSheet({
+                            isOpen: true,
+                            folderId: subFolder.id,
+                            folderName: subFolder.name,
+                          });
+                        }
+                      }}
+                      className={`group relative glass-card rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 text-left transition-all duration-300 hover:scale-[1.03] border overflow-hidden animate-slide-up cursor-pointer border-white/10 hover:border-purple-300/50 hover:shadow-lg hover:shadow-purple-500/20`}
+                      style={{ animationDelay: `${index * 0.05}s` }}
+                    >
+                      {/* Glow effect on hover */}
+                      <div className={`absolute inset-0 bg-gradient-to-br ${activeFolder.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
+
+                      {isEditing ? (
+                        <div className="relative z-10 flex flex-col gap-3 h-full">
+                          <input
+                            type="text"
+                            value={editingSubFolderValue}
+                            onChange={(e) => setEditingSubFolderValue(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                            autoFocus
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleSaveSubFolderName(subFolder.id);
+                              }}
+                              className="flex-1 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white text-xs font-medium shadow-lg hover:shadow-green-500/50 transition-all"
+                            >
+                              บันทึก
+                            </button>
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleCancelEditSubFolder();
+                              }}
+                              className="flex-1 px-3 py-2 rounded-xl bg-white/10 text-purple-100 text-xs font-medium hover:bg-white/20 transition-all"
+                            >
+                              ยกเลิก
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="relative z-10 cursor-pointer">
+                          <div
+                            className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br ${activeFolder.gradient} flex items-center justify-center mb-2 sm:mb-3 md:mb-4 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300`}
+                          >
+                            <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-white drop-shadow-md" />
+                          </div>
+                          <h3 className="folder-title font-bold text-white group-hover:text-purple-100 transition-colors text-sm sm:text-base">
+                            {subFolder.name}
+                          </h3>
+                          <p className="folder-description text-purple-200/60 mt-0.5 sm:mt-1 line-clamp-2 text-xs sm:text-sm hidden sm:block">
+                            {isLeaf ? `${fileCount} ไฟล์` : `${subFolderCount} โฟลเดอร์`}
+                          </p>
+                          <div className="flex items-center justify-between folder-meta mt-2 sm:mt-3 md:mt-4 pt-2 sm:pt-3 border-t border-white/10 text-xs sm:text-sm">
+                            <span className="flex items-center gap-1 sm:gap-1.5 text-purple-200/70">
+                              <FolderOpen className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                              {subFolderCount}
+                            </span>
+                            <span className="flex items-center gap-1 sm:gap-1.5 text-purple-200/70">
+                              <FileVideo className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                              {fileCount}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Leaf indicator */}
+                      {isLeaf && !isEditing && (
+                        <div className="absolute bottom-2 right-2 w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-gradient-to-r from-emerald-400 to-green-400 shadow-lg shadow-emerald-500/50" />
+                      )}
                     </div>
-                    {canUploadFiles ? (
-                      <>
-                        <p className="text-purple-200/70 text-responsive-sm">นี่คือโฟลเดอร์ปลายทาง</p>
-                        <p className="text-emerald-300/70 text-responsive-xs mt-1">✓ สามารถอัพโหลดไฟล์ได้ที่นี่</p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-purple-200/70 text-responsive-sm">ยังไม่มีโฟลเดอร์ย่อย</p>
-                        <p className="text-purple-300/50 text-responsive-xs mt-1">คลิก "สร้างโฟลเดอร์" เพื่อเริ่มต้น</p>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  displayFolders.map((subFolder, index) => {
-                    const isEditing = editingSubFolderId === subFolder.id;
-                    const hasChildren = subFolder.children.length > 0;
-                    const isLeaf = isLeafFolder(subFolder);
-
-                    return (
-                      <div
-                        key={subFolder.id}
-                        onClick={() => {
-                          if (!isEditing) {
-                            handleNestedFolderSelect(subFolder.id);
-                          }
-                        }}
-                        className={`group relative glass-card rounded-xl sm:rounded-2xl p-3 sm:p-5 border text-left transition-all duration-300 hover:scale-[1.03] cursor-pointer overflow-hidden animate-slide-up border-white/10 hover:border-purple-300/50 hover:shadow-lg hover:shadow-purple-500/20 ${isEditing ? 'min-w-[180px]' : ''}`}
-                        style={{ animationDelay: `${index * 0.05}s` }}
-                      >
-                        {/* Background glow */}
-                        <div className={`absolute inset-0 bg-gradient-to-br ${activeFolder.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
-
-                        {isEditing ? (
-                          <div className="relative z-10 flex flex-col gap-2 sm:gap-3 h-full">
-                            <input
-                              type="text"
-                              value={editingSubFolderValue}
-                              onChange={(e) =>
-                                setEditingSubFolderValue(e.target.value)
-                              }
-                              className="w-full min-w-[120px] px-3 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
-                              onClick={(e) => e.stopPropagation()}
-                              style={{ minWidth: '8ch' }}
-                              autoFocus
-                            />
-                            <div className="flex gap-1.5 sm:gap-2">
-                              <button
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  handleSaveSubFolderName(subFolder.id);
-                                }}
-                                className="flex-1 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white btn-text font-medium shadow-lg shadow-green-500/30 hover:shadow-green-500/50 transition-all"
-                              >
-                                บันทึก
-                              </button>
-                              <button
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  handleCancelEditSubFolder();
-                                }}
-                                className="flex-1 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-white/10 text-purple-100 btn-text font-medium hover:bg-white/20 transition-all"
-                              >
-                                ยกเลิก
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="relative z-10 flex flex-col h-full">
-                            <div className="flex items-start gap-3 flex-1">
-                              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${activeFolder.gradient} flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all duration-300`}>
-                                <FolderOpen className="w-5 h-5 text-white" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="folder-title text-white font-semibold truncate group-hover:text-purple-100 transition-colors">
-                                  {subFolder.name}
-                                </div>
-                                <div className="flex items-center gap-2 sm:gap-3 folder-meta text-purple-200/60 mt-1">
-                                  {hasChildren && (
-                                    <span className="flex items-center gap-1">
-                                      <FolderOpen className="w-3 h-3" />
-                                      {subFolder.children.length}
-                                    </span>
-                                  )}
-                                  {isLeaf && (
-                                    <span className="flex items-center gap-1">
-                                      <FileVideo className="w-3 h-3" />
-                                      {subFolder.fileIds.length} ไฟล์
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between pt-2 sm:pt-3 mt-2 sm:mt-3 border-t border-white/10">
-                              <div className="flex items-center gap-1">
-                                {isLeaf ? (
-                                  <span className="folder-meta text-emerald-300/70 flex items-center gap-1">
-                                    <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                    อัพโหลดได้
-                                  </span>
-                                ) : (
-                                  <span className="folder-meta text-purple-200/50 flex items-center gap-1">
-                                    <ChevronRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                    คลิกเพื่อเข้า
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    handleStartEditSubFolder(subFolder);
-                                  }}
-                                  className="p-2 rounded-lg bg-white/10 text-purple-100 hover:bg-white/20 hover:text-white transition-all"
-                                  title="แก้ไขชื่อ"
-                                >
-                                  <Pencil className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    handleDeleteSubFolder(subFolder.id);
-                                  }}
-                                  className="p-2 rounded-lg bg-white/10 text-red-300 hover:bg-red-500/30 hover:text-red-200 transition-all"
-                                  title="ลบโฟลเดอร์"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
+                  );
+                })}
               </div>
             </div>
           )}
 
-          {/* Control Bar */}
-          <div className="glass-card rounded-2xl p-3 md:p-4 mb-6 relative z-30">
-            {/* Mobile Menu Toggle */}
-            <div className="flex items-center gap-3 md:hidden mb-3">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-300" />
-                <input
-                  type="text"
-                  placeholder="ค้นหาไฟล์..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm placeholder-purple-300/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
-              <button
-                onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className="p-2.5 bg-white/10 rounded-xl text-purple-300 mobile-touch-target"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setShowUploadModal(true)}
-                className="p-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl text-white mobile-touch-target"
-              >
-                <Upload className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Mobile Menu Dropdown */}
-            {showMobileMenu && (
-              <div className="md:hidden mb-3 p-3 bg-white/5 rounded-xl space-y-3">
-                {/* View Mode */}
-                <div className="flex items-center justify-between">
-                  <span className="text-responsive-sm text-purple-200">มุมมอง:</span>
-                  <div className="flex items-center gap-1 p-1 bg-white/10 rounded-lg">
-                    {[
-                      { mode: "grid" as const, icon: Grid },
-                      { mode: "masonry" as const, icon: LayoutGrid },
-                      { mode: "list" as const, icon: List },
-                    ].map(({ mode, icon: Icon }) => (
-                      <button
-                        key={mode}
-                        onClick={() => setViewMode(mode)}
-                        className={`p-2 rounded-lg transition-all ${viewMode === mode
-                          ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                          : "text-purple-300"
-                          }`}
-                      >
-                        <Icon className="w-4 h-4" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Type Filter */}
-                <div className="flex items-center justify-between">
-                  <span className="text-responsive-sm text-purple-200">ประเภท:</span>
-                  <select
-                    value={filterType}
-                    onChange={(e) => setFilterType(e.target.value as any)}
-                    className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-responsive-sm"
-                  >
-                    <option value="all" className="bg-slate-800">ทุกประเภท</option>
-                    <option value="image" className="bg-slate-800">รูปภาพ</option>
-                    <option value="video" className="bg-slate-800">วิดีโอ</option>
-                    <option value="clip" className="bg-slate-800">คลิป</option>
-                  </select>
-                </div>
-
-                {/* Sort */}
-                <div className="flex items-center justify-between">
-                  <span className="text-responsive-sm text-purple-200">เรียงตาม:</span>
-                  <select
-                    value={`${sortBy}-${sortDirection}`}
-                    onChange={(e) => {
-                      const [sort, dir] = e.target.value.split("-");
-                      setSortBy(sort as any);
-                      setSortDirection(dir as any);
-                    }}
-                    className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-responsive-sm"
-                  >
-                    <option value="date-desc" className="bg-slate-800">ล่าสุด</option>
-                    <option value="date-asc" className="bg-slate-800">เก่าสุด</option>
-                    <option value="name-asc" className="bg-slate-800">A-Z</option>
-                    <option value="views-desc" className="bg-slate-800">ยอดวิว</option>
-                  </select>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg btn-text ${showFavoritesOnly
-                      ? "bg-gradient-to-r from-red-500 to-pink-500 text-white"
-                      : "bg-white/10 text-purple-300"
-                      }`}
-                  >
-                    <Heart className={`w-3.5 h-3.5 ${showFavoritesOnly ? "fill-current" : ""}`} />
-                    โปรด
-                  </button>
-                  <button
-                    onClick={selectAll}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white/10 text-purple-300 rounded-lg btn-text"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    {selectedFiles.length > 0 ? 'ยกเลิก' : 'เลือก'}
-                  </button>
-                  <button
-                    onClick={distributeFilesRandomly}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg btn-text"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    สุ่ม
-                  </button>
-                </div>
-              </div>
-            )}
-
+          {/* Control Bar - Desktop Only */}
+          <div className="hidden md:block glass-card rounded-2xl p-3 md:p-4 mb-6 relative z-30">
             {/* Desktop Controls */}
-            <div className="hidden md:flex flex-wrap items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               {/* Search */}
               <div className="flex-1 min-w-[250px] relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-300" />
@@ -2842,17 +2959,6 @@ const AllFilesGalleryPage = () => {
               </button>
             </div>
 
-            {/* Results Info */}
-            <div className="mt-3 md:mt-4 flex items-center justify-between text-responsive-sm text-purple-200/60">
-              <span>
-                แสดง {filteredFiles.length} จาก {files.length} ไฟล์
-              </span>
-              {selectedFiles.length > 0 && (
-                <span className="text-purple-300">
-                  เลือกแล้ว {selectedFiles.length} ไฟล์
-                </span>
-              )}
-            </div>
           </div>
 
           {/* Mobile Upload Modal - Enhanced for Android & iPhone */}
@@ -3157,15 +3263,7 @@ const AllFilesGalleryPage = () => {
               <div className="animate-spin rounded-full h-16 w-16 border-4 border-purple-500 border-t-transparent" />
             </div>
           ) : filteredFiles.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 sm:h-96 text-center">
-              <div className="p-4 sm:p-6 rounded-full bg-purple-500/20 mb-3 sm:mb-4">
-                <FolderOpen className="w-10 h-10 sm:w-16 sm:h-16 text-purple-400" />
-              </div>
-              <h3 className="text-responsive-2xl font-bold text-white mb-2">ไม่พบไฟล์</h3>
-              <p className="text-purple-200/60 text-responsive-sm">
-                ลองเปลี่ยนตัวกรองหรือคำค้นหาใหม่
-              </p>
-            </div>
+            null
           ) : viewMode === "list" ? (
             // List View
             <div className="glass-card rounded-2xl overflow-hidden overflow-x-auto">
@@ -3308,173 +3406,171 @@ const AllFilesGalleryPage = () => {
               </table>
             </div>
           ) : (
-            // Grid / Masonry View
-            <div
-              className={`grid gap-3 md:gap-6 ${viewMode === "masonry"
-                ? "columns-2 md:columns-3 lg:columns-4 xl:columns-5"
-                : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-                }`}
-            >
+            // Samsung Gallery Style - 4 columns grid
+            <div className="grid grid-cols-4 gap-0.5">
               {filteredFiles.map((file, index) => (
                 <div
                   key={file.id}
-                  draggable={!isMobile}
-                  onDragStart={(e) => !isMobile && handleDragStart(e, file.id)}
-                  onDragEnd={!isMobile ? handleDragEnd : undefined}
-                  onTouchStart={() => handleTouchSelect(file.id)}
-                  className={`image-card glass-card rounded-xl md:rounded-2xl overflow-hidden group file-item animate-bounce-in ${!isMobile ? 'cursor-grab active:cursor-grabbing' : ''} ${viewMode === "masonry" ? "break-inside-avoid mb-3 md:mb-6" : ""} ${draggingFileId === file.id ? "opacity-50 scale-95" : ""} ${selectedFiles.includes(file.id) && isMobile ? 'ring-2 ring-purple-400' : ''}`}
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                >
-                  {/* Image/Video Container */}
-                  <div
-                    className="relative aspect-[4/3] overflow-hidden cursor-pointer"
-                    onClick={() => openLightbox(index)}
-                  >
-                    <ThumbnailImage
-                      file={file}
-                      alt={file.name}
-                      className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-                    />
-
-                    {/* Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                    {/* Type Badge */}
-                    <div
-                      className={`absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r ${getTypeColor(
-                        file.type
-                      )} text-white text-xs font-semibold shadow-lg`}
-                    >
-                      {getTypeIcon(file.type)}
-                      <span className="uppercase">{file.type}</span>
-                    </div>
-
-                    {/* Duration for videos/clips */}
-                    {file.duration && (
-                      <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/70 rounded-md text-white text-xs font-medium">
-                        {file.duration}
-                      </div>
-                    )}
-
-                    {/* Play Icon for videos */}
-                    {(file.type === "video" || file.type === "clip") && (
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="p-4 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors">
-                          <Play className="w-8 h-8 text-white" />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Favorite Badge */}
-                    {file.favorite && (
-                      <div className="absolute top-3 right-3">
-                        <Heart className="w-5 h-5 text-pink-500 fill-current drop-shadow-lg" />
-                      </div>
-                    )}
-
-                    {/* Selection Checkbox */}
-                    <div
-                      className={`absolute top-3 left-3 transition-opacity ${selectedFiles.includes(file.id)
-                        ? "opacity-100"
-                        : "opacity-0 group-hover:opacity-100"
-                        }`}
-                      onClick={(e) => {
-                        e.stopPropagation();
+                  className={`relative aspect-square overflow-hidden cursor-pointer ${selectedFiles.includes(file.id) ? 'ring-2 ring-white ring-inset' : ''}`}
+                  onClick={() => {
+                    if (isFileSelectionMode) {
+                      toggleSelect(file.id);
+                    } else {
+                      openLightbox(index);
+                    }
+                  }}
+                  onTouchStart={() => {
+                    fileLongPressRef.current = setTimeout(() => {
+                      setIsFileSelectionMode(true);
+                      if (!selectedFiles.includes(file.id)) {
                         toggleSelect(file.id);
-                      }}
-                    >
+                      }
+                    }, 500);
+                  }}
+                  onTouchEnd={() => {
+                    if (fileLongPressRef.current) {
+                      clearTimeout(fileLongPressRef.current);
+                      fileLongPressRef.current = null;
+                    }
+                  }}
+                  onTouchMove={() => {
+                    if (fileLongPressRef.current) {
+                      clearTimeout(fileLongPressRef.current);
+                      fileLongPressRef.current = null;
+                    }
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setIsFileSelectionMode(true);
+                    if (!selectedFiles.includes(file.id)) {
+                      toggleSelect(file.id);
+                    }
+                  }}
+                >
+                  {/* Image */}
+                  <ThumbnailImage
+                    file={file}
+                    alt={file.name}
+                    className="w-full h-full object-cover"
+                  />
+
+                  {/* Selection Checkbox - visible in selection mode or when selected */}
+                  {(isFileSelectionMode || selectedFiles.includes(file.id)) && (
+                    <div className="absolute top-2 left-2">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${selectedFiles.includes(file.id)
-                          ? "bg-purple-500 text-white"
-                          : "bg-black/50 border-2 border-white/50 text-transparent hover:border-purple-400"
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedFiles.includes(file.id)
+                          ? 'bg-white border-white'
+                          : 'border-white/70 bg-black/30'
                           }`}
                       >
-                        <Check className="w-4 h-4" />
+                        {selectedFiles.includes(file.id) && (
+                          <Check className="w-4 h-4 text-black" />
+                        )}
                       </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Info Section */}
-                  <div className="p-2.5 sm:p-4 space-y-2 sm:space-y-3">
-                    {/* File Name */}
-                    <h3 className="file-title font-semibold text-white truncate group-hover:text-purple-300 transition-colors">
-                      {file.name}
-                    </h3>
-
-                    {/* Tags */}
-                    <div className="flex flex-wrap gap-1">
-                      {file.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="file-tag bg-purple-500/20 text-purple-300 rounded-full hover:bg-purple-500/30 cursor-pointer transition-colors"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
+                  {/* Video duration badge */}
+                  {file.duration && (
+                    <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/70 rounded text-white text-xs font-medium">
+                      {file.duration}
                     </div>
+                  )}
 
-                    {/* Meta Info */}
-                    <div className="flex items-center justify-between file-meta text-purple-200/60">
-                      <div className="flex items-center gap-1.5 sm:gap-3">
-                        <span className="flex items-center gap-0.5 sm:gap-1">
-                          <Eye className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5" />
-                          {formatNumber(file.views)}
-                        </span>
-                        <span className="flex items-center gap-0.5 sm:gap-1">
-                          <HardDrive className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5" />
-                          {file.size}
-                        </span>
-                      </div>
-                      <span className="flex items-center gap-0.5 sm:gap-1">
-                        <Calendar className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5" />
-                        {file.date}
-                      </span>
+                  {/* Play icon for videos */}
+                  {(file.type === "video" || file.type === "clip") && !file.duration && (
+                    <div className="absolute bottom-1 right-1">
+                      <Play className="w-4 h-4 text-white drop-shadow-lg" fill="white" />
                     </div>
+                  )}
 
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-1.5 sm:gap-2 pt-1.5 sm:pt-2 file-actions">
-                      {/* Share Button (was Save) */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShareFileId(file.id);
-                          setShowShareModal(true);
-                        }}
-                        className="flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl transition-all mobile-touch-target bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-400 hover:to-emerald-400"
-                      >
-                        <Share2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                        <span className="btn-text font-medium hidden sm:inline">
-                          Share
-                        </span>
-                      </button>
-                      {/* Download Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownloadFile(file.id);
-                        }}
-                        className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-400 hover:to-cyan-400 transition-colors mobile-touch-target"
-                        title="ดาวน์โหลด"
-                      >
-                        <Download className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </button>
-                      {/* Delete Button (was Share/LINE) */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteFile(file.id);
-                        }}
-                        className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-white/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors mobile-touch-target"
-                        title="ลบไฟล์"
-                      >
-                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </button>
-                    </div>
-                  </div>
+                  {/* Share icon - only when not in selection mode */}
+                  {!isFileSelectionMode && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShareFileId(file.id);
+                        setShowShareModal(true);
+                      }}
+                      className="absolute bottom-1 right-1 p-1.5 rounded-full bg-black/40 text-white/80 hover:text-white hover:bg-black/60 transition-all"
+                    >
+                      <Share2 className="w-4 h-4 drop-shadow-lg" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
           )}
+
+          {/* File Selection Mode Bottom Action Bar - Slide up animation */}
+          <div
+            className={`fixed bottom-0 left-0 right-0 bg-black border-t border-white/10 z-50 safe-area-bottom transform transition-transform duration-300 ease-out ${isFileSelectionMode ? 'translate-y-0' : 'translate-y-full'
+              }`}
+          >
+            <div className="flex items-center justify-around py-3 px-4">
+              {/* Add to Album */}
+              <button
+                onClick={() => {
+                  if (selectedFiles.length > 0) {
+                    alert(`เพิ่ม ${selectedFiles.length} รายการไปยังอัลบั้ม`);
+                  }
+                }}
+                className="flex flex-col items-center gap-1 px-4 py-2"
+              >
+                <FolderPlus className="w-6 h-6 text-white" />
+                <span className="text-white text-xs">สร้าง</span>
+              </button>
+
+              {/* Share */}
+              <button
+                onClick={() => {
+                  if (selectedFiles.length > 0) {
+                    setShareFileId(selectedFiles[0]);
+                    setShowShareModal(true);
+                  }
+                }}
+                className="flex flex-col items-center gap-1 px-4 py-2"
+              >
+                <Share2 className="w-6 h-6 text-white" />
+                <span className="text-white text-xs">แชร์</span>
+              </button>
+
+              {/* Delete */}
+              <button
+                onClick={() => {
+                  if (selectedFiles.length > 0) {
+                    setConfirmModal({
+                      isOpen: true,
+                      type: 'delete',
+                      title: 'ลบไฟล์ที่เลือก',
+                      message: `คุณต้องการลบ ${selectedFiles.length} ไฟล์ที่เลือกหรือไม่?`,
+                      onConfirm: () => {
+                        selectedFiles.forEach(id => handleDeleteFile(id));
+                        setSelectedFiles([]);
+                        setIsFileSelectionMode(false);
+                        closeConfirmModal();
+                      },
+                      confirmText: 'ลบ',
+                      cancelText: 'ยกเลิก',
+                    });
+                  }
+                }}
+                className="flex flex-col items-center gap-1 px-4 py-2"
+              >
+                <Trash2 className="w-6 h-6 text-white" />
+                <span className="text-white text-xs">ลบ</span>
+              </button>
+
+              {/* More Options */}
+              <button
+                onClick={() => setShowHeaderMenu(true)}
+                className="flex flex-col items-center gap-1 px-4 py-2"
+              >
+                <MoreVertical className="w-6 h-6 text-white" />
+                <span className="text-white text-xs">เพิ่มเติม</span>
+              </button>
+            </div>
+          </div>
 
           {/* Lightbox Modal */}
           {showLightbox && filteredFiles[lightboxIndex] && (
@@ -3585,51 +3681,72 @@ const AllFilesGalleryPage = () => {
             </div>
           )}
 
-          {/* Floating Action Button - Always visible on mobile */}
-          <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col gap-2 sm:gap-3 md:hidden">
-            {/* Selected files actions */}
-            {selectedFiles.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={() => {
-                    // Share all selected files
-                    if (selectedFiles.length === 1) {
-                      setShareFileId(selectedFiles[0]);
-                      setShowShareModal(true);
-                    } else {
-                      shareToLine(selectedFiles[0]);
-                    }
-                  }}
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full line-share-btn text-white shadow-lg flex items-center justify-center"
-                >
-                  <Send className="w-5 h-5 sm:w-6 sm:h-6" />
-                </button>
-                <button
-                  onClick={() => {
-                    selectedFiles.forEach(id => {
-                      setAIProcessingFiles(prev => [...prev, id]);
-                    });
-                    setTimeout(() => {
-                      alert(`🎬 AI Video Production started for ${selectedFiles.length} files!`);
-                      setAIProcessingFiles([]);
-                      setSelectedFiles([]);
-                    }, 2000);
-                  }}
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg flex items-center justify-center"
-                >
-                  <Wand2 className="w-5 h-5 sm:w-6 sm:h-6" />
-                </button>
-              </div>
-            )}
-
-            {/* Main upload FAB - prominent cyan button */}
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-xl shadow-blue-500/40 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+          {/* Folder Action Sheet - Samsung Gallery Style */}
+          {folderActionSheet.isOpen && (
+            <div
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center"
+              onClick={() => setFolderActionSheet({ isOpen: false, folderId: null, folderName: '' })}
             >
-              <Plus className="w-7 h-7 sm:w-8 sm:h-8" />
-            </button>
-          </div>
+              <div
+                className="w-full max-w-lg bg-slate-900 rounded-t-3xl overflow-hidden animate-slide-up"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="p-5 border-b border-white/10">
+                  <div className="w-12 h-1 bg-white/30 rounded-full mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-white text-center">
+                    {folderActionSheet.folderName}
+                  </h3>
+                </div>
+
+                {/* Actions */}
+                <div className="p-4 space-y-2">
+                  {/* Edit Name */}
+                  <button
+                    onClick={() => {
+                      const folder = displayFolders.find(f => f.id === folderActionSheet.folderId);
+                      if (folder) {
+                        handleStartEditSubFolder(folder);
+                      }
+                      setFolderActionSheet({ isOpen: false, folderId: null, folderName: '' });
+                    }}
+                    className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                      <Pencil className="w-6 h-6 text-blue-400" />
+                    </div>
+                    <span className="text-white text-lg">แก้ไขชื่อ</span>
+                  </button>
+
+                  {/* Delete */}
+                  <button
+                    onClick={() => {
+                      if (folderActionSheet.folderId) {
+                        handleDeleteSubFolder(folderActionSheet.folderId);
+                      }
+                      setFolderActionSheet({ isOpen: false, folderId: null, folderName: '' });
+                    }}
+                    className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-white/5 hover:bg-red-500/20 transition-colors"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                      <Trash2 className="w-6 h-6 text-red-400" />
+                    </div>
+                    <span className="text-red-400 text-lg">ลบโฟลเดอร์</span>
+                  </button>
+                </div>
+
+                {/* Cancel Button */}
+                <div className="p-4 pt-0">
+                  <button
+                    onClick={() => setFolderActionSheet({ isOpen: false, folderId: null, folderName: '' })}
+                    className="w-full py-4 rounded-2xl bg-white/10 text-white font-medium text-lg hover:bg-white/20 transition-colors"
+                  >
+                    ยกเลิก
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* File Progress Container - Upload/Download animations */}

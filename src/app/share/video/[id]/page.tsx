@@ -2,6 +2,7 @@ import { Metadata, ResolvingMetadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import fs from "fs";
 import path from "path";
+import CopyButton from "./CopyButton";
 
 // Base URL for the application
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://app.bjhbangkok.com";
@@ -23,8 +24,11 @@ async function getVideoInfo(id: string): Promise<VideoInfo | null> {
         // Decode the ID (it's base64 encoded path)
         const decodedPath = Buffer.from(id, "base64url").toString("utf-8");
 
-        // Security check - ensure path is within marketing folder
-        if (!decodedPath.startsWith("/marketing/") && !decodedPath.startsWith("marketing/")) {
+        // Security check - ensure path is within allowed folders
+        const allowedFolders = ["/images/video/", "/marketing/", "images/video/", "marketing/"];
+        const isAllowed = allowedFolders.some(folder => decodedPath.includes(folder));
+
+        if (!isAllowed) {
             return null;
         }
 
@@ -50,11 +54,20 @@ async function getVideoInfo(id: string): Promise<VideoInfo | null> {
 
         const mimeType = mimeTypes[ext] || "video/mp4";
 
+        // Use LINE-specific video endpoint for OG tags (supports transcoded versions)
+        // This endpoint serves cached transcoded H.264 version if available
+        const lineVideoUrl = `${BASE_URL}/api/line-video/${id}`;
+
+        // Direct URL for fallback/player
+        const directUrl = `${BASE_URL}${normalizedPath}`;
+
         // Generate thumbnail path (check for existing thumbnail)
         const thumbnailName = `${path.basename(fileName, ext)}_thumb.jpg`;
-        const thumbnailPath = `/images/video/${thumbnailName}`;
+        const folderPath = path.dirname(normalizedPath);
+        const thumbnailPath = `${folderPath}/${thumbnailName}`;
         const thumbnailFullPath = path.join(process.cwd(), "public", thumbnailPath);
 
+        // Also check for a thumbnail in the same folder
         const thumbnail = fs.existsSync(thumbnailFullPath)
             ? `${BASE_URL}${thumbnailPath}`
             : `${BASE_URL}/images/video-placeholder.svg`;
@@ -62,11 +75,11 @@ async function getVideoInfo(id: string): Promise<VideoInfo | null> {
         return {
             id,
             name: fileName,
-            url: `${BASE_URL}${normalizedPath}`,
+            url: lineVideoUrl, // Use LINE-optimized endpoint for OG tags
             thumbnail,
             width: 1280,
             height: 720,
-            mimeType,
+            mimeType: "video/mp4", // Always report as MP4 for LINE
         };
     } catch (error) {
         console.error("Error getting video info:", error);
@@ -128,7 +141,7 @@ export async function generateMetadata(
             images: [video.thumbnail],
         },
 
-        // Additional meta tags
+        // Additional meta tags via 'other' - these will be rendered as <meta name="key" content="value">
         other: {
             // LINE specific
             "line:title": video.name,
@@ -140,6 +153,13 @@ export async function generateMetadata(
 
             // Apple specific for inline video
             "apple-mobile-web-app-capable": "yes",
+
+            // Additional OG video tags as fallback
+            "og:video": video.url,
+            "og:video:secure_url": video.url,
+            "og:video:type": video.mimeType,
+            "og:video:width": String(video.width),
+            "og:video:height": String(video.height),
         },
     };
 }
@@ -158,81 +178,55 @@ export default async function VideoSharePage({
     }
 
     return (
-        <>
-            {/* Additional meta tags that Next.js Metadata API doesn't support directly */}
-            <head>
-                {/* Essential LINE video meta tags */}
-                <meta property="og:video" content={video.url} />
-                <meta property="og:video:secure_url" content={video.url} />
-                <meta property="og:video:type" content={video.mimeType} />
-                <meta property="og:video:width" content={String(video.width)} />
-                <meta property="og:video:height" content={String(video.height)} />
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+            <div className="max-w-4xl w-full">
+                {/* Video Player */}
+                <div className="bg-black rounded-2xl overflow-hidden shadow-2xl">
+                    <video
+                        controls
+                        autoPlay
+                        playsInline
+                        preload="metadata"
+                        poster={video.thumbnail}
+                        className="w-full aspect-video"
+                        controlsList="nodownload"
+                    >
+                        <source src={video.url} type={video.mimeType} />
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
 
-                {/* Twitter Player Card */}
-                <meta name="twitter:player" content={`${BASE_URL}/embed/video/${id}`} />
-                <meta name="twitter:player:width" content={String(video.width)} />
-                <meta name="twitter:player:height" content={String(video.height)} />
-                <meta name="twitter:player:stream" content={video.url} />
-                <meta name="twitter:player:stream:content_type" content={video.mimeType} />
-            </head>
+                {/* Video Info */}
+                <div className="mt-6 text-center">
+                    <h1 className="text-2xl font-bold text-white mb-2">{video.name}</h1>
+                    <p className="text-white/60">BJH Bangkok Medical Center</p>
 
-            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-                <div className="max-w-4xl w-full">
-                    {/* Video Player */}
-                    <div className="bg-black rounded-2xl overflow-hidden shadow-2xl">
-                        <video
-                            controls
-                            autoPlay
-                            playsInline
-                            preload="metadata"
-                            poster={video.thumbnail}
-                            className="w-full aspect-video"
-                            controlsList="nodownload"
-                        >
-                            <source src={video.url} type={video.mimeType} />
-                            Your browser does not support the video tag.
-                        </video>
-                    </div>
-
-                    {/* Video Info */}
-                    <div className="mt-6 text-center">
-                        <h1 className="text-2xl font-bold text-white mb-2">{video.name}</h1>
-                        <p className="text-white/60">BJH Bangkok Medical Center</p>
-
-                        {/* Share buttons */}
-                        <div className="mt-6 flex justify-center gap-4">
-                            <a
-                                href={`https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(`${BASE_URL}/share/video/${id}`)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-6 py-3 bg-[#00B900] hover:bg-[#00A000] text-white rounded-xl font-medium transition-colors flex items-center gap-2"
-                            >
-                                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.349 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314" />
-                                </svg>
-                                Share on LINE
-                            </a>
-
-                            <button
-                                onClick={() => navigator.clipboard?.writeText(`${BASE_URL}/share/video/${id}`)}
-                                className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium transition-colors"
-                            >
-                                Copy Link
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Back to gallery link */}
-                    <div className="mt-8 text-center">
+                    {/* Share buttons */}
+                    <div className="mt-6 flex justify-center gap-4">
                         <a
-                            href="/all-files-gallery"
-                            className="text-purple-400 hover:text-purple-300 underline"
+                            href={`https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(`${BASE_URL}/share/video/${id}`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-6 py-3 bg-[#00B900] hover:bg-[#00A000] text-white rounded-xl font-medium transition-colors flex items-center gap-2"
                         >
-                            ← Back to Gallery
+                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.349 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314" />
+                            </svg>
+                            Share on LINE
                         </a>
+
+                        <CopyButton url={`${BASE_URL}/share/video/${id}`} />
                     </div>
+                </div>                {/* Back to gallery link */}
+                <div className="mt-8 text-center">
+                    <a
+                        href="/all-files-gallery"
+                        className="text-purple-400 hover:text-purple-300 underline"
+                    >
+                        ← Back to Gallery
+                    </a>
                 </div>
             </div>
-        </>
+        </div>
     );
 }

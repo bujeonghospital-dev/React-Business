@@ -1,8 +1,9 @@
-import { notFound } from "next/navigation";
+﻿import { notFound } from "next/navigation";
 import fs from "fs";
 import path from "path";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://app.bjhbangkok.com";
+const VIDEO_ROOT = path.join(process.cwd(), "public", "images", "video");
 
 interface VideoInfo {
     url: string;
@@ -14,12 +15,22 @@ async function getVideoInfo(id: string): Promise<VideoInfo | null> {
     try {
         const decodedPath = Buffer.from(id, "base64url").toString("utf-8");
 
-        if (!decodedPath.includes("/marketing/")) {
+        // Allow both marketing and images/video paths
+        const allowedPrefixes = ["/marketing/", "marketing/", "/images/video/", "images/video/"];
+        const isAllowed = allowedPrefixes.some((p) => decodedPath.startsWith(p));
+        if (!isAllowed) {
             return null;
         }
 
         const normalizedPath = decodedPath.startsWith("/") ? decodedPath : `/${decodedPath}`;
         const fullPath = path.join(process.cwd(), "public", normalizedPath);
+
+        // Security: prevent path traversal
+        const resolvedPath = path.resolve(fullPath);
+        const publicDir = path.resolve(process.cwd(), "public");
+        if (!resolvedPath.startsWith(publicDir)) {
+            return null;
+        }
 
         if (!fs.existsSync(fullPath)) {
             return null;
@@ -33,16 +44,30 @@ async function getVideoInfo(id: string): Promise<VideoInfo | null> {
             ".m4v": "video/x-m4v",
         };
 
-        const fileName = path.basename(fullPath, ext);
-        const thumbnailPath = `/images/video/${fileName}_thumb.jpg`;
-        const thumbnailFullPath = path.join(process.cwd(), "public", thumbnailPath);
+        // Find thumbnail
+        const baseName = path.basename(fullPath, ext);
+        const thumbnailCandidates = [
+            `${baseName}_thumb.jpg`,
+            `${baseName}_thumb.png`,
+            `${baseName}.jpg`,
+        ];
 
-        const thumbnail = fs.existsSync(thumbnailFullPath)
-            ? `${BASE_URL}${thumbnailPath}`
-            : `${BASE_URL}/images/video-placeholder.svg`;
+        let thumbnail = `${BASE_URL}/images/video-placeholder.svg`;
+        for (const thumbName of thumbnailCandidates) {
+            const thumbPath = path.join(path.dirname(fullPath), thumbName);
+            if (fs.existsSync(thumbPath)) {
+                const relativePath = path.relative(path.join(process.cwd(), "public"), thumbPath);
+                const encodedPath = relativePath.split(path.sep).map(s => encodeURIComponent(s)).join("/");
+                thumbnail = `${BASE_URL}/${encodedPath}`;
+                break;
+            }
+        }
+
+        // URL encode the path for special characters
+        const encodedVideoPath = normalizedPath.split("/").map(s => encodeURIComponent(s)).join("/");
 
         return {
-            url: `${BASE_URL}${normalizedPath}`,
+            url: `${BASE_URL}${encodedVideoPath}`,
             mimeType: mimeTypes[ext] || "video/mp4",
             thumbnail,
         };

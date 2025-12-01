@@ -9,11 +9,13 @@ interface DevMiniToolbarProps {
   position?: "bottom-left" | "bottom-right";
   storageKey?: string; // key สำหรับจำค่าเปิด/ปิด
   items?: MenuItem[];
+  hiddenPaths?: string[]; // paths to hide the toolbar on
 }
 const DevMiniToolbar: React.FC<DevMiniToolbarProps> = ({
   position = "bottom-left",
   storageKey = "dev_toolbar_visible",
   items,
+  hiddenPaths = [],
 }) => {
   const [open, setOpen] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -103,7 +105,9 @@ const DevMiniToolbar: React.FC<DevMiniToolbarProps> = ({
     },
   ];
   const data = items ?? defaultItems;
-  if (hidden) return null;
+  // Hide on certain paths
+  const isPathHidden = hiddenPaths.some(p => path?.startsWith(p));
+  if (hidden || isPathHidden) return null;
   const containerPos =
     position === "bottom-left" ? "left-4 bottom-4" : "right-4 bottom-4";
   return (
@@ -177,11 +181,10 @@ const DevMiniToolbar: React.FC<DevMiniToolbarProps> = ({
                 </button>
                 {submenuIndex === idx && (
                   <div
-                    className={`absolute top-0 ${
-                      position === "bottom-left"
+                    className={`absolute top-0 ${position === "bottom-left"
                         ? "left-full ml-2"
                         : "right-full mr-2"
-                    } w-60 rounded-xl border bg-white shadow-xl`}
+                      } w-60 rounded-xl border bg-white shadow-xl`}
                   >
                     {item.items.map((sub, sidx) =>
                       sub.type === "action" ? (
@@ -218,4 +221,4 @@ const DevMiniToolbar: React.FC<DevMiniToolbarProps> = ({
     </div>
   );
 };
-export default DevMiniToolbar;
+export default DevMiniToolbar;

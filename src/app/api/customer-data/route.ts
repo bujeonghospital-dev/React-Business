@@ -3,6 +3,7 @@ import pool from "@/lib/db";
 // Mapping ชื่อคอลัมน์จากภาษาอังกฤษ (ในฐานข้อมูล) เป็นภาษาไทย (สำหรับ UI)
 const columnMapping: Record<string, string> = {
   id: "id",
+  id_all: "id_all",
   status: "สถานะ",
   source: "แหล่งที่มา",
   interested_product: "ผลิตภัณฑ์ที่สนใจ",
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
     client = await pool.connect();
     // ดึงข้อมูลทั้งหมดจากตาราง bjh_all_leads ใน schema BJH-Server
     const result = await client.query(
-      'SELECT * FROM "BJH-Server".bjh_all_leads ORDER BY id DESC'
+      'SELECT *, id_all AS id FROM "BJH-Server".bjh_master_customers ORDER BY id_all DESC'
     );
     const customers = result.rows;
     // แปลงชื่อคอลัมน์เป็นภาษาไทย
@@ -146,7 +147,8 @@ export async function POST(request: NextRequest) {
       const setClause = fields
         .map((field, index) => `${field} = $${index + 1}`)
         .join(", ");
-      const query = `UPDATE "BJH-Server".bjh_all_leads SET ${setClause} WHERE id = $${
+      const primaryKeyColumn = "id_all";
+      const query = `UPDATE "BJH-Server".bjh_master_customers SET ${setClause} WHERE ${primaryKeyColumn} = $${
         fields.length + 1
       } RETURNING *`;
       const result = await pool.query(query, [...values, id]);
@@ -191,7 +193,7 @@ export async function POST(request: NextRequest) {
         const placeholders = fields
           .map((_, index) => `$${index + 1}`)
           .join(", ");
-        const query = `INSERT INTO "BJH-Server".bjh_all_leads (${fields.join(
+        const query = `INSERT INTO "BJH-Server".bjh_master_customers (${fields.join(
           ", "
         )}) VALUES (${placeholders}) RETURNING *`;
 
@@ -209,36 +211,15 @@ export async function POST(request: NextRequest) {
 
         // Check if it's a duplicate key error
         if (insertError.code === "23505") {
-          // Try to reset sequence
-          try {
-            await pool.query(`
-              SELECT setval(
-                pg_get_serial_sequence('"BJH-Server".bjh_all_leads', 'id'),
-                (SELECT COALESCE(MAX(id), 0) + 1 FROM "BJH-Server".bjh_all_leads),
-                false
-              )
-            `);
-            return NextResponse.json(
-              {
-                success: false,
-                error:
-                  "ID sequence ไม่ถูกต้อง ระบบได้แก้ไขแล้ว กรุณาลองเพิ่มข้อมูลอีกครั้ง",
-                code: "SEQUENCE_RESET",
-              },
-              { status: 409 }
-            );
-          } catch (seqError) {
-            console.error("Sequence reset error:", seqError);
-            return NextResponse.json(
-              {
-                success: false,
-                error:
-                  "ไม่สามารถเพิ่มข้อมูลได้ กรุณาติดต่อผู้ดูแลระบบเพื่อแก้ไข ID sequence",
-                details: insertError.message,
-              },
-              { status: 500 }
-            );
-          }
+          return NextResponse.json(
+            {
+              success: false,
+              error: "ข้อมูลซ้ำ กรุณาตรวจสอบข้อมูลก่อนส่ง",
+              code: "DUPLICATE_ENTRY",
+              details: insertError.message,
+            },
+            { status: 409 }
+          );
         }
 
         throw insertError;
@@ -246,7 +227,7 @@ export async function POST(request: NextRequest) {
     } else if (action === "delete") {
       // ลบข้อมูลลูกค้า
       const { id } = data;
-      await pool.query('DELETE FROM "BJH-Server".bjh_all_leads WHERE id = $1', [
+      await pool.query('DELETE FROM "BJH-Server".bjh_master_customers WHERE id_all = $1', [
         id,
       ]);
       return NextResponse.json({
@@ -266,7 +247,7 @@ export async function POST(request: NextRequest) {
 
       // สร้าง placeholders สำหรับ SQL query ($1, $2, $3, ...)
       const placeholders = ids.map((_, index) => `$${index + 1}`).join(", ");
-      const query = `DELETE FROM "BJH-Server".bjh_all_leads WHERE id IN (${placeholders}) RETURNING id`;
+      const query = `DELETE FROM "BJH-Server".bjh_master_customers WHERE id_all IN (${placeholders}) RETURNING id_all AS id`;
 
       const result = await pool.query(query, ids);
 

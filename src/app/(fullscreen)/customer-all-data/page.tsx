@@ -341,8 +341,8 @@ const CustomerAllDataPage = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      // Check if click is outside all dropdown menus
-      if (!target.closest(".relative.group")) {
+      // Close dropdowns when clicking outside the filter toolbar
+      if (!target.closest('.filter-toolbar')) {
         closeAllFilterMenus();
       }
     };
@@ -1158,7 +1158,7 @@ const CustomerAllDataPage = () => {
 
         {/* Desktop Filters - Hidden on mobile */}
         <div className="hidden md:block bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4">
-          <div className="flex flex-wrap items-center gap-3 mb-3">
+          <div className="flex flex-wrap items-center gap-3 mb-3 filter-toolbar">
             {/* Status Filter */}
             <div className="relative">
               <button

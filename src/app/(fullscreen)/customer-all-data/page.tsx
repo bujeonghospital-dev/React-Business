@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
@@ -15,6 +15,7 @@ import {
 import { EditCustomerModal } from "@/components/EditCustomerModal";
 import { AddCustomerModal } from "@/components/AddCustomerModal";
 import UserMenu from "@/components/UserMenu";
+import { getLatestUpdatedAt } from "@/app/api/customer-data/utils";
 // Add custom styles for scrollbar (horizontal and vertical)
 const customScrollbarStyle = `
   .custom-scrollbar::-webkit-scrollbar {
@@ -73,7 +74,10 @@ interface TableSizeOption {
 }
 const CustomerAllDataPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const customerType = searchParams.get("type"); // "existing" or "new"
   const [tableData, setTableData] = useState<TableData[]>([]);
+  const [lastUpdateTimestamp, setLastUpdateTimestamp] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -115,6 +119,7 @@ const CustomerAllDataPage = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [statusOptions, setStatusOptions] = useState<
     Array<{ value: string; label: string; color: string }>
   >([]);
@@ -123,6 +128,7 @@ const CustomerAllDataPage = () => {
   );
   const [showTableSizeMenu, setShowTableSizeMenu] = useState(false);
   const [tableSize, setTableSize] = useState<number>(500);
+  const tableDataRef = useRef<TableData[]>([]);
   const fetchData = async () => {
     try {
       setIsLoading(true);
@@ -257,8 +263,23 @@ const CustomerAllDataPage = () => {
         sanitizedTables.forEach((table: TableData) => {
           allData.push(...table.data);
         });
+        // Filter by customer type based on CN number (รหัสลูกค้า or customer_code)
+        let typeFilteredData = allData;
+        if (customerType === "existing") {
+          // ลูกค้าเก่า - customers with CN number
+          typeFilteredData = allData.filter((row) => {
+            const cnValue = row["รหัสลูกค้า"] || row["customer_code"];
+            return cnValue && cnValue.toString().trim() !== "";
+          });
+        } else if (customerType === "new") {
+          // ลูกค้าใหม่ - customers without CN number
+          typeFilteredData = allData.filter((row) => {
+            const cnValue = row["รหัสลูกค้า"] || row["customer_code"];
+            return !cnValue || cnValue.toString().trim() === "";
+          });
+        }
         // Keep all rows that have at least one value in any header
-        const filteredData = allData.filter((row) => {
+        const filteredData = typeFilteredData.filter((row) => {
           return filteredHeaders.some((header) => {
             const value = row[header];
             return value !== undefined && value !== null && value !== "";
@@ -271,6 +292,10 @@ const CustomerAllDataPage = () => {
           data: filteredData,
         };
         setTableData([mergedTable]);
+        const latestTimestamp = getLatestUpdatedAt(result.data);
+        if (latestTimestamp) {
+          setLastUpdateTimestamp(latestTimestamp);
+        }
       } else {
         setTableData([]);
       }
@@ -319,6 +344,66 @@ const CustomerAllDataPage = () => {
       console.error("Error fetching table size options:", error);
     }
   };
+  const fetchRealtimeUpdates = useCallback(async () => {
+    if (!lastUpdateTimestamp || tableDataRef.current.length === 0) {
+      return;
+    }
+    try {
+      const response = await fetch(
+        `/api/customer-updates?since=${encodeURIComponent(lastUpdateTimestamp)}`
+      );
+      const result = await response.json();
+      if (!response.ok || result.success === false) {
+        return;
+      }
+      if (!Array.isArray(result.data) || result.data.length === 0) {
+        return;
+      }
+      const currentTable = tableDataRef.current[0];
+      if (!currentTable) {
+        return;
+      }
+      const mergedMap = new Map<any, Record<string, any>>();
+      currentTable.data.forEach((row) => {
+        if (row.id !== undefined && row.id !== null) {
+          mergedMap.set(row.id, row);
+        }
+      });
+      result.data.forEach((incoming: Record<string, any>) => {
+        if (incoming.id === undefined || incoming.id === null) {
+          return;
+        }
+        const existing = mergedMap.get(incoming.id);
+        mergedMap.set(
+          incoming.id,
+          existing ? { ...existing, ...incoming } : incoming
+        );
+      });
+      const updatedData = Array.from(mergedMap.values());
+      const mergedHeaders = [...currentTable.headers];
+      (result.columns || []).forEach((column: string) => {
+        if (!mergedHeaders.includes(column)) {
+          mergedHeaders.push(column);
+        }
+      });
+      setTableData([
+        {
+          ...currentTable,
+          headers: mergedHeaders,
+          data: updatedData,
+          rowCount: updatedData.length,
+        },
+      ]);
+      if (result.latestUpdatedAt) {
+        setLastUpdateTimestamp(result.latestUpdatedAt);
+      }
+    } catch (error) {
+      console.error("Error fetching realtime updates:", error);
+    }
+  }, [lastUpdateTimestamp]);
+  useEffect(() => {
+    tableDataRef.current = tableData;
+  }, [tableData]);
   useEffect(() => {
     // Check authentication and get user data
     const checkAuth = () => {
@@ -335,13 +420,21 @@ const CustomerAllDataPage = () => {
     fetchStatusOptions();
     fetchTableSizeOptions();
   }, []);
+  useEffect(() => {
+    if (!lastUpdateTimestamp || tableData.length === 0) {
+      return;
+    }
+    fetchRealtimeUpdates();
+    const interval = setInterval(fetchRealtimeUpdates, 8000);
+    return () => clearInterval(interval);
+  }, [lastUpdateTimestamp, fetchRealtimeUpdates, tableData.length]);
 
   // Close all menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      // Check if click is outside all dropdown menus
-      if (!target.closest(".relative.group")) {
+      // Close dropdowns when clicking outside the filter toolbar
+      if (!target.closest('.filter-toolbar')) {
         closeAllFilterMenus();
       }
     };
@@ -522,11 +615,10 @@ const CustomerAllDataPage = () => {
       return;
     }
 
-    const confirmMessage = `คุณต้องการลบข้อมูล ${
-      selectedIds.length
-    } รายการใช่หรือไม่?\n\nID ที่จะลบ: ${selectedIds.join(
-      ", "
-    )}\n\nการดำเนินการนี้ไม่สามารถย้อนกลับได้`;
+    const confirmMessage = `คุณต้องการลบข้อมูล ${selectedIds.length
+      } รายการใช่หรือไม่?\n\nID ที่จะลบ: ${selectedIds.join(
+        ", "
+      )}\n\nการดำเนินการนี้ไม่สามารถย้อนกลับได้`;
 
     if (!confirm(confirmMessage)) {
       return;
@@ -584,6 +676,24 @@ const CustomerAllDataPage = () => {
   };
   const filteredAndSortedData = useMemo(() => {
     if (tableData.length === 0) return [];
+
+    // Check if any filter is active - if not, return empty for performance
+    const hasActiveFilter =
+      statusFilter !== "all" ||
+      productFilter !== "all" ||
+      contactFilter !== "all" ||
+      followUpLastDate ||
+      followUpNextDate ||
+      consultDate ||
+      surgeryDate ||
+      getNameDate ||
+      getConsultApptDate ||
+      getSurgeryApptDate ||
+      searchTerm;
+
+    // Return empty array if no filters applied (for mobile performance)
+    if (!hasActiveFilter) return [];
+
     let filtered = [...tableData[0].data];
     // Filter by current user if not superadmin or admin
     if (
@@ -746,6 +856,24 @@ const CustomerAllDataPage = () => {
     getConsultApptDate,
     getSurgeryApptDate,
   ]);
+
+  // Helper to check if any filter is active (for UI display)
+  const hasActiveFilter = useMemo(() => {
+    return (
+      statusFilter !== "all" ||
+      productFilter !== "all" ||
+      contactFilter !== "all" ||
+      followUpLastDate ||
+      followUpNextDate ||
+      consultDate ||
+      surgeryDate ||
+      getNameDate ||
+      getConsultApptDate ||
+      getSurgeryApptDate ||
+      searchTerm
+    );
+  }, [statusFilter, productFilter, contactFilter, followUpLastDate, followUpNextDate, consultDate, surgeryDate, getNameDate, getConsultApptDate, getSurgeryApptDate, searchTerm]);
+
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -818,80 +946,335 @@ const CustomerAllDataPage = () => {
   return (
     <>
       <style>{customScrollbarStyle}</style>
-      <div className="w-full min-h-screen bg-gray-50 p-4 flex flex-col">
-        {/* Back Button */}
-        <div className="mb-4">
+      <div className="w-full min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 p-3 flex flex-col">
+        {/* Header - Back and Add buttons */}
+        <div className="flex justify-between items-center mb-3">
           <button
-            onClick={() => router.push("/home")}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg font-medium text-sm"
+            onClick={() => router.push("/customer-selection")}
+            className="flex items-center justify-center w-11 h-11 bg-white hover:bg-slate-50 text-slate-600 rounded-xl transition-all shadow-sm border border-slate-200 active:scale-95"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span>กลับไปหน้าหลัก</span>
+          </button>
+          {/* Title showing customer type */}
+          <div className="flex-1 text-center">
+            <h1 className="text-lg font-semibold text-slate-700">
+              {customerType === "existing" ? "ลูกค้าเก่า" : customerType === "new" ? "ลูกค้าใหม่" : "ลูกค้าทั้งหมด"}
+            </h1>
+          </div>
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center justify-center w-11 h-11 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl transition-all shadow-md active:scale-95"
+          >
+            <Plus className="w-6 h-6" />
           </button>
         </div>
-        {/* Header with User Menu */}
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              ข้อมูลลูกค้าทั้งหมด
-            </h1>
-            <p className="text-sm text-gray-600 mt-1">
-              {currentUser &&
-              currentUser.role_tag !== "superadmin" &&
-              currentUser.role_tag !== "admin"
-                ? `แสดงข้อมูลของ: ${currentUser.name}`
-                : "แสดงข้อมูลทั้งหมด"}
-            </p>
-          </div>
-          <UserMenu />
-        </div>
-        {/* Control Bar */}
-        <div className="bg-white rounded-lg shadow-md p-4 mb-4">
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Search */}
-            <div className="flex-1 min-w-[200px]">
-              <input
-                type="text"
-                placeholder="ค้นหา..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
 
+        {/* Search Bar */}
+        <div className="mb-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="ค้นหาลูกค้า..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm text-sm"
+            />
+          </div>
+        </div>
+
+        {/* Mobile Filter Button & Active Count */}
+        <div className="flex md:hidden items-center gap-2 mb-3">
+          <button
+            onClick={() => setShowFilterSheet(true)}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all text-sm font-medium ${hasActiveFilter
+              ? "bg-blue-500 text-white shadow-md"
+              : "bg-white text-slate-600 border border-slate-200 shadow-sm"
+              }`}
+          >
+            <Filter className="w-5 h-5" />
+            <span>ตัวกรอง</span>
+            {hasActiveFilter && (
+              <span className="bg-white text-blue-500 px-2 py-0.5 rounded-full text-xs font-bold">
+                {[
+                  statusFilter !== "all",
+                  productFilter !== "all",
+                  contactFilter !== "all",
+                  followUpLastDate,
+                  followUpNextDate,
+                  consultDate,
+                  surgeryDate,
+                  getNameDate,
+                  getConsultApptDate,
+                  getSurgeryApptDate,
+                  searchTerm
+                ].filter(Boolean).length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Mobile Delete Button - Show when items selected */}
+        {selectedIds.length > 0 && (
+          <div className="mb-3 md:hidden">
+            <button
+              onClick={handleDeleteMultiple}
+              disabled={isDeleting}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-rose-500 text-white rounded-xl text-sm font-medium hover:bg-rose-600 disabled:opacity-50 shadow-md"
+            >
+              <X className="w-4 h-4" />
+              {isDeleting ? "กำลังลบ..." : `ลบรายการที่เลือก (${selectedIds.length})`}
+            </button>
+          </div>
+        )}
+
+        {/* Mobile Filter Bottom Sheet */}
+        {showFilterSheet && (
+          <div className="fixed inset-0 z-50 md:hidden">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/50 transition-opacity"
+              onClick={() => setShowFilterSheet(false)}
+            />
+
+            {/* Sheet */}
+            <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] overflow-hidden animate-slide-up">
+              {/* Handle */}
+              <div className="flex justify-center py-3">
+                <div className="w-10 h-1 bg-slate-300 rounded-full" />
+              </div>
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 pb-3 border-b border-slate-100">
+                <h3 className="text-lg font-semibold text-slate-800">ตัวกรอง</h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setStatusFilter("all");
+                      setProductFilter("all");
+                      setContactFilter("all");
+                      setFollowUpLastDate("");
+                      setFollowUpNextDate("");
+                      setConsultDate("");
+                      setSurgeryDate("");
+                      setGetNameDate("");
+                      setGetConsultApptDate("");
+                      setGetSurgeryApptDate("");
+                    }}
+                    className="px-3 py-1.5 text-sm text-rose-500 hover:bg-rose-50 rounded-lg"
+                  >
+                    ล้างทั้งหมด
+                  </button>
+                  <button
+                    onClick={() => setShowFilterSheet(false)}
+                    className="p-2 hover:bg-slate-100 rounded-full"
+                  >
+                    <X className="w-5 h-5 text-slate-500" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Filter Content - Scrollable */}
+              <div className="overflow-y-auto max-h-[calc(85vh-120px)] px-4 py-4">
+                {/* Status Filter */}
+                <div className="mb-5">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">สถานะ</label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="all">ทั้งหมด</option>
+                    {statusOptions.map((status) => (
+                      <option key={status.value} value={status.value}>{status.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Product Filter */}
+                <div className="mb-5">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">สินค้า</label>
+                  <select
+                    value={productFilter}
+                    onChange={(e) => setProductFilter(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    {productOptions.map((product) => (
+                      <option key={product.value} value={product.value}>{product.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Contact Filter - Only for admin */}
+                {currentUser && (currentUser.role_tag === "superadmin" || currentUser.role_tag === "admin") && (
+                  <div className="mb-5">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">ผู้ติดต่อ</label>
+                    <select
+                      value={contactFilter}
+                      onChange={(e) => setContactFilter(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      {contactOptions.map((contact) => (
+                        <option key={contact.value} value={contact.value}>{contact.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Date Filters Section */}
+                <div className="mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-3">กรองตามวันที่</label>
+
+                  <div className="space-y-4">
+                    {/* วันติดตาม-ล่าสุด */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-slate-500 w-24 shrink-0">ติดตาม-ล่าสุด</span>
+                      <input
+                        type="date"
+                        value={followUpLastDate}
+                        onChange={(e) => setFollowUpLastDate(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      {followUpLastDate && (
+                        <button onClick={() => setFollowUpLastDate("")} className="p-1 text-rose-500">
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* วันติดตาม-ถัดไป */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-slate-500 w-24 shrink-0">ติดตาม-ถัดไป</span>
+                      <input
+                        type="date"
+                        value={followUpNextDate}
+                        onChange={(e) => setFollowUpNextDate(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      {followUpNextDate && (
+                        <button onClick={() => setFollowUpNextDate("")} className="p-1 text-rose-500">
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* วันที่ Consult */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-slate-500 w-24 shrink-0">วัน Consult</span>
+                      <input
+                        type="date"
+                        value={consultDate}
+                        onChange={(e) => setConsultDate(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      {consultDate && (
+                        <button onClick={() => setConsultDate("")} className="p-1 text-rose-500">
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* วันที่ผ่าตัด */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-slate-500 w-24 shrink-0">วันผ่าตัด</span>
+                      <input
+                        type="date"
+                        value={surgeryDate}
+                        onChange={(e) => setSurgeryDate(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      {surgeryDate && (
+                        <button onClick={() => setSurgeryDate("")} className="p-1 text-rose-500">
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* วันได้ชื่อ */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-slate-500 w-24 shrink-0">วันได้ชื่อ</span>
+                      <input
+                        type="date"
+                        value={getNameDate}
+                        onChange={(e) => setGetNameDate(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      {getNameDate && (
+                        <button onClick={() => setGetNameDate("")} className="p-1 text-rose-500">
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* วันได้นัด Consult */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-slate-500 w-24 shrink-0">ได้นัด Consult</span>
+                      <input
+                        type="date"
+                        value={getConsultApptDate}
+                        onChange={(e) => setGetConsultApptDate(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      {getConsultApptDate && (
+                        <button onClick={() => setGetConsultApptDate("")} className="p-1 text-rose-500">
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* วันได้นัดผ่าตัด */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-slate-500 w-24 shrink-0">ได้นัดผ่าตัด</span>
+                      <input
+                        type="date"
+                        value={getSurgeryApptDate}
+                        onChange={(e) => setGetSurgeryApptDate(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      {getSurgeryApptDate && (
+                        <button onClick={() => setGetSurgeryApptDate("")} className="p-1 text-rose-500">
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Apply Button */}
+              <div className="px-4 py-4 border-t border-slate-100 bg-white">
+                <button
+                  onClick={() => setShowFilterSheet(false)}
+                  className="w-full py-3 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition-colors"
+                >
+                  แสดงผลลัพธ์
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Desktop Filters - Hidden on mobile */}
+        <div className="hidden md:block bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4">
+          <div className="flex flex-wrap items-center gap-3 mb-3 filter-toolbar">
             {/* Status Filter */}
-            <div className="relative group">
+            <div className="relative">
               <button
                 onClick={() => {
                   closeAllFilterMenus();
                   setShowStatusMenu(!showStatusMenu);
                 }}
-                className="px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white rounded-lg flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
-              >
-                <span>
-                  สถานะ{" "}
-                  {statusFilter !== "all" &&
-                    `(${statusFilter.substring(0, 8)}...)`}
-                </span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${
-                    showStatusMenu ? "rotate-180" : ""
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${statusFilter !== "all"
+                  ? "bg-cyan-50 border-cyan-300 text-cyan-700"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                  />
-                </svg>
+              >
+                <span>สถานะ</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showStatusMenu ? "rotate-180" : ""}`} />
               </button>
               {showStatusMenu && (
-                <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 min-w-[280px] overflow-hidden">
-                  <div className="max-h-72 overflow-y-auto">
+                <div className="absolute top-full left-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-50 min-w-[200px] overflow-hidden">
+                  <div className="max-h-64 overflow-y-auto">
                     {statusOptions.map((status) => (
                       <button
                         key={status.value}
@@ -899,11 +1282,10 @@ const CustomerAllDataPage = () => {
                           setStatusFilter(status.value);
                           setShowStatusMenu(false);
                         }}
-                        className={`w-full text-left px-4 py-3 transition-all border-b border-gray-100 text-sm font-medium ${
-                          statusFilter === status.value
-                            ? `${status.color} shadow-sm`
-                            : `bg-white text-gray-700 hover:${status.color}`
-                        }`}
+                        className={`w-full text-left px-4 py-2.5 transition-all text-sm ${statusFilter === status.value
+                          ? "bg-cyan-50 text-cyan-700 font-medium"
+                          : "text-slate-600 hover:bg-slate-50"
+                          }`}
                       >
                         {statusFilter === status.value && "✓ "}
                         {status.label}
@@ -913,38 +1295,24 @@ const CustomerAllDataPage = () => {
                 </div>
               )}
             </div>
+
             {/* Product Filter */}
-            <div className="relative group">
+            <div className="relative">
               <button
                 onClick={() => {
                   closeAllFilterMenus();
                   setShowProductMenu(!showProductMenu);
                 }}
-                className="px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white rounded-lg flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
-              >
-                <span>
-                  สินค้า{" "}
-                  {productFilter !== "all" &&
-                    `(${productFilter.substring(0, 8)}...)`}
-                </span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${
-                    showProductMenu ? "rotate-180" : ""
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${productFilter !== "all"
+                  ? "bg-indigo-50 border-indigo-300 text-indigo-700"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                  />
-                </svg>
+              >
+                <span>สินค้า</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showProductMenu ? "rotate-180" : ""}`} />
               </button>
               {showProductMenu && (
-                <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 min-w-[240px] overflow-hidden">
+                <div className="absolute top-full left-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-50 min-w-[200px] overflow-hidden">
                   <div className="max-h-64 overflow-y-auto">
                     {productOptions.map((product) => (
                       <button
@@ -953,11 +1321,10 @@ const CustomerAllDataPage = () => {
                           setProductFilter(product.value);
                           setShowProductMenu(false);
                         }}
-                        className={`w-full text-left px-4 py-3 transition-colors border-b border-gray-100 text-sm font-medium ${
-                          productFilter === product.value
-                            ? "bg-indigo-50 text-indigo-700"
-                            : "bg-white text-gray-700 hover:bg-indigo-50 hover:text-indigo-700"
-                        }`}
+                        className={`w-full text-left px-4 py-2.5 transition-all text-sm ${productFilter === product.value
+                          ? "bg-indigo-50 text-indigo-700 font-medium"
+                          : "text-slate-600 hover:bg-slate-50"
+                          }`}
                       >
                         {productFilter === product.value && "✓ "}
                         {product.label}
@@ -967,823 +1334,668 @@ const CustomerAllDataPage = () => {
                 </div>
               )}
             </div>
-            {/* Contact Filter - Only show for superadmin and admin */}
-            {currentUser &&
-              (currentUser.role_tag === "superadmin" ||
-                currentUser.role_tag === "admin") && (
-                <div className="relative group">
-                  <button
-                    onClick={() => {
-                      closeAllFilterMenus();
-                      setShowContactMenu(!showContactMenu);
-                    }}
-                    className="px-4 py-2.5 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white rounded-lg flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
-                  >
-                    <span>
-                      ผู้ติดต่อ{" "}
-                      {contactFilter !== "all" && `(${contactFilter})`}
-                    </span>
-                    <svg
-                      className={`w-4 h-4 transition-transform ${
-                        showContactMenu ? "rotate-180" : ""
-                      }`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                      />
-                    </svg>
-                  </button>
-                  {showContactMenu && (
-                    <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 min-w-[180px] overflow-hidden">
-                      <div className="max-h-64 overflow-y-auto">
-                        {contactOptions.map((contact) => (
-                          <button
-                            key={contact.value}
-                            onClick={() => {
-                              setContactFilter(contact.value);
-                              setShowContactMenu(false);
-                            }}
-                            className={`w-full text-left px-4 py-3 transition-colors border-b border-gray-100 text-sm font-medium ${
-                              contactFilter === contact.value
-                                ? "bg-rose-50 text-rose-700"
-                                : "bg-white text-gray-700 hover:bg-rose-50 hover:text-rose-700"
+
+            {/* Contact Filter - Only for admin */}
+            {currentUser && (currentUser.role_tag === "superadmin" || currentUser.role_tag === "admin") && (
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    closeAllFilterMenus();
+                    setShowContactMenu(!showContactMenu);
+                  }}
+                  className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${contactFilter !== "all"
+                    ? "bg-rose-50 border-rose-300 text-rose-700"
+                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                    }`}
+                >
+                  <span>ผู้ติดต่อ</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showContactMenu ? "rotate-180" : ""}`} />
+                </button>
+                {showContactMenu && (
+                  <div className="absolute top-full left-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-50 min-w-[180px] overflow-hidden">
+                    <div className="max-h-64 overflow-y-auto">
+                      {contactOptions.map((contact) => (
+                        <button
+                          key={contact.value}
+                          onClick={() => {
+                            setContactFilter(contact.value);
+                            setShowContactMenu(false);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 transition-all text-sm ${contactFilter === contact.value
+                            ? "bg-rose-50 text-rose-700 font-medium"
+                            : "text-slate-600 hover:bg-slate-50"
                             }`}
-                          >
-                            {contactFilter === contact.value && "✓ "}
-                            {contact.label}
-                          </button>
-                        ))}
-                      </div>
+                        >
+                          {contactFilter === contact.value && "✓ "}
+                          {contact.label}
+                        </button>
+                      ))}
                     </div>
-                  )}
-                </div>
-              )}
-            {/* Date Filter 1: Follow Up Last */}
-            <div className="relative group">
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Date Filters */}
+            <div className="relative">
               <button
                 onClick={() => {
                   closeAllFilterMenus();
                   setShowFollowUpLastMenu(!showFollowUpLastMenu);
                 }}
-                className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg font-medium text-sm"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <span>วันติดตาม-ล่าสุด</span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${
-                    showFollowUpLastMenu ? "rotate-180" : ""
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${followUpLastDate
+                  ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                  />
-                </svg>
+              >
+                <span>ติดตาม-ล่าสุด</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showFollowUpLastMenu ? "rotate-180" : ""}`} />
               </button>
               {showFollowUpLastMenu && (
-                <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4 w-72">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-2">
-                      เลือกวันที่
-                    </label>
-                    <input
-                      type="date"
-                      value={followUpLastDate}
-                      onChange={(e) => setFollowUpLastDate(e.target.value)}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 text-sm transition-all"
-                    />
-                  </div>
+                <div className="absolute top-full left-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-3 w-64">
+                  <input
+                    type="date"
+                    value={followUpLastDate}
+                    onChange={(e) => setFollowUpLastDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                  />
+                  {followUpLastDate && (
+                    <button onClick={() => setFollowUpLastDate("")} className="mt-2 w-full px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-lg">
+                      ล้างตัวกรอง
+                    </button>
+                  )}
                 </div>
               )}
             </div>
-            {/* Date Filter 2: Follow Up Next */}
-            <div className="relative group">
+
+            <div className="relative">
               <button
                 onClick={() => {
                   closeAllFilterMenus();
                   setShowFollowUpNextMenu(!showFollowUpNextMenu);
                 }}
-                className="px-4 py-2.5 bg-gradient-to-r from-violet-500 to-violet-600 hover:from-violet-600 hover:to-violet-700 text-white rounded-lg flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg font-medium text-sm"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <span>วันติดตาม-ถัดไป</span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${
-                    showFollowUpNextMenu ? "rotate-180" : ""
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${followUpNextDate
+                  ? "bg-violet-50 border-violet-300 text-violet-700"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                  />
-                </svg>
+              >
+                <span>ติดตาม-ถัดไป</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showFollowUpNextMenu ? "rotate-180" : ""}`} />
               </button>
               {showFollowUpNextMenu && (
-                <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4 w-72">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-2">
-                      เลือกวันที่
-                    </label>
-                    <input
-                      type="date"
-                      value={followUpNextDate}
-                      onChange={(e) => setFollowUpNextDate(e.target.value)}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-violet-500 focus:ring-2 focus:ring-violet-200 text-sm transition-all"
-                    />
-                  </div>
+                <div className="absolute top-full left-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-3 w-64">
+                  <input
+                    type="date"
+                    value={followUpNextDate}
+                    onChange={(e) => setFollowUpNextDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-sm"
+                  />
+                  {followUpNextDate && (
+                    <button onClick={() => setFollowUpNextDate("")} className="mt-2 w-full px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-lg">
+                      ล้างตัวกรอง
+                    </button>
+                  )}
                 </div>
               )}
             </div>
-            {/* Date Filter 3: Consult */}
-            <div className="relative group">
+
+            <div className="relative">
               <button
                 onClick={() => {
                   closeAllFilterMenus();
                   setShowConsultMenu(!showConsultMenu);
                 }}
-                className="px-4 py-2.5 bg-gradient-to-r from-fuchsia-500 to-fuchsia-600 hover:from-fuchsia-600 hover:to-fuchsia-700 text-white rounded-lg flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg font-medium text-sm"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <span>วันที่ Consult</span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${
-                    showConsultMenu ? "rotate-180" : ""
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${consultDate
+                  ? "bg-fuchsia-50 border-fuchsia-300 text-fuchsia-700"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                  />
-                </svg>
+              >
+                <span>Consult</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showConsultMenu ? "rotate-180" : ""}`} />
               </button>
               {showConsultMenu && (
-                <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4 w-72">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-2">
-                      เลือกวันที่
-                    </label>
-                    <input
-                      type="date"
-                      value={consultDate}
-                      onChange={(e) => setConsultDate(e.target.value)}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-fuchsia-500 focus:ring-2 focus:ring-fuchsia-200 text-sm transition-all"
-                    />
-                  </div>
+                <div className="absolute top-full left-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-3 w-64">
+                  <input
+                    type="date"
+                    value={consultDate}
+                    onChange={(e) => setConsultDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent text-sm"
+                  />
+                  {consultDate && (
+                    <button onClick={() => setConsultDate("")} className="mt-2 w-full px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-lg">
+                      ล้างตัวกรอง
+                    </button>
+                  )}
                 </div>
               )}
             </div>
-            {/* Date Filter 4: Surgery */}
-            <div className="relative group">
+
+            <div className="relative">
               <button
                 onClick={() => {
                   closeAllFilterMenus();
                   setShowSurgeryMenu(!showSurgeryMenu);
                 }}
-                className="px-4 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg font-medium text-sm"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <span>วันที่ผ่าตัด</span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${
-                    showSurgeryMenu ? "rotate-180" : ""
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${surgeryDate
+                  ? "bg-orange-50 border-orange-300 text-orange-700"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                  />
-                </svg>
+              >
+                <span>ผ่าตัด</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showSurgeryMenu ? "rotate-180" : ""}`} />
               </button>
               {showSurgeryMenu && (
-                <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4 w-72">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-2">
-                      เลือกวันที่
-                    </label>
-                    <input
-                      type="date"
-                      value={surgeryDate}
-                      onChange={(e) => setSurgeryDate(e.target.value)}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 text-sm transition-all"
-                    />
-                  </div>
+                <div className="absolute top-full left-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-3 w-64">
+                  <input
+                    type="date"
+                    value={surgeryDate}
+                    onChange={(e) => setSurgeryDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                  />
+                  {surgeryDate && (
+                    <button onClick={() => setSurgeryDate("")} className="mt-2 w-full px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-lg">
+                      ล้างตัวกรอง
+                    </button>
+                  )}
                 </div>
               )}
             </div>
-            {/* Date Filter 5: Get Name */}
-            <div className="relative group">
+
+            <div className="relative">
               <button
                 onClick={() => {
                   closeAllFilterMenus();
                   setShowGetNameMenu(!showGetNameMenu);
                 }}
-                className="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg font-medium text-sm"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <span>วันได้ชื่อ</span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${
-                    showGetNameMenu ? "rotate-180" : ""
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${getNameDate
+                  ? "bg-teal-50 border-teal-300 text-teal-700"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                  />
-                </svg>
+              >
+                <span>วันได้ชื่อ</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showGetNameMenu ? "rotate-180" : ""}`} />
               </button>
               {showGetNameMenu && (
-                <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4 w-72">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-2">
-                      เลือกวันที่
-                    </label>
-                    <input
-                      type="date"
-                      value={getNameDate}
-                      onChange={(e) => setGetNameDate(e.target.value)}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm transition-all"
-                    />
-                  </div>
+                <div className="absolute top-full left-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-3 w-64">
+                  <input
+                    type="date"
+                    value={getNameDate}
+                    onChange={(e) => setGetNameDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                  />
+                  {getNameDate && (
+                    <button onClick={() => setGetNameDate("")} className="mt-2 w-full px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-lg">
+                      ล้างตัวกรอง
+                    </button>
+                  )}
                 </div>
               )}
             </div>
-            {/* Date Filter 6: Get Consult Appt */}
-            <div className="relative group">
+
+            <div className="relative">
               <button
                 onClick={() => {
                   closeAllFilterMenus();
                   setShowGetConsultApptMenu(!showGetConsultApptMenu);
                 }}
-                className="px-4 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg font-medium text-sm"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <span>วันได้นัด Consult</span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${
-                    showGetConsultApptMenu ? "rotate-180" : ""
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${getConsultApptDate
+                  ? "bg-sky-50 border-sky-300 text-sky-700"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                  />
-                </svg>
+              >
+                <span>ได้นัด Consult</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showGetConsultApptMenu ? "rotate-180" : ""}`} />
               </button>
               {showGetConsultApptMenu && (
-                <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4 w-72">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-2">
-                      เลือกวันที่
-                    </label>
-                    <input
-                      type="date"
-                      value={getConsultApptDate}
-                      onChange={(e) => setGetConsultApptDate(e.target.value)}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-sm transition-all"
-                    />
-                  </div>
+                <div className="absolute top-full left-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-3 w-64">
+                  <input
+                    type="date"
+                    value={getConsultApptDate}
+                    onChange={(e) => setGetConsultApptDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-sm"
+                  />
+                  {getConsultApptDate && (
+                    <button onClick={() => setGetConsultApptDate("")} className="mt-2 w-full px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-lg">
+                      ล้างตัวกรอง
+                    </button>
+                  )}
                 </div>
               )}
             </div>
-            {/* Date Filter 7: Get Surgery Appt */}
-            <div className="relative group">
+
+            <div className="relative">
               <button
                 onClick={() => {
                   closeAllFilterMenus();
                   setShowGetSurgeryApptMenu(!showGetSurgeryApptMenu);
                 }}
-                className="px-4 py-2.5 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white rounded-lg flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg font-medium text-sm"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <span>วันได้นัด ผ่าตัด</span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${
-                    showGetSurgeryApptMenu ? "rotate-180" : ""
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-sm font-medium border ${getSurgeryApptDate
+                  ? "bg-amber-50 border-amber-300 text-amber-700"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                  />
-                </svg>
+              >
+                <span>ได้นัดผ่าตัด</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showGetSurgeryApptMenu ? "rotate-180" : ""}`} />
               </button>
               {showGetSurgeryApptMenu && (
-                <div className="absolute top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-4 w-72">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-2">
-                      เลือกวันที่
-                    </label>
-                    <input
-                      type="date"
-                      value={getSurgeryApptDate}
-                      onChange={(e) => setGetSurgeryApptDate(e.target.value)}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-pink-500 focus:ring-2 focus:ring-pink-200 text-sm transition-all"
-                    />
-                  </div>
+                <div className="absolute top-full left-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-3 w-64">
+                  <input
+                    type="date"
+                    value={getSurgeryApptDate}
+                    onChange={(e) => setGetSurgeryApptDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-sm"
+                  />
+                  {getSurgeryApptDate && (
+                    <button onClick={() => setGetSurgeryApptDate("")} className="mt-2 w-full px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-lg">
+                      ล้างตัวกรอง
+                    </button>
+                  )}
                 </div>
               )}
             </div>
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg font-medium"
-            >
-              <Plus className="w-4 h-4" />
-              เพิ่มข้อมูล
-            </button>
 
+            {/* Clear All Filters */}
+            {hasActiveFilter && (
+              <button
+                onClick={() => {
+                  setStatusFilter("all");
+                  setProductFilter("all");
+                  setContactFilter("all");
+                  setFollowUpLastDate("");
+                  setFollowUpNextDate("");
+                  setConsultDate("");
+                  setSurgeryDate("");
+                  setGetNameDate("");
+                  setGetConsultApptDate("");
+                  setGetSurgeryApptDate("");
+                }}
+                className="px-4 py-2 bg-rose-500 text-white rounded-lg text-sm font-medium hover:bg-rose-600"
+              >
+                ล้างทั้งหมด
+              </button>
+            )}
+          </div>
+
+          {/* Results count and delete button */}
+          <div className="flex justify-between items-center pt-3 border-t border-slate-100">
+            <span className="text-sm text-slate-600">
+              <span className="font-medium">{filteredAndSortedData.length}</span> รายการ
+            </span>
             {selectedIds.length > 0 && (
               <button
                 onClick={handleDeleteMultiple}
                 disabled={isDeleting}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg font-medium disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded-lg text-sm font-medium hover:bg-rose-600 disabled:opacity-50"
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-                {isDeleting
-                  ? "กำลังลบ..."
-                  : `ลบที่เลือก (${selectedIds.length})`}
+                <X className="w-4 h-4" />
+                {isDeleting ? "กำลังลบ..." : `ลบรายการที่เลือก (${selectedIds.length})`}
               </button>
             )}
           </div>
-          {/* Active Filters Display */}
-          {tableData.length > 0 && (
-            <div className="mt-4 space-y-2">
-              {/* Active Filters Tags */}
-              {(searchTerm ||
-                statusFilter !== "all" ||
-                productFilter !== "all" ||
-                contactFilter !== "all" ||
-                followUpLastDate ||
-                followUpNextDate ||
-                consultDate ||
-                surgeryDate ||
-                getNameDate ||
-                getConsultApptDate ||
-                getSurgeryApptDate) && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <svg
-                      className="w-4 h-4 text-blue-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-                      />
-                    </svg>
-                    <span className="text-sm font-semibold text-blue-900">
-                      ฟิลเตอร์ที่ใช้งานอยู่:
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {searchTerm && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-teal-300 rounded-full text-xs font-medium text-teal-700 shadow-sm">
-                        <span className="font-semibold">ค้นหา:</span>
-                        <span className="max-w-[200px] truncate">
-                          &quot;{searchTerm}&quot;
-                        </span>
-                        <button
-                          onClick={() => setSearchTerm("")}
-                          className="ml-1 hover:bg-teal-100 rounded-full p-0.5 transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                    {statusFilter !== "all" && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-cyan-300 rounded-full text-xs font-medium text-cyan-700 shadow-sm">
-                        <span className="font-semibold">สถานะ:</span>
-                        <span className="max-w-[150px] truncate">
-                          {statusFilter}
-                        </span>
-                        <button
-                          onClick={() => setStatusFilter("all")}
-                          className="ml-1 hover:bg-cyan-100 rounded-full p-0.5 transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                    {productFilter !== "all" && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-indigo-300 rounded-full text-xs font-medium text-indigo-700 shadow-sm">
-                        <span className="font-semibold">สินค้า:</span>
-                        <span className="max-w-[150px] truncate">
-                          {productFilter}
-                        </span>
-                        <button
-                          onClick={() => setProductFilter("all")}
-                          className="ml-1 hover:bg-indigo-100 rounded-full p-0.5 transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                    {contactFilter !== "all" && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-rose-300 rounded-full text-xs font-medium text-rose-700 shadow-sm">
-                        <span className="font-semibold">ผู้ติดต่อ:</span>
-                        <span>{contactFilter}</span>
-                        <button
-                          onClick={() => setContactFilter("all")}
-                          className="ml-1 hover:bg-rose-100 rounded-full p-0.5 transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                    {followUpLastDate && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-emerald-300 rounded-full text-xs font-medium text-emerald-700 shadow-sm">
-                        <span className="font-semibold">วันติดตาม-ล่าสุด:</span>
-                        <span>{followUpLastDate}</span>
-                        <button
-                          onClick={() => setFollowUpLastDate("")}
-                          className="ml-1 hover:bg-emerald-100 rounded-full p-0.5 transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                    {followUpNextDate && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-violet-300 rounded-full text-xs font-medium text-violet-700 shadow-sm">
-                        <span className="font-semibold">วันติดตาม-ถัดไป:</span>
-                        <span>{followUpNextDate}</span>
-                        <button
-                          onClick={() => setFollowUpNextDate("")}
-                          className="ml-1 hover:bg-violet-100 rounded-full p-0.5 transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                    {consultDate && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-fuchsia-300 rounded-full text-xs font-medium text-fuchsia-700 shadow-sm">
-                        <span className="font-semibold">วันที่ Consult:</span>
-                        <span>{consultDate}</span>
-                        <button
-                          onClick={() => setConsultDate("")}
-                          className="ml-1 hover:bg-fuchsia-100 rounded-full p-0.5 transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                    {surgeryDate && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-orange-300 rounded-full text-xs font-medium text-orange-700 shadow-sm">
-                        <span className="font-semibold">วันที่ผ่าตัด:</span>
-                        <span>{surgeryDate}</span>
-                        <button
-                          onClick={() => setSurgeryDate("")}
-                          className="ml-1 hover:bg-orange-100 rounded-full p-0.5 transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                    {getNameDate && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-blue-300 rounded-full text-xs font-medium text-blue-700 shadow-sm">
-                        <span className="font-semibold">วันได้ชื่อ:</span>
-                        <span>{getNameDate}</span>
-                        <button
-                          onClick={() => setGetNameDate("")}
-                          className="ml-1 hover:bg-blue-100 rounded-full p-0.5 transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                    {getConsultApptDate && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-purple-300 rounded-full text-xs font-medium text-purple-700 shadow-sm">
-                        <span className="font-semibold">
-                          วันได้นัด Consult:
-                        </span>
-                        <span>{getConsultApptDate}</span>
-                        <button
-                          onClick={() => setGetConsultApptDate("")}
-                          className="ml-1 hover:bg-purple-100 rounded-full p-0.5 transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                    {getSurgeryApptDate && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-pink-300 rounded-full text-xs font-medium text-pink-700 shadow-sm">
-                        <span className="font-semibold">วันได้นัด ผ่าตัด:</span>
-                        <span>{getSurgeryApptDate}</span>
-                        <button
-                          onClick={() => setGetSurgeryApptDate("")}
-                          className="ml-1 hover:bg-pink-100 rounded-full p-0.5 transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                    {/* Clear All Button */}
-                    <button
-                      onClick={() => {
-                        setSearchTerm("");
-                        setStatusFilter("all");
-                        setProductFilter("all");
-                        setContactFilter("all");
-                        setFollowUpLastDate("");
-                        setFollowUpNextDate("");
-                        setConsultDate("");
-                        setSurgeryDate("");
-                        setGetNameDate("");
-                        setGetConsultApptDate("");
-                        setGetSurgeryApptDate("");
-                      }}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs font-medium shadow-sm transition-colors"
-                    >
-                      <X className="w-3 h-3" />
-                      <span>ล้างทั้งหมด</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-              {/* Results Info */}
-              <div className="text-sm text-gray-600">
-                แสดง {(currentPage - 1) * itemsPerPage + 1}-
-                {Math.min(
-                  currentPage * itemsPerPage,
-                  filteredAndSortedData.length
-                )}{" "}
-                จาก {filteredAndSortedData.length} รายการ
-                {(searchTerm ||
-                  statusFilter !== "all" ||
-                  productFilter !== "all" ||
-                  contactFilter !== "all" ||
-                  followUpLastDate ||
-                  followUpNextDate ||
-                  consultDate ||
-                  surgeryDate ||
-                  getNameDate ||
-                  getConsultApptDate ||
-                  getSurgeryApptDate) &&
-                  ` (กรองจาก ${tableData[0].data.length} รายการทั้งหมด)`}
-              </div>
-            </div>
-          )}
-          {/* Pagination Controls */}
-          {tableData.length > 0 && totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-center gap-2">
-              {/* First Page */}
-              <button
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
-                className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                title="หน้าแรก"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-                  />
-                </svg>
-              </button>
-              {/* Previous Page */}
+        </div>
+
+        {/* Pagination - Only show when filter is active (mobile) */}
+        {hasActiveFilter &&
+          tableData.length > 0 && totalPages > 1 && (
+            <div className="flex md:hidden justify-center items-center gap-1 mb-3">
               <button
                 onClick={() => setCurrentPage(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm disabled:opacity-50 shadow-sm"
               >
-                ← ก่อนหน้า
+                ←
               </button>
-              {/* Page Numbers */}
               <div className="flex items-center gap-1">
-                {/* Show first page if not near it */}
-                {currentPage > 3 && (
-                  <>
-                    <button
-                      onClick={() => setCurrentPage(1)}
-                      className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      1
-                    </button>
-                    {currentPage > 4 && (
-                      <span className="px-2 text-gray-500">...</span>
-                    )}
-                  </>
-                )}
-                {/* Pages around current page */}
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((page) => {
-                    return (
-                      page === currentPage ||
-                      page === currentPage - 1 ||
-                      page === currentPage + 1 ||
-                      page === currentPage - 2 ||
-                      page === currentPage + 2
-                    );
-                  })
-                  .map((page) => (
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let page;
+                  if (totalPages <= 5) {
+                    page = i + 1;
+                  } else if (currentPage <= 3) {
+                    page = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    page = totalPages - 4 + i;
+                  } else {
+                    page = currentPage - 2 + i;
+                  }
+                  return (
                     <button
                       key={page}
                       onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-2 rounded-lg transition-all font-medium ${
-                        page === currentPage
-                          ? "bg-blue-600 text-white shadow-md"
-                          : "bg-white border border-gray-300 hover:bg-gray-50"
-                      }`}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${page === currentPage
+                        ? "bg-blue-500 text-white shadow-md"
+                        : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                        }`}
                     >
                       {page}
                     </button>
-                  ))}
-                {/* Show last page if not near it */}
-                {currentPage < totalPages - 2 && (
+                  );
+                })}
+                {totalPages > 5 && currentPage < totalPages - 2 && (
                   <>
-                    {currentPage < totalPages - 3 && (
-                      <span className="px-2 text-gray-500">...</span>
-                    )}
+                    <span className="text-slate-400">...</span>
                     <button
                       onClick={() => setCurrentPage(totalPages)}
-                      className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50"
                     >
                       {totalPages}
                     </button>
                   </>
                 )}
               </div>
-              {/* Next Page */}
               <button
                 onClick={() => setCurrentPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm disabled:opacity-50 shadow-sm"
               >
-                ถัดไป →
-              </button>
-              {/* Last Page */}
-              <button
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages}
-                className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                title="หน้าสุดท้าย"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                  />
-                </svg>
+                →
               </button>
             </div>
           )}
-        </div>
+
+        {/* Desktop Pagination - Always show */}
+        {tableData.length > 0 && totalPages > 1 && (
+          <div className="hidden md:flex justify-center items-center gap-1 mb-3">
+            <button
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm disabled:opacity-50 shadow-sm"
+            >
+              ←
+            </button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let page;
+                if (totalPages <= 5) {
+                  page = i + 1;
+                } else if (currentPage <= 3) {
+                  page = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  page = totalPages - 4 + i;
+                } else {
+                  page = currentPage - 2 + i;
+                }
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${page === currentPage
+                      ? "bg-blue-500 text-white shadow-md"
+                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                      }`}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
+              {totalPages > 5 && currentPage < totalPages - 2 && (
+                <>
+                  <span className="text-slate-400">...</span>
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50"
+                  >
+                    {totalPages}
+                  </button>
+                </>
+              )}
+            </div>
+            <button
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm disabled:opacity-50 shadow-sm"
+            >
+              →
+            </button>
+          </div>
+        )}
+
+        {/* Mobile: Show message when no filter applied */}
+        {!hasActiveFilter && (
+          <div className="md:hidden flex-1 flex flex-col items-center justify-center py-16">
+            <Filter className="w-16 h-16 text-slate-300 mb-4" />
+            <p className="text-slate-500 text-center text-sm">กรุณาเลือกตัวกรองเพื่อแสดงข้อมูล</p>
+            <button
+              onClick={() => setShowFilterSheet(true)}
+              className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-xl text-sm font-medium hover:bg-blue-600 transition-colors"
+            >
+              เลือกตัวกรอง
+            </button>
+          </div>
+        )}
+
+        {/* Data Table - Desktop always shows, Mobile only when filter active */}
+        {hasActiveFilter &&
+          tableData.length > 0 && (
+            <div className="md:hidden bg-white rounded-lg shadow-md overflow-hidden mb-4">
+              {/* Horizontal scrollbar on top */}
+              <div
+                className="overflow-x-auto custom-scrollbar-horizontal"
+                style={{
+                  overflowY: "hidden",
+                  height: "12px",
+                }}
+                onScroll={(e) => {
+                  const target = e.currentTarget;
+                  const tableContainer = target.nextElementSibling as HTMLElement;
+                  if (tableContainer) {
+                    tableContainer.scrollLeft = target.scrollLeft;
+                  }
+                }}
+              >
+                <div
+                  style={{
+                    width: tableData[0].headers.length * 150 + "px",
+                    height: "1px",
+                  }}
+                />
+              </div>
+              <div
+                className="overflow-x-auto overflow-y-auto custom-scrollbar"
+                style={{
+                  maxHeight: `calc(100vh + ${tableSize}px)`,
+                  position: "relative",
+                }}
+                onScroll={(e) => {
+                  const target = e.currentTarget;
+                  const topScroller =
+                    target.previousElementSibling as HTMLElement;
+                  if (topScroller) {
+                    topScroller.scrollLeft = target.scrollLeft;
+                  }
+                }}
+              >
+                <table
+                  className="w-full border-collapse text-sm table-auto"
+                  style={{ position: "relative", zIndex: 1 }}
+                >
+                  <thead className="sticky top-0 z-30 bg-yellow-300">
+                    <tr className="bg-yellow-300 border border-gray-400">
+                      <th className="px-3 py-2 text-center font-bold text-gray-900 border-r border-gray-400">
+                        <input
+                          type="checkbox"
+                          checked={
+                            selectedIds.length === filteredAndSortedData.length &&
+                            filteredAndSortedData.length > 0
+                          }
+                          onChange={handleToggleSelectAll}
+                          className="w-4 h-4 cursor-pointer"
+                          title="เลือกทั้งหมด"
+                        />
+                      </th>
+                      {tableData[0].headers.map((header, idx) => {
+                        // Define gradient colors for header date columns
+                        const headerGradients: Record<string, string> = {
+                          วันที่ติดตามครั้งล่าสุด:
+                            "bg-gradient-to-r from-emerald-300 to-emerald-400",
+                          วันที่ติดตามครั้งถัดไป:
+                            "bg-gradient-to-r from-emerald-300 to-emerald-400",
+                          "วันที่ Consult":
+                            "bg-gradient-to-r from-fuchsia-300 to-fuchsia-400",
+                          วันที่ผ่าตัด:
+                            "bg-gradient-to-r from-orange-300 to-orange-400",
+                          เวลาที่นัด:
+                            "bg-gradient-to-r from-orange-300 to-orange-400",
+                          "วันที่ได้ชื่อ เบอร์":
+                            "bg-gradient-to-r from-blue-300 to-blue-400",
+                          "วันที่ได้นัด consult":
+                            "bg-gradient-to-r from-fuchsia-300 to-fuchsia-400",
+                          วันที่ได้นัดผ่าตัด:
+                            "bg-gradient-to-r from-orange-300 to-orange-400",
+                        };
+
+                        const headerGradient =
+                          headerGradients[header] || "bg-yellow-300";
+                        const hoverClass = headerGradients[header]
+                          ? "hover:opacity-90"
+                          : "hover:bg-yellow-400";
+
+                        return (
+                          <th
+                            key={idx}
+                            onClick={() => handleSort(header)}
+                            className={`px-3 py-2 text-center text-xs font-bold text-gray-900 border-r border-gray-400 whitespace-nowrap cursor-pointer ${hoverClass} transition-all ${headerGradient}`}
+                            style={{ fontSize: "11px" }}
+                          >
+                            <div className="flex items-center justify-center gap-1">
+                              <span>{header}</span>
+                              {sortColumn === header &&
+                                (sortDirection === "asc" ? (
+                                  <ChevronUp className="w-3 h-3" />
+                                ) : (
+                                  <ChevronDown className="w-3 h-3" />
+                                ))}
+                            </div>
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      console.log(
+                        "📊 Rendering tbody with",
+                        paginatedData.length,
+                        "rows"
+                      );
+                      return null;
+                    })()}
+                    {paginatedData.map((row, rowIndex) => {
+                      const absoluteIndex =
+                        (currentPage - 1) * itemsPerPage + rowIndex;
+                      const patternIndex = absoluteIndex % 4;
+                      const rowId = row["id"];
+                      const isChecked = selectedIds.includes(rowId);
+                      // Pattern: white (0) → pink (1) → white (2) → purple-light (3)
+                      let bgColor = "bg-white";
+                      if (patternIndex === 1) {
+                        bgColor = "bg-pink-200";
+                      } else if (patternIndex === 3) {
+                        bgColor = "bg-purple-200";
+                      }
+
+                      if (isChecked) {
+                        bgColor = "bg-blue-100";
+                      }
+
+                      return (
+                        <tr
+                          key={rowIndex}
+                          onClick={() => {
+                            setEditingCustomer(row);
+                            setIsEditModalOpen(true);
+                          }}
+                          className={`border border-gray-300 transition-all duration-200 group ${bgColor} hover:bg-blue-50 cursor-pointer`}
+                        >
+                          <td
+                            className="px-3 py-2 border-r border-gray-300 text-center"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => handleToggleSelect(rowId)}
+                              className="w-4 h-4 cursor-pointer"
+                            />
+                          </td>
+                          {tableData[0].headers.map((header, colIdx) => {
+                            const value = row[header];
+                            const hasValue =
+                              value !== undefined &&
+                              value !== null &&
+                              value !== "";
+                            const displayValue = formatDateValue(value);
+                            const isNotesColumn = header === "หมายเหตุ";
+
+                            // Define gradient colors for specific date columns
+                            const dateColumns: Record<string, string> = {
+                              วันที่ติดตามครั้งล่าสุด:
+                                "bg-gradient-to-r from-emerald-100 to-emerald-200",
+                              วันที่ติดตามครั้งถัดไป:
+                                "bg-gradient-to-r from-emerald-100 to-emerald-200",
+                              "วันที่ Consult":
+                                "bg-gradient-to-r from-fuchsia-100 to-fuchsia-200",
+                              วันที่ผ่าตัด:
+                                "bg-gradient-to-r from-orange-100 to-orange-200",
+                              เวลาที่นัด:
+                                "bg-gradient-to-r from-orange-100 to-orange-200",
+                              "วันที่ได้ชื่อ เบอร์":
+                                "bg-gradient-to-r from-blue-100 to-blue-200",
+                              "วันที่ได้นัด consult":
+                                "bg-gradient-to-r from-fuchsia-100 to-fuchsia-200",
+                              วันที่ได้นัดผ่าตัด:
+                                "bg-gradient-to-r from-orange-100 to-orange-200",
+                            };
+
+                            const gradientClass = dateColumns[header] || "";
+                            const isDateColumn = !!dateColumns[header];
+
+                            return (
+                              <td
+                                key={colIdx}
+                                className={`px-3 py-2 text-xs text-gray-900 border-r border-gray-300 text-center align-middle ${isNotesColumn ? "" : "whitespace-nowrap"
+                                  } ${gradientClass}`}
+                                style={{
+                                  fontSize: "11px",
+                                  minWidth: isNotesColumn
+                                    ? "450px"
+                                    : isDateColumn
+                                      ? "80px"
+                                      : undefined,
+                                  maxWidth: isNotesColumn
+                                    ? "450px"
+                                    : isDateColumn
+                                      ? "80px"
+                                      : undefined,
+                                }}
+                              >
+                                {hasValue ? (
+                                  <span
+                                    className={
+                                      isNotesColumn
+                                        ? "block text-left whitespace-pre-wrap break-words"
+                                        : "block"
+                                    }
+                                  >
+                                    {displayValue}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400 block">-</span>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+        {/* Desktop Data Table - Always visible on desktop */}
         {tableData.length > 0 && (
-          <div className="bg-white rounded-lg shadow-md overflow-hidden mb-4">
+          <div className="hidden md:block bg-white rounded-lg shadow-md overflow-hidden mb-4">
             {/* Horizontal scrollbar on top */}
             <div
               className="overflow-x-auto custom-scrollbar-horizontal"
@@ -1814,8 +2026,7 @@ const CustomerAllDataPage = () => {
               }}
               onScroll={(e) => {
                 const target = e.currentTarget;
-                const topScroller =
-                  target.previousElementSibling as HTMLElement;
+                const topScroller = target.previousElementSibling as HTMLElement;
                 if (topScroller) {
                   topScroller.scrollLeft = target.scrollLeft;
                 }
@@ -1839,166 +2050,52 @@ const CustomerAllDataPage = () => {
                         title="เลือกทั้งหมด"
                       />
                     </th>
-                    {tableData[0].headers.map((header, idx) => {
-                      // Define gradient colors for header date columns
-                      const headerGradients: Record<string, string> = {
-                        วันที่ติดตามครั้งล่าสุด:
-                          "bg-gradient-to-r from-emerald-300 to-emerald-400",
-                        วันที่ติดตามครั้งถัดไป:
-                          "bg-gradient-to-r from-emerald-300 to-emerald-400",
-                        "วันที่ Consult":
-                          "bg-gradient-to-r from-fuchsia-300 to-fuchsia-400",
-                        วันที่ผ่าตัด:
-                          "bg-gradient-to-r from-orange-300 to-orange-400",
-                        เวลาที่นัด:
-                          "bg-gradient-to-r from-orange-300 to-orange-400",
-                        "วันที่ได้ชื่อ เบอร์":
-                          "bg-gradient-to-r from-blue-300 to-blue-400",
-                        "วันที่ได้นัด consult":
-                          "bg-gradient-to-r from-fuchsia-300 to-fuchsia-400",
-                        วันที่ได้นัดผ่าตัด:
-                          "bg-gradient-to-r from-orange-300 to-orange-400",
-                      };
-
-                      const headerGradient =
-                        headerGradients[header] || "bg-yellow-300";
-                      const hoverClass = headerGradients[header]
-                        ? "hover:opacity-90"
-                        : "hover:bg-yellow-400";
-
-                      return (
-                        <th
-                          key={idx}
-                          onClick={() => handleSort(header)}
-                          className={`px-3 py-2 text-center text-xs font-bold text-gray-900 border-r border-gray-400 whitespace-nowrap cursor-pointer ${hoverClass} transition-all ${headerGradient}`}
-                          style={{ fontSize: "11px" }}
-                        >
-                          <div className="flex items-center justify-center gap-1">
-                            <span>{header}</span>
-                            {sortColumn === header &&
-                              (sortDirection === "asc" ? (
-                                <ChevronUp className="w-3 h-3" />
-                              ) : (
-                                <ChevronDown className="w-3 h-3" />
-                              ))}
-                          </div>
-                        </th>
-                      );
-                    })}
+                    {tableData[0].headers.map((header, idx) => (
+                      <th
+                        key={idx}
+                        className="px-3 py-2 text-center font-bold text-gray-900 whitespace-nowrap border-r border-gray-400"
+                      >
+                        {header}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {(() => {
-                    console.log(
-                      "📊 Rendering tbody with",
-                      paginatedData.length,
-                      "rows"
-                    );
-                    return null;
-                  })()}
-                  {paginatedData.map((row, rowIndex) => {
-                    const absoluteIndex =
-                      (currentPage - 1) * itemsPerPage + rowIndex;
-                    const patternIndex = absoluteIndex % 4;
-                    const rowId = row["id"];
-                    const isChecked = selectedIds.includes(rowId);
-                    // Pattern: white (0) → pink (1) → white (2) → purple-light (3)
-                    let bgColor = "bg-white";
-                    if (patternIndex === 1) {
-                      bgColor = "bg-pink-200";
-                    } else if (patternIndex === 3) {
-                      bgColor = "bg-purple-200";
-                    }
-
-                    if (isChecked) {
-                      bgColor = "bg-blue-100";
-                    }
-
+                  {paginatedData.map((row, rowIdx) => {
+                    const rowId = row["ไอดี"] || row["id"] || rowIdx;
+                    const isSelected = selectedIds.includes(rowId);
                     return (
                       <tr
-                        key={rowIndex}
+                        key={rowIdx}
+                        className={`border-b border-gray-200 ${isSelected ? "bg-blue-50" : rowIdx % 2 === 0 ? "bg-white" : "bg-gray-50"
+                          } hover:bg-blue-100 transition-colors cursor-pointer`}
                         onClick={() => {
                           setEditingCustomer(row);
                           setIsEditModalOpen(true);
                         }}
-                        className={`border border-gray-300 transition-all duration-200 group ${bgColor} hover:bg-blue-50 cursor-pointer`}
                       >
                         <td
-                          className="px-3 py-2 border-r border-gray-300 text-center"
+                          className="px-3 py-2 text-center border-r border-gray-200"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <input
                             type="checkbox"
-                            checked={isChecked}
+                            checked={isSelected}
                             onChange={() => handleToggleSelect(rowId)}
                             className="w-4 h-4 cursor-pointer"
                           />
                         </td>
                         {tableData[0].headers.map((header, colIdx) => {
                           const value = row[header];
-                          const hasValue =
-                            value !== undefined &&
-                            value !== null &&
-                            value !== "";
-                          const displayValue = formatDateValue(value);
-                          const isNotesColumn = header === "หมายเหตุ";
-
-                          // Define gradient colors for specific date columns
-                          const dateColumns: Record<string, string> = {
-                            วันที่ติดตามครั้งล่าสุด:
-                              "bg-gradient-to-r from-emerald-100 to-emerald-200",
-                            วันที่ติดตามครั้งถัดไป:
-                              "bg-gradient-to-r from-emerald-100 to-emerald-200",
-                            "วันที่ Consult":
-                              "bg-gradient-to-r from-fuchsia-100 to-fuchsia-200",
-                            วันที่ผ่าตัด:
-                              "bg-gradient-to-r from-orange-100 to-orange-200",
-                            เวลาที่นัด:
-                              "bg-gradient-to-r from-orange-100 to-orange-200",
-                            "วันที่ได้ชื่อ เบอร์":
-                              "bg-gradient-to-r from-blue-100 to-blue-200",
-                            "วันที่ได้นัด consult":
-                              "bg-gradient-to-r from-fuchsia-100 to-fuchsia-200",
-                            วันที่ได้นัดผ่าตัด:
-                              "bg-gradient-to-r from-orange-100 to-orange-200",
-                          };
-
-                          const gradientClass = dateColumns[header] || "";
-                          const isDateColumn = !!dateColumns[header];
-
+                          const hasValue = value !== undefined && value !== null && value !== "";
+                          const displayValue = hasValue ? String(value) : "-";
                           return (
                             <td
                               key={colIdx}
-                              className={`px-3 py-2 text-xs text-gray-900 border-r border-gray-300 text-center align-middle ${
-                                isNotesColumn ? "" : "whitespace-nowrap"
-                              } ${gradientClass}`}
-                              style={{
-                                fontSize: "11px",
-                                minWidth: isNotesColumn
-                                  ? "450px"
-                                  : isDateColumn
-                                  ? "80px"
-                                  : undefined,
-                                maxWidth: isNotesColumn
-                                  ? "450px"
-                                  : isDateColumn
-                                  ? "80px"
-                                  : undefined,
-                              }}
+                              className="px-3 py-2 text-center border-r border-gray-200 whitespace-nowrap"
+                              style={{ fontSize: "11px" }}
                             >
-                              {hasValue ? (
-                                <span
-                                  className={
-                                    isNotesColumn
-                                      ? "block text-left whitespace-pre-wrap break-words"
-                                      : "block"
-                                  }
-                                >
-                                  {displayValue}
-                                </span>
-                              ) : (
-                                <span className="text-gray-400 block">-</span>
-                              )}
+                              {hasValue ? displayValue : <span className="text-gray-400">-</span>}
                             </td>
                           );
                         })}
@@ -2025,4 +2122,16 @@ const CustomerAllDataPage = () => {
     </>
   );
 };
-export default CustomerAllDataPage;
+
+// Wrapper component with Suspense for useSearchParams
+export default function CustomerAllDataPageWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="w-full min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-slate-500">กำลังโหลด...</div>
+      </div>
+    }>
+      <CustomerAllDataPage />
+    </Suspense>
+  );
+}

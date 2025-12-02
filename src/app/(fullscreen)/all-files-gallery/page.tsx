@@ -2064,21 +2064,79 @@ const AllFilesGalleryPage = () => {
     }
   };
 
-  // Share to LINE handler with video support
-  const shareToLine = async (fileId: number) => {
-    const file = files.find(f => f.id === fileId);
-    if (!file) return;
+  const downloadShareBlob = async (url: string) => {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error("Failed to download file for sharing");
+    }
+    return await response.blob();
+  };
 
-    // For videos, use special share URL for inline playback
+  const getAbsoluteMediaUrl = (file: FileItem) => {
+    if (file.url.startsWith("http")) {
+      return file.url;
+    }
+    if (typeof window === "undefined") {
+      return file.url;
+    }
+    return `${window.location.origin}${file.url}`;
+  };
+
+  const guessShareMimeType = (url: string, type: FileItem['type']) => {
+    const extension = url
+      .split("?")[0]
+      .split("/")
+      .pop()
+      ?.split(".")
+      .pop()
+      ?.toLowerCase();
+    const map: Record<string, string> = {
+      mp4: "video/mp4",
+      mov: "video/quicktime",
+      webm: "video/webm",
+      mkv: "video/x-matroska",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      gif: "image/gif",
+      bmp: "image/bmp",
+      heic: "image/heic",
+      heif: "image/heif",
+    };
+
+    if (extension && map[extension]) {
+      return map[extension];
+    }
+
+    if (type === "image") return "image/jpeg";
+    if (type === "video" || type === "clip") return "video/mp4";
+    return "application/octet-stream";
+  };
+
+  const resolveShareFileName = (file: FileItem, url: string) => {
+    if (file.name.includes(".")) {
+      return file.name;
+    }
+    const extension = url
+      .split("?")[0]
+      .split("/")
+      .pop()
+      ?.split(".")
+      .pop();
+    return extension ? `${file.name}.${extension}` : file.name;
+  };
+
+  // Share to LINE handler with video support
+  const shareToLine = async (file: FileItem) => {
+    if (typeof window === "undefined") return;
+
     let shareUrl: string;
     if (file.type === 'video' || file.type === 'clip') {
       const result = await generateVideoShareUrl(file);
       shareUrl = result.shareUrl;
 
-      // If file is large, trigger transcoding in background (don't wait)
       if (result.needsTranscoding) {
         console.log(`Video ${file.name} (${result.fileSizeMB}MB) may need transcoding for optimal LINE playback`);
-        // Start transcoding in background - don't block sharing
         transcodeForLine(file).then(success => {
           if (success) {
             console.log('Transcoding completed for:', file.name);
@@ -2089,20 +2147,39 @@ const AllFilesGalleryPage = () => {
       shareUrl = window.location.href;
     }
 
-    const shareText = encodeURIComponent(`📹 ${file.name} - BJH Bangkok`);
+    const shareMessage = `📹 ${file.name} - BJH Bangkok`;
+    const encodedShareText = encodeURIComponent(shareMessage);
     const encodedUrl = encodeURIComponent(shareUrl);
 
-    // Open LINE share
-    if (isMobile) {
-      // Mobile LINE app deep link
-      window.location.href = `line://msg/text/${shareText}%0A${encodedUrl}`;
-    } else {
-      // Desktop LINE share
-      window.open(
-        `https://social-plugins.line.me/lineit/share?url=${encodedUrl}&text=${shareText}`,
-        '_blank',
-        'width=500,height=500'
-      );
+    let sharedViaWebShare = false;
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        const absoluteUrl = getAbsoluteMediaUrl(file);
+        const blob = await downloadShareBlob(absoluteUrl);
+        const shareFile = new File([blob], resolveShareFileName(file, absoluteUrl), {
+          type: guessShareMimeType(absoluteUrl, file.type),
+        });
+        const canShareFiles =
+          !('canShare' in navigator) || navigator.canShare({ files: [shareFile] });
+
+        if (canShareFiles) {
+          await navigator.share({
+            title: file.name,
+            files: [shareFile],
+          });
+          sharedViaWebShare = true;
+        }
+      } catch (error) {
+        console.warn('Web Share failed, falling back to LINE deep link', error);
+      }
+    }
+
+    if (!sharedViaWebShare) {
+      if (isMobile) {
+        window.location.href = `line://msg/text/${encodedShareText}%0A${encodedUrl}`;
+      } else {
+        window.open(`https://social-plugins.line.me/lineit/share?url=${encodedUrl}&text=${encodedShareText}`, '_blank', 'width=500,height=500');
+      }
     }
 
     setShowShareModal(false);
@@ -2114,36 +2191,39 @@ const AllFilesGalleryPage = () => {
     const file = files.find(f => f.id === fileId);
     if (!file) return;
 
-    // Get proper share URL for videos
-    const shareResult = (file.type === 'video' || file.type === 'clip')
-      ? await generateVideoShareUrl(file)
-      : { shareUrl: window.location.href, needsTranscoding: false };
-
-    const shareUrl = shareResult.shareUrl;
-
     switch (platform) {
       case 'line':
-        shareToLine(fileId);
+        await shareToLine(file);
         break;
-      case 'copy':
-        await navigator.clipboard.writeText(shareUrl);
+      case 'copy': {
+        const shareResult = (file.type === 'video' || file.type === 'clip')
+          ? await generateVideoShareUrl(file)
+          : { shareUrl: window.location.href };
+        await navigator.clipboard.writeText(shareResult.shareUrl);
         alert('Link copied to clipboard!');
+        setShowShareModal(false);
+        setShareFileId(null);
         break;
+      }
       case 'native':
         if (navigator.share) {
           try {
+            const shareResult = (file.type === 'video' || file.type === 'clip')
+              ? await generateVideoShareUrl(file)
+              : { shareUrl: window.location.href };
             await navigator.share({
               title: file.name,
               text: `Check out this ${file.type}: ${file.name}`,
-              url: shareUrl,
+              url: shareResult.shareUrl,
             });
           } catch (err) {
             console.log('Share cancelled');
           }
         }
+        setShowShareModal(false);
+        setShareFileId(null);
         break;
     }
-    setShowShareModal(false);
   };
 
   // Send video directly to LINE user via Messaging API (plays inline in LINE app)

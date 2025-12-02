@@ -3460,11 +3460,10 @@ export const EditCustomerModal = ({
                       return (
                         <div
                           key={cardKey}
-                          className={`rounded-2xl border bg-white px-3 py-3 shadow-sm transition ${
-                            selectedAppointmentHistoryKey === cardKey
+                          className={`rounded-2xl border bg-white px-3 py-3 shadow-sm transition ${selectedAppointmentHistoryKey === cardKey
                               ? "border-teal-300 ring-1 ring-teal-200"
                               : "border-slate-200"
-                          }`}
+                            }`}
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="space-y-1">
@@ -3489,11 +3488,10 @@ export const EditCustomerModal = ({
                                 disabled={!entry.appoint_code}
                                 title={!entry.appoint_code ? "รหัสนัดหมายไม่พร้อม" : "แก้ไขนัดหมายนี้"}
                                 onClick={() => handleSelectAppointmentHistory(entry, cardKey)}
-                                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                                  entry.appoint_code
+                                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${entry.appoint_code
                                     ? "border border-slate-300 text-slate-600 hover:border-slate-400"
                                     : "border border-slate-200 text-slate-400 cursor-not-allowed"
-                                }`}
+                                  }`}
                               >
                                 แก้ไขนัดหมาย
                               </button>

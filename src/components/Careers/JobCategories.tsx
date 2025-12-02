@@ -1,12 +1,11 @@
 "use client";
 import React, { useState } from "react";
 const categories = [
-  { id: "all", name: "ทั้งหมด", count: 15, icon: "📋" },
-  { id: "management", name: "บริหารจัดการ", count: 2, icon: "👔" },
-  { id: "sales", name: "ฝ่ายขาย", count: 3, icon: "💼" },
-  { id: "production", name: "ฝ่ายผลิต", count: 4, icon: "🏭" },
-  { id: "technical", name: "ช่างเทคนิค", count: 3, icon: "🔧" },
-  { id: "hr", name: "ทรัพยากรบุคคล", count: 2, icon: "👥" },
+  { id: "all", name: "ทั้งหมด", count: 10, icon: "📋" },
+  { id: "medical", name: "แพทย์/พยาบาล", count: 3, icon: "👩‍⚕️" },
+  { id: "nursing", name: "พยาบาล/ผู้ช่วย", count: 2, icon: "👨‍⚕️" },
+  { id: "admin", name: "บริหาร/ธุรการ", count: 2, icon: "💼" },
+  { id: "service", name: "บริการลูกค้า", count: 2, icon: "👋" },
   { id: "other", name: "อื่นๆ", count: 1, icon: "📌" },
 ];
 const JobCategories = () => {
@@ -19,8 +18,8 @@ const JobCategories = () => {
           onClick={() => setSelectedCategory(category.id)}
           className={`group relative p-6 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 ${
             selectedCategory === category.id
-              ? "border-blue-600 bg-blue-50 shadow-lg"
-              : "border-gray-200 bg-white hover:border-blue-400 hover:shadow-md"
+              ? "border-teal-500 bg-teal-50 shadow-lg"
+              : "border-gray-200 bg-white hover:border-teal-400 hover:shadow-md"
           }`}
         >
           <div className="flex flex-col items-center text-center space-y-3">
@@ -37,7 +36,7 @@ const JobCategories = () => {
               <h3
                 className={`font-semibold mb-1 ${
                   selectedCategory === category.id
-                    ? "text-blue-600"
+                    ? "text-teal-600"
                     : "text-gray-900"
                 }`}
               >
@@ -46,7 +45,7 @@ const JobCategories = () => {
               <p
                 className={`text-sm ${
                   selectedCategory === category.id
-                    ? "text-blue-500"
+                    ? "text-teal-500"
                     : "text-gray-500"
                 }`}
               >
@@ -55,11 +54,11 @@ const JobCategories = () => {
             </div>
           </div>
           {selectedCategory === category.id && (
-            <div className="absolute inset-0 rounded-xl border-2 border-blue-600 animate-pulse pointer-events-none" />
+            <div className="absolute inset-0 rounded-xl border-2 border-teal-500 animate-pulse pointer-events-none" />
           )}
         </button>
       ))}
     </div>
   );
 };
-export default JobCategories;
+export default JobCategories;

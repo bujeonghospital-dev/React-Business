@@ -6,32 +6,32 @@ export type Feature = {
 export const SAMPLE_FEATURES: Feature[] = [
   {
     icon: "/images/go-green/icons/solar.png",
-    title: "Solar Energy",
-    lines: ["ประหยัดพลังงานได้", "146,518.4 kWh/ปี"],
+    title: "Certified Surgeons",
+    lines: ["แพทย์ศัลยกรรมเฉพาะทาง", "มาตรฐานสากล"],
   },
   {
     icon: "/images/go-green/icons/energy.png",
-    title: "Energy Saving",
-    lines: ["ประหยัดค่าไฟฟ้า ", "1,940,575.80 บาท/ปี"],
+    title: "Modern Equipment",
+    lines: ["เครื่องมือทันสมัย", "ได้มาตรฐานสากล"],
   },
   {
     icon: "/images/go-green/icons/co2.png",
-    title: "GHG Emissions Reduction",
-    lines: ["ลดการปล่อยคาร์บอน", "≈ 195 tCO2/ปี"],
+    title: "Safety First",
+    lines: ["ความปลอดภัยสูงสุด", "มาตรฐานโรงพยาบาล"],
   },
   {
     icon: "/images/go-green/icons/tree.png",
-    title: "Tree-Planting Equivalent",
-    lines: ["เก่ากับการปลูกต้นไม้", "21,667 ต้น"],
+    title: "1:1 Consultation",
+    lines: ["ปรึกษาแบบ 1:1", "กับแพทย์โดยตรง"],
   },
   {
     icon: "/images/go-green/icons/truck_1.png",
-    title: "Green Transport",
-    lines: ["ลดการปล่อย", "ก๊าซคาร์บอนไดออกไซด์และมลภาวะ", "สู่สิ่งแวดล้อม"],
+    title: "Aftercare Support",
+    lines: ["ดูแลหลังผ่าตัด", "ติดตามตลอดการรักษา"],
   },
   {
     icon: "/images/go-green/icons/property-document_14001_1.png",
-    title: "Green standard",
-    lines: ["ปฏิบัติตามมาตรฐานสิ่งแวดล้อม", "ISO 14001"],
+    title: "Licensed Clinic",
+    lines: ["ได้รับอนุญาตถูกต้อง", "ฆสพ.สบส : ๔๖๒๗ / ๒๕๖๘"],
   },
-];
+];

@@ -4,11 +4,11 @@ export default function Page() {
   return (
     <ScaledCanvas>
       <GoGreenSection
-        title={`" ขับเคลื่อนการเติบโตอย่างยั่งยืน เพื่อธุรกิจ สังคม และโลกใบนี้ "`}
+        title={`" ความงามที่มีมาตรฐาน ปลอดภัย โดยแพทย์เฉพาะทาง "`}
         imageFit="cover"
         textFirstOnMobile={false}
         imagePosition="left"
       />
     </ScaledCanvas>
   );
-}
+}

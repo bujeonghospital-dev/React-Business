@@ -62,8 +62,8 @@ function useAnims() {
 // ===== Component =====
 export default function GoGreenSection({
   imageSrc = "/images/go-green/go_green_home_page_4.png",
-  imageAlt = "Go Green",
-  title = " ขับเคลื่อนการเติมโตอย่างยั่งยืน เพื่อธุรกิจ สังคม และ โลกใบนี้",
+  imageAlt = "BJH Bangkok",
+  title = " ความงามที่มีมาตรฐาน ปลอดภัย โดยแพทย์เฉพาะทาง",
   subtitle = ``,
   features = SAMPLE_FEATURES,
   imageFit = "cover", // "cover" | "contain"
@@ -201,4 +201,4 @@ export default function GoGreenSection({
       </div>
     </section>
   );
-}
+}

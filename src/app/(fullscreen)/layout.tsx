@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: {
     template: "%s | BJH Bangkok",
-    default: "Customer Data - TPP",
+    default: "App",
   },
 };
 

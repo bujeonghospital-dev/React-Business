@@ -34,8 +34,8 @@ export default function CustomerSelectionPage() {
         let newCount = 0;
 
         result.data.forEach((row: Record<string, any>) => {
-          // Check both Thai and English column names
-          const cnValue = row["รหัสลูกค้า"] || row["customer_code"];
+          // Check 'cn' column for existing customers (customers with CN number from OPD)
+          const cnValue = row["cn"];
           if (cnValue && cnValue.toString().trim() !== "") {
             existingCount++;
           } else {

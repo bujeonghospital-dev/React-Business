@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, useMemo, useCallback, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
   RefreshCw,
@@ -263,18 +263,18 @@ const CustomerAllDataPage = () => {
         sanitizedTables.forEach((table: TableData) => {
           allData.push(...table.data);
         });
-        // Filter by customer type based on CN number (รหัสลูกค้า or customer_code)
+        // Filter by customer type based on CN number (cn column from OPD system)
         let typeFilteredData = allData;
         if (customerType === "existing") {
-          // ลูกค้าเก่า - customers with CN number
+          // ลูกค้าเก่า - customers with CN number (opened OPD)
           typeFilteredData = allData.filter((row) => {
-            const cnValue = row["รหัสลูกค้า"] || row["customer_code"];
+            const cnValue = row["cn"];
             return cnValue && cnValue.toString().trim() !== "";
           });
         } else if (customerType === "new") {
-          // ลูกค้าใหม่ - customers without CN number
+          // ลูกค้าใหม่ - customers without CN number (not opened OPD yet)
           typeFilteredData = allData.filter((row) => {
-            const cnValue = row["รหัสลูกค้า"] || row["customer_code"];
+            const cnValue = row["cn"];
             return !cnValue || cnValue.toString().trim() === "";
           });
         }

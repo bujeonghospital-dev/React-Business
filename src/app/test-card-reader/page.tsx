@@ -94,6 +94,21 @@ type ReaderDevice = {
     info: string;
 };
 
+type CardInfo = {
+    idNumber: string;
+    fullName: string;
+    fullNameEn: string;
+    sex: string;
+    birthDate: string;
+    age: string;
+    issueDate: string;
+    expiryDate: string;
+    address: string;
+    cardStatus: string;
+    statusCode: string;
+    readerName: string;
+};
+
 const SMART_CARD_FILTERS: USBDeviceFilter[] = [{ classCode: 0x0b }];
 const HID_SMART_CARD_FILTERS: HIDDeviceFilter[] = [{ usagePage: 0x0b }];
 
@@ -191,6 +206,20 @@ export default function TestCardReaderPage() {
     const [atrValue, setAtrValue] = useState<string | null>(null);
     const [cardLog, setCardLog] = useState<string[]>([]);
     const [apduInput, setApduInput] = useState("00A4040007A000000054480001");
+    const [cardInfo, setCardInfo] = useState<CardInfo>({
+        idNumber: "",
+        fullName: "",
+        fullNameEn: "",
+        sex: "",
+        birthDate: "",
+        age: "",
+        issueDate: "",
+        expiryDate: "",
+        address: "",
+        cardStatus: "",
+        statusCode: "",
+        readerName: "",
+    });
     const sequenceRef = useRef(0);
 
     const logMessage = useCallback((message: string) => {
@@ -539,6 +568,85 @@ export default function TestCardReaderPage() {
                             </div>
                         </div>
 
+                        <div className="mt-4">
+                            <div className="border rounded-4 shadow-sm p-4">
+                                <div className="row g-4">
+                                    <div className="col-lg-8">
+                                        <div className="d-flex align-items-center justify-content-between mb-2">
+                                            <div>
+                                                <p className="text-uppercase small fw-semibold text-muted mb-1">เลขประจำตัวประชาชน</p>
+                                                <h1 className="h3 mb-0">{cardInfo.idNumber}</h1>
+                                            </div>
+                                            <span className="badge bg-success bg-opacity-15 text-success">{cardInfo.cardStatus}</span>
+                                        </div>
+                                        <div className="d-flex gap-4 flex-wrap mb-3">
+                                            <div>
+                                                <p className="small text-uppercase text-muted mb-1">ชื่อ-นามสกุล</p>
+                                                <p className="fw-semibold mb-0">{cardInfo.fullName}</p>
+                                                <p className="text-muted small mb-0">{cardInfo.fullNameEn}</p>
+                                            </div>
+                                            <div>
+                                                <p className="small text-uppercase text-muted mb-1">เพศ</p>
+                                                <p className="mb-0">{cardInfo.sex}</p>
+                                            </div>
+                                            <div>
+                                                <p className="small text-uppercase text-muted mb-1">วันเกิด</p>
+                                                <p className="mb-0">{cardInfo.birthDate} · {cardInfo.age}</p>
+                                            </div>
+                                        </div>
+                                        <div className="row row-cols-1 row-cols-md-2 g-3">
+                                            <div>
+                                                <p className="small text-uppercase text-muted mb-1">วันที่ออกบัตร</p>
+                                                <p className="mb-0 fw-semibold">{cardInfo.issueDate}</p>
+                                            </div>
+                                            <div>
+                                                <p className="small text-uppercase text-muted mb-1">วันหมดอายุ</p>
+                                                <p className="mb-0 fw-semibold">{cardInfo.expiryDate}</p>
+                                            </div>
+                                        </div>
+                                        <div className="mt-3">
+                                            <p className="small text-uppercase text-muted mb-1">ที่อยู่ตามบัตร</p>
+                                            <p className="mb-0">{cardInfo.address}</p>
+                                        </div>
+                                    </div>
+                                    <div className="col-lg-4">
+                                        <div className="border rounded-4 p-3 h-100 d-flex flex-column justify-content-between">
+                                            <div>
+                                                <div className="ratio ratio-1x1 rounded mb-2" style={{ backgroundColor: "#f5f5f5" }}>
+                                                    <div className="d-flex justify-content-center align-items-center h-100 text-muted">ภาพถ่าย</div>
+                                                </div>
+                                                <p className="text-uppercase small text-muted mb-1">เลขที่บัตรประชาชน</p>
+                                                <p className="fs-5 fw-semibold mb-1">{cardInfo.statusCode}</p>
+                                                <p className="small text-muted mb-0">{cardInfo.readerName}</p>
+                                            </div>
+                                            <div className="mt-3">
+                                                <p className="small text-uppercase text-muted mb-1">ระบบบันทึก</p>
+                                                <div className="bg-dark text-white rounded-3 px-3 py-2 small">
+                                                    FAST ID STATUS
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="mt-3">
+                                    <div className="small text-uppercase text-muted mb-2">System Logs</div>
+                                    <div className="bg-light border rounded-3 p-3" style={{ minHeight: 140 }}>
+                                        {cardLog.length ? (
+                                            <ul className="list-unstyled mb-0 small">
+                                                {cardLog.map((entry, index) => (
+                                                    <li key={entry + index} className="pb-2 border-bottom border-secondary border-opacity-25">
+                                                        {entry}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <p className="small text-muted mb-0">ยังไม่พบข้อมูลบันทึก</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="mt-5">
                             <div className="border rounded-4 shadow-sm p-4">
                                 <div className="d-flex flex-column flex-lg-row gap-3 align-items-start">
@@ -570,19 +678,14 @@ export default function TestCardReaderPage() {
                                         </div>
                                     </div>
                                     <div className="flex-fill">
-                                        <h3 className="h6 text-uppercase text-muted">บันทึกการอ่าน</h3>
-                                        <div className="bg-light border rounded-3 p-3" style={{ minHeight: 160 }}>
-                                            {cardLog.length ? (
-                                                <ul className="list-unstyled mb-0 small">
-                                                    {cardLog.map((entry, index) => (
-                                                        <li key={entry + index} className="pb-2 border-bottom border-secondary border-opacity-25">
-                                                            {entry}
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            ) : (
-                                                <p className="small text-muted mb-0">เปิดบัตรแล้วจะเห็น ATR/ผลลัพธ์ APDU</p>
-                                            )}
+                                        <h3 className="h6 text-uppercase text-muted">ขั้นตอนอัตโนมัติ</h3>
+                                        <div className="bg-dark text-white rounded-3 p-3" style={{ minHeight: 160 }}>
+                                            <ul className="list-unstyled mb-0 small">
+                                                <li>Card Disconnected.</li>
+                                                <li>Step 1 Card Connected.</li>
+                                                <li>Step 2 Read card information.</li>
+                                                <li>Step 3 Read the picture.</li>
+                                            </ul>
                                         </div>
                                     </div>
                                 </div>

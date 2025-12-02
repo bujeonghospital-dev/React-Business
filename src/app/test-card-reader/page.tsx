@@ -109,7 +109,11 @@ type CardInfo = {
     readerName: string;
 };
 
-const SMART_CARD_FILTERS: USBDeviceFilter[] = [{ classCode: 0x0b }];
+const SMART_CARD_FILTERS: USBDeviceFilter[] = [
+    { vendorId: 0x058f, productId: 0x9540 }, // Alcorlink USB Smart Card Reader
+    { classCode: 0x0b },                     // เผื่อ generic CCID ตัวอื่นในอนาคต
+];
+
 const HID_SMART_CARD_FILTERS: HIDDeviceFilter[] = [{ usagePage: 0x0b }];
 
 const toHex = (value?: number) =>
@@ -298,27 +302,36 @@ export default function TestCardReaderPage() {
     const prepareUsbDevice = useCallback(
         async (device: USBDevice) => {
             await tearDownDevice();
+
             if (!device.opened) {
                 await device.open();
             }
+
             if (!device.configuration) {
                 const desired = device.configurations?.[0]?.configurationValue ?? 1;
                 await device.selectConfiguration(desired);
             }
+
             const configuration = device.configuration;
             if (!configuration) {
                 throw new Error("ไม่พบ configuration ของเครื่องอ่าน");
             }
+
             const ccidInterface = configuration.interfaces.find((iface) =>
                 iface.alternates.some((alt) => alt.interfaceClass === 0x0b)
             );
+
             const alternate = ccidInterface?.alternates.find((alt) => alt.interfaceClass === 0x0b);
             const outEp = alternate?.endpoints?.find((ep) => ep.direction === "out" && ep.type === "bulk");
             const inEp = alternate?.endpoints?.find((ep) => ep.direction === "in" && ep.type === "bulk");
+
             if (!ccidInterface || !outEp || !inEp) {
+                console.error("CCID interfaces:", configuration.interfaces);
                 throw new Error("ไม่พบ interface/endpoint ที่รองรับ CCID");
             }
+
             await device.claimInterface(ccidInterface.interfaceNumber);
+
             setSelectedUsbDevice(device);
             setSelectedInterface(ccidInterface.interfaceNumber);
             setOutEndpoint(outEp.endpointNumber);
@@ -327,9 +340,14 @@ export default function TestCardReaderPage() {
             sequenceRef.current = 0;
             setAtrValue(null);
             setCardLog([]);
+
+            logMessage(
+                `เตรียมอุปกรณ์เรียบร้อย (iface=${ccidInterface.interfaceNumber}, OUT=${outEp.endpointNumber}, IN=${inEp.endpointNumber})`
+            );
         },
-        [tearDownDevice]
+        [tearDownDevice, logMessage]
     );
+
 
     useEffect(() => {
         if (typeof navigator === "undefined") return;

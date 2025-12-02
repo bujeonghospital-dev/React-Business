@@ -374,36 +374,36 @@ export const AddCustomerModal = ({
         try {
             const customerPayload = {
                 // Personal Info
-                คำนำหน้า: formData.prefix,
-                ชื่อ: formData.name,
-                นามสกุล: formData.surname,
-                ชื่อเล่น: formData.nickname,
-                เพศ: formData.gender,
-                ติดดาว: formData.star_flag,
-                สถานะ: formData.status,
+                prefix: formData.prefix,
+                name: formData.name,
+                surname: formData.surname,
+                nickname: formData.nickname,
+                gender: formData.gender,
+                star_flag: formData.star_flag === "ติดดาว" ? 1 : 0,
+                status: formData.status,
                 // Contact Info
-                เบอร์โทร: formData.phone,
-                อีเมล: formData.email,
-                ไลน์ไอดี: formData.lineid,
-                เฟสบุ๊ค: formData.facebook,
-                ประเทศ: formData.country,
+                phone: formData.phone,
+                email: formData.email,
+                lineid: formData.lineid,
+                facebook: formData.facebook,
+                country: formData.country,
                 // Business Info
-                "  แหล่งที่มา": formData.source,
-                " ผลิตภัณฑ์ที่สนใจ": formData.interested_product,
-                ผู้ติดต่อ: formData.contact_staff,
-                ยอดที่เสนอ: formData.proposed_amount || null,
+                source: formData.source,
+                interested_product: formData.interested_product,
+                contact_staff: formData.contact_staff,
+                proposed_amount: formData.proposed_amount || null,
                 // Follow-up Dates
-                วันที่ได้รับข้อมูล: formData.got_contact_date || null,
-                วันที่ติดตามครั้งล่าสุด: formData.last_followup || null,
-                วันที่ติดตามครั้งถัดไป: formData.next_followup || null,
+                got_contact_date: formData.got_contact_date || null,
+                last_followup: formData.last_followup || null,
+                next_followup: formData.next_followup || null,
                 // Consult/Surgery Dates
-                วันที่ปรึกษา: formData.consult_date || null,
-                วันที่นัดปรึกษา: formData.booked_consult_date || null,
-                วันที่ผ่าตัด: formData.surgery_date || null,
-                วันที่นัดผ่าตัด: formData.booked_surgery_date || null,
-                เวลานัดหมาย: formData.appointment_time || null,
+                consult_date: formData.consult_date || null,
+                booked_consult_date: formData.booked_consult_date || null,
+                surgery_date: formData.surgery_date || null,
+                booked_surgery_date: formData.booked_surgery_date || null,
+                appointment_time: formData.appointment_time || null,
                 // Notes
-                หมายเหตุ: formData.note,
+                note: formData.note,
                 // OPD data
                 locno: opdData.locno,
                 province: opdData.province,
@@ -508,7 +508,7 @@ export const AddCustomerModal = ({
                     </div>
 
                     {/* Centered Tabs */}
-                    <div className="flex justify-center items-center gap-1 sm:gap-2 px-4 pt-4 pb-3">
+                    <div className="flex justify-center items-center gap-1 sm:gap-2 px-4 py-4">
                         {tabs.map((tab) => (
                             <button
                                 key={tab.id}
@@ -523,14 +523,6 @@ export const AddCustomerModal = ({
                                 <span className="text-xs sm:text-sm font-medium hidden sm:block">{tab.label}</span>
                             </button>
                         ))}
-                    </div>
-
-                    {/* Title Row */}
-                    <div className="flex items-center justify-center gap-2 pb-4">
-                        <Save className="w-5 h-5 text-white/80" />
-                        <h1 className="text-lg sm:text-xl font-semibold text-white">
-                            เพิ่มลูกค้าใหม่
-                        </h1>
                     </div>
                 </div>
 

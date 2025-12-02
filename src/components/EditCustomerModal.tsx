@@ -1904,7 +1904,7 @@ export const EditCustomerModal = ({
           </div>
 
           {/* Centered Tabs */}
-          <div className="flex justify-center items-center gap-1 sm:gap-2 px-4 pt-4 pb-3">
+          <div className="flex justify-center items-center gap-1 sm:gap-2 px-4 py-4">
             <button
               onClick={() => setActiveTab("contact")}
               className={`flex flex-col sm:flex-row items-center justify-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 ${activeTab === "contact" ? "bg-white/30 shadow-inner" : "bg-white/10 hover:bg-white/20"
@@ -1958,14 +1958,6 @@ export const EditCustomerModal = ({
               <Calendar className="w-5 h-5" />
               <span className="text-xs sm:text-sm font-medium hidden sm:block">นัดหมาย</span>
             </button>
-          </div>
-
-          {/* Title Row */}
-          <div className="flex items-center justify-center gap-2 pb-4">
-            <Save className="w-5 h-5 text-white/80" />
-            <h1 className="text-lg sm:text-xl font-semibold text-white">
-              แก้ไขข้อมูลลูกค้า
-            </h1>
           </div>
         </div>
 

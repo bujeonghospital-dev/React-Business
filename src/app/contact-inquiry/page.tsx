@@ -31,30 +31,18 @@ const staggerContainer = {
 };
 // Company Information
 const COMPANY_INFO = {
-  name: "บริษัท ไทยบรรจุภัณฑ์และการพิมพ์ จำกัด (มหาชน)",
-  shortName: "Thai Packaging and Printing Public Company Limited",
+  name: "BJH BANGKOK",
+  shortName: "ฆสพ.สบส : ๔๖๒๗ / ๒๕๖๘",
   headquarters: {
-    title: "สำนักงานใหญ่",
-    address:
-      "9/9 หมู่ 6 ถนนกิ่งแก้ว ตำบลราชาเทวะ อำเภอบางพลี จังหวัดสมุทรปราการ 10540",
-    phone: "02-175-2201-8",
-    fax: "(+66) 2-529-1254",
-    email: "marketingcenter@tpppack.com",
-    coordinates: { lat: 13.685984091307898, lng: 100.72794861574249 },
-  },
-  factory: {
-    title: "โรงงาน",
-    address:
-      "9/9 หมู่ 6 ถนนกิ่งแก้ว ตำบลราชาเทวะ อำเภอบางพลี จังหวัดสมุทรปราการ 10540",
-    phone: "02-175-2201-8",
-    fax: "(+66) 2-529-1254",
-    email: "marketingcenter@tpppack.com",
-    coordinates: { lat: 13.685984091307898, lng: 100.72794861574249 },
+    title: "BJH BANGKOK",
+    address: "กรุงเทพมหานคร",
+    phone: "02-095-4799",
+    phone2: "086-411-4262",
+    email: "",
+    coordinates: { lat: 13.7563, lng: 100.5018 },
   },
   workingHours: {
-    weekdays: "จันทร์ - ศุกร์: 8:30 - 17:30 น.",
-    saturday: "เสาร์: 8:30 - 17:30 น.",
-    sunday: "วันอาทิตย์และวันหยุดนักขัตฤกษ์: ปิดทำการ",
+    everyday: "เปิดทุกวัน: 11:00 - 20:00 น.",
   },
 };
 // Form Component
@@ -67,9 +55,6 @@ interface FormData {
   message: string;
 }
 const ContactInquiryPage = () => {
-  const [activeTab, setActiveTab] = useState<"headquarters" | "factory">(
-    "headquarters"
-  );
   const [formData, setFormData] = useState<FormData>({
     name: "",
     company: "",
@@ -132,22 +117,12 @@ const ContactInquiryPage = () => {
       setIsSubmitting(false);
     }
   };
-  const currentLocation =
-    activeTab === "headquarters"
-      ? COMPANY_INFO.headquarters
-      : COMPANY_INFO.factory;
+  const currentLocation = COMPANY_INFO.headquarters;
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50">
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-teal-50">
       {/* Hero Section */}
-      <div className="relative h-[400px] bg-gradient-to-br from-red-900 via-red-800 to-red-700 overflow-hidden">
-        <div className="absolute inset-0 bg-black/30" />
-        <Image
-          src="/images/team/TPP_HOME.png"
-          alt="Contact Us"
-          fill
-          className="object-cover mix-blend-overlay"
-          priority
-        />
+      <div className="relative h-[400px] overflow-hidden" style={{ background: "linear-gradient(135deg, #3BA8A6 0%, #4AC0BF 50%, #5DD3D2 100%)" }}>
+        <div className="absolute inset-0 bg-black/20" />
         <Container>
           <motion.div
             initial="hidden"
@@ -160,9 +135,9 @@ const ContactInquiryPage = () => {
               ติดต่อเรา
             </h1>
             <p className="text-lg md:text-xl max-w-2xl drop-shadow-lg">
-              ยินดีให้บริการและตอบทุกคำถามเกี่ยวกับผลิตภัณฑ์และบริการของเรา
+              ยินดีให้บริการและตอบทุกคำถามเกี่ยวกับบริการศัลยกรรมของเรา
               <br />
-              พร้อมสร้างความประทับใจให้กับคุณ
+              พร้อมดูแลความงามของคุณ
             </p>
           </motion.div>
         </Container>
@@ -191,8 +166,8 @@ const ContactInquiryPage = () => {
                 {/* Contact Information */}
                 <div className="space-y-4">
                   <div className="flex items-start gap-4 group">
-                    <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-red-100 to-red-200 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <MapPin className="w-6 h-6 text-red-600" />
+                    <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-teal-100 to-teal-200 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <MapPin className="w-6 h-6 text-teal-600" />
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900 mb-1">
@@ -204,48 +179,68 @@ const ContactInquiryPage = () => {
                     </div>
                   </div>
                   <div className="flex items-start gap-4 group">
-                    <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-red-100 to-red-200 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Phone className="w-6 h-6 text-red-600" />
+                    <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-teal-100 to-teal-200 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Phone className="w-6 h-6 text-teal-600" />
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900 mb-1">
-                        โทรศัพท์
+                        Call Center
                       </h3>
-                      <p className="text-gray-600">{currentLocation.phone}</p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        โทรสาร: {currentLocation.fax}
+                      <p className="text-gray-600">
+                        <a href={`tel:${currentLocation.phone}`} className="hover:text-teal-600">{currentLocation.phone}</a>
+                      </p>
+                      <p className="text-gray-600">
+                        <a href={`tel:${currentLocation.phone2}`} className="hover:text-teal-600">{currentLocation.phone2}</a>
                       </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4 group">
-                    <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-red-100 to-red-200 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Mail className="w-6 h-6 text-red-600" />
+                    <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-teal-100 to-teal-200 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <MessageSquare className="w-6 h-6 text-teal-600" />
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900 mb-1">
-                        อีเมล
+                        ช่องทางติดต่อ
                       </h3>
-                      <a
-                        href={`mailto:${currentLocation.email}`}
-                        className="text-red-600 hover:text-red-700 hover:underline transition-colors"
-                      >
-                        {currentLocation.email}
-                      </a>
+                      <div className="flex gap-3">
+                        <a
+                          href="https://www.facebook.com/bjhbangkok"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-teal-600 hover:text-teal-700 transition-colors"
+                        >
+                          Facebook
+                        </a>
+                        <a
+                          href="https://lin.ee/D9KIJyb"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-teal-600 hover:text-teal-700 transition-colors"
+                        >
+                          LINE
+                        </a>
+                        <a
+                          href="https://m.me/bjhbangkok"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-teal-600 hover:text-teal-700 transition-colors"
+                        >
+                          Messenger
+                        </a>
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-start gap-4 group">
-                    <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-red-100 to-red-200 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Clock className="w-6 h-6 text-red-600" />
+                    <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-teal-100 to-teal-200 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Clock className="w-6 h-6 text-teal-600" />
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900 mb-1">
                         เวลาทำการ
                       </h3>
                       <div className="text-gray-600 space-y-1 text-sm">
-                        <p>{COMPANY_INFO.workingHours.weekdays}</p>
-                        <p>{COMPANY_INFO.workingHours.saturday}</p>
-                        <p className="text-red-600">
-                          {COMPANY_INFO.workingHours.sunday}
+                        <p className="text-teal-600 font-medium">
+                          {COMPANY_INFO.workingHours.everyday}
                         </p>
                       </div>
                     </div>
@@ -263,7 +258,7 @@ const ContactInquiryPage = () => {
                   markerTitle={currentLocation.title}
                 />
               </div>
-              <div className="p-4 bg-gradient-to-r from-red-600 to-red-700">
+              <div className="p-4" style={{ background: "linear-gradient(90deg, #3BA8A6 0%, #4AC0BF 100%)" }}>
                 <a
                   href={`https://www.google.com/maps/search/?api=1&query=${currentLocation.coordinates.lat},${currentLocation.coordinates.lng}`}
                   target="_blank"
@@ -305,7 +300,7 @@ const ContactInquiryPage = () => {
                       value={formData.name}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none"
+                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all outline-none"
                       placeholder="กรอกชื่อ-นามสกุล"
                     />
                   </div>
@@ -326,7 +321,7 @@ const ContactInquiryPage = () => {
                       name="company"
                       value={formData.company}
                       onChange={handleInputChange}
-                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none"
+                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all outline-none"
                       placeholder="กรอกชื่อบริษัท (ถ้ามี)"
                     />
                   </div>
@@ -348,7 +343,7 @@ const ContactInquiryPage = () => {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none"
+                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all outline-none"
                       placeholder="example@email.com"
                     />
                   </div>
@@ -370,7 +365,7 @@ const ContactInquiryPage = () => {
                       value={formData.phone}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none"
+                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all outline-none"
                       placeholder="0X-XXXX-XXXX"
                     />
                   </div>
@@ -392,7 +387,7 @@ const ContactInquiryPage = () => {
                       value={formData.subject}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none"
+                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all outline-none"
                       placeholder="เรื่องที่ต้องการติดต่อ"
                     />
                   </div>
@@ -412,7 +407,7 @@ const ContactInquiryPage = () => {
                     onChange={handleInputChange}
                     required
                     rows={5}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none resize-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all outline-none resize-none"
                     placeholder="รายละเอียดที่ต้องการสอบถามหรือติดต่อ"
                   />
                 </div>
@@ -421,11 +416,10 @@ const ContactInquiryPage = () => {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`p-4 rounded-xl ${
-                      submitStatus.type === "success"
+                    className={`p-4 rounded-xl ${submitStatus.type === "success"
                         ? "bg-green-50 text-green-800 border border-green-200"
                         : "bg-red-50 text-red-800 border border-red-200"
-                    }`}
+                      }`}
                   >
                     {submitStatus.message}
                   </motion.div>
@@ -436,7 +430,8 @@ const ContactInquiryPage = () => {
                   disabled={isSubmitting}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold py-4 px-6 rounded-xl hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  style={{ background: "linear-gradient(90deg, #3BA8A6 0%, #4AC0BF 100%)" }}
                 >
                   {isSubmitting ? (
                     <>
@@ -462,31 +457,35 @@ const ContactInquiryPage = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="mt-16 bg-gradient-to-r from-red-600 via-red-700 to-red-800 rounded-2xl shadow-2xl overflow-hidden"
+          className="mt-16 rounded-2xl shadow-2xl overflow-hidden"
+          style={{ background: "linear-gradient(135deg, #3BA8A6 0%, #4AC0BF 50%, #5DD3D2 100%)" }}
         >
           <div className="p-8 md:p-12 text-white text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               พร้อมให้บริการคุณ
             </h2>
             <p className="text-lg md:text-xl mb-6 max-w-3xl mx-auto">
-              ทีมงานผู้เชี่ยวชาญของเรายินดีให้คำปรึกษาและตอบทุกคำถามเกี่ยวกับผลิตภัณฑ์
+              ทีมแพทย์ผู้เชี่ยวชาญของเรายินดีให้คำปรึกษาและตอบทุกคำถาม
               <br />
-              และบริการด้านบรรจุภัณฑ์และงานพิมพ์คุณภาพสูง
+              เกี่ยวกับบริการศัลยกรรมความงามมาตรฐานสากล
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <a
                 href={`tel:${COMPANY_INFO.headquarters.phone}`}
-                className="bg-white text-red-600 font-semibold px-8 py-3 rounded-xl hover:bg-gray-100 transition-colors inline-flex items-center gap-2"
+                className="bg-white font-semibold px-8 py-3 rounded-xl hover:bg-gray-100 transition-colors inline-flex items-center gap-2"
+                style={{ color: "#4AC0BF" }}
               >
                 <Phone className="w-5 h-5" />
                 โทรหาเรา
               </a>
               <a
-                href={`mailto:${COMPANY_INFO.headquarters.email}`}
+                href="https://lin.ee/D9KIJyb"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="bg-transparent border-2 border-white text-white font-semibold px-8 py-3 rounded-xl hover:bg-white/10 transition-colors inline-flex items-center gap-2"
               >
-                <Mail className="w-5 h-5" />
-                ส่งอีเมล
+                <MessageSquare className="w-5 h-5" />
+                แชทกับเรา
               </a>
             </div>
           </div>
@@ -495,4 +494,4 @@ const ContactInquiryPage = () => {
     </div>
   );
 };
-export default ContactInquiryPage;
+export default ContactInquiryPage;

@@ -500,7 +500,10 @@ nav > .dropdown > span.btn:active {
 /* ----------------------------------------------------------------------------------------- */
 /* ชุดสียังไม่ได้จัดวางเด้อ */
 .custom-red {
-  color: #d6001c !important;
+  color: #4AC0BF !important;
+}
+.custom-teal {
+  color: #4AC0BF !important;
 }
 .custom-Charcoal-gray {
   color: #242424 !important;

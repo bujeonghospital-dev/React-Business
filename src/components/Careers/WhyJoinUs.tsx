@@ -107,44 +107,44 @@ const benefits = [
   {
     icon: ChartBarIcon,
     title: "การเติบโตในสายอาชีพ",
-    description: "โอกาสในการพัฒนาและเติบโตในสายงานอย่างไร้ขีดจำกัด",
-    color: "text-blue-600",
-    bgColor: "bg-blue-50",
+    description: "โอกาสในการพัฒนาและเติบโตในสายงานสายสุขภาพ",
+    color: "text-teal-600",
+    bgColor: "bg-teal-50",
   },
   {
     icon: AcademicCapIcon,
     title: "การฝึกอบรมและพัฒนา",
     description: "โปรแกรมการฝึกอบรมที่ครอบคลุมและทันสมัย",
-    color: "text-green-600",
-    bgColor: "bg-green-50",
+    color: "text-teal-600",
+    bgColor: "bg-teal-50",
   },
   {
     icon: HeartIcon,
     title: "สวัสดิการครบครัน",
-    description: "ประกันสุขภาพ กองทุนสำรองเลี้ยงชีพ โบนัสประจำปี และอื่นๆ",
-    color: "text-red-600",
-    bgColor: "bg-red-50",
+    description: "ประกันสุขภาพ โบนัสประจำปี และอื่นๆ",
+    color: "text-teal-600",
+    bgColor: "bg-teal-50",
   },
   {
     icon: UsersIcon,
     title: "สภาพแวดล้อมการทำงาน",
     description: "บรรยากาศการทำงานที่ดี ทีมงานที่เป็นมิตร",
-    color: "text-purple-600",
-    bgColor: "bg-purple-50",
+    color: "text-teal-600",
+    bgColor: "bg-teal-50",
   },
   {
     icon: TrophyIcon,
-    title: "ความมั่นคงทางการเงิน",
-    description: "บริษัทมหาชนจดทะเบียนในตลาดหลักทรัพย์ มากกว่า 35 ปี",
-    color: "text-yellow-600",
-    bgColor: "bg-yellow-50",
+    title: "ความมั่นคง",
+    description: "ศูนย์ศัลยกรรมที่ได้รับอนุญาตถูกต้องตามกฎหมาย",
+    color: "text-teal-600",
+    bgColor: "bg-teal-50",
   },
   {
     icon: ShieldCheckIcon,
     title: "มาตรฐานสากล",
-    description: "ISO 9001:2015, ISO 14001:2015, GMP/HACCP",
-    color: "text-indigo-600",
-    bgColor: "bg-indigo-50",
+    description: "แพทย์เฉพาะทางความงาม อุปกรณ์ทันสมัย",
+    color: "text-teal-600",
+    bgColor: "bg-teal-50",
   },
 ];
 const WhyJoinUs = () => {
@@ -159,7 +159,7 @@ const WhyJoinUs = () => {
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               ทำไมต้องเข้าร่วมกับเรา
             </h2>
-            <div className="w-full h-1 bg-gradient-to-r from-blue-600 to-green-600 mx-auto mb-6"></div>
+            <div className="w-full h-1 bg-gradient-to-r from-teal-500 to-teal-600 mx-auto mb-6"></div>
           </div>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
             เราให้ความสำคัญกับการพัฒนาบุคลากรและสร้างสภาพแวดล้อมการทำงานที่ดีที่สุด
@@ -189,7 +189,7 @@ const WhyJoinUs = () => {
           })}
         </div>
         {/* Additional Benefits Section */}
-        <div className="mt-16 bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-8 md:p-12 text-white">
+        <div className="mt-16 rounded-2xl p-8 md:p-12 text-white" style={{ background: "linear-gradient(135deg, #3BA8A6 0%, #4AC0BF 100%)" }}>
           <h3 className="text-2xl md:text-3xl font-bold mb-6 text-center">
             สวัสดิการที่คุณจะได้รับ
           </h3>
@@ -225,7 +225,7 @@ const WhyJoinUs = () => {
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                <span>เบี้ยขยัน 250-700 บาท/เดือน</span>
+                <span>ประกันสังคม</span>
               </li>
               <li className="flex items-start">
                 <svg
@@ -241,7 +241,7 @@ const WhyJoinUs = () => {
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                <span>รถรับส่งพนักงาน (สายคลองขุด และสายลาดกระบัง)</span>
+                <span>วันหยุดประจำปีตามกฎหมาย</span>
               </li>
               <li className="flex items-start">
                 <svg
@@ -257,7 +257,7 @@ const WhyJoinUs = () => {
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                <span>ประกันสังคม และกองทุนเงินทดแทน</span>
+                <span>สวัสดิการด้านความงามสำหรับพนักงาน</span>
               </li>
               <li className="flex items-start">
                 <svg
@@ -273,7 +273,7 @@ const WhyJoinUs = () => {
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                <span>กองทุนสำรองเลี้ยงชีพ</span>
+                <span>สภาพแวดล้อมการทำงานที่ดี</span>
               </li>
             </ul>
             <ul className="space-y-3">
@@ -364,4 +364,4 @@ const WhyJoinUs = () => {
     </section>
   );
 };
-export default WhyJoinUs;
+export default WhyJoinUs;

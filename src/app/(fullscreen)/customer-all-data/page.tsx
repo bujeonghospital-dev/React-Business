@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
   RefreshCw,
@@ -73,6 +73,8 @@ interface TableSizeOption {
 }
 const CustomerAllDataPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const customerType = searchParams.get("type"); // "existing" or "new"
   const [tableData, setTableData] = useState<TableData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -258,8 +260,23 @@ const CustomerAllDataPage = () => {
         sanitizedTables.forEach((table: TableData) => {
           allData.push(...table.data);
         });
+        // Filter by customer type based on CN number (รหัสลูกค้า or customer_code)
+        let typeFilteredData = allData;
+        if (customerType === "existing") {
+          // ลูกค้าเก่า - customers with CN number
+          typeFilteredData = allData.filter((row) => {
+            const cnValue = row["รหัสลูกค้า"] || row["customer_code"];
+            return cnValue && cnValue.toString().trim() !== "";
+          });
+        } else if (customerType === "new") {
+          // ลูกค้าใหม่ - customers without CN number
+          typeFilteredData = allData.filter((row) => {
+            const cnValue = row["รหัสลูกค้า"] || row["customer_code"];
+            return !cnValue || cnValue.toString().trim() === "";
+          });
+        }
         // Keep all rows that have at least one value in any header
-        const filteredData = allData.filter((row) => {
+        const filteredData = typeFilteredData.filter((row) => {
           return filteredHeaders.some((header) => {
             const value = row[header];
             return value !== undefined && value !== null && value !== "";
@@ -335,7 +352,7 @@ const CustomerAllDataPage = () => {
     fetchData();
     fetchStatusOptions();
     fetchTableSizeOptions();
-  }, []);
+  }, [customerType]);
 
   // Close all menus when clicking outside
   useEffect(() => {
@@ -858,11 +875,17 @@ const CustomerAllDataPage = () => {
         {/* Header - Back and Add buttons */}
         <div className="flex justify-between items-center mb-3">
           <button
-            onClick={() => router.push("/home")}
+            onClick={() => router.push("/customer-selection")}
             className="flex items-center justify-center w-11 h-11 bg-white hover:bg-slate-50 text-slate-600 rounded-xl transition-all shadow-sm border border-slate-200 active:scale-95"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
+          {/* Title showing customer type */}
+          <div className="flex-1 text-center">
+            <h1 className="text-lg font-semibold text-slate-700">
+              {customerType === "existing" ? "ลูกค้าเก่า" : customerType === "new" ? "ลูกค้าใหม่" : "ลูกค้าทั้งหมด"}
+            </h1>
+          </div>
           <button
             onClick={() => setIsAddModalOpen(true)}
             className="flex items-center justify-center w-11 h-11 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl transition-all shadow-md active:scale-95"
@@ -2024,4 +2047,16 @@ const CustomerAllDataPage = () => {
     </>
   );
 };
-export default CustomerAllDataPage;
+
+// Wrapper component with Suspense for useSearchParams
+export default function CustomerAllDataPageWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="w-full min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-slate-500">กำลังโหลด...</div>
+      </div>
+    }>
+      <CustomerAllDataPage />
+    </Suspense>
+  );
+}

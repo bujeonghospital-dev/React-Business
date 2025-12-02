@@ -139,7 +139,7 @@ export default function FullscreenHomePage() {
           title: "All สนใจ",
           icon: <FaCheckCircle />,
           status: "",
-          link: "/customer-all-data",
+          link: "/customer-selection",
         },
         {
           title: "สถานะ ชื่อ เบอร์",

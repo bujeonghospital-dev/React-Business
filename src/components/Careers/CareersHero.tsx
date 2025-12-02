@@ -5,10 +5,10 @@ const CareersHero = () => {
   return (
     <div className="relative w-full h-[500px] md:h-[600px] overflow-hidden">
       {/* Background Image */}
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-900/90 to-blue-700/80 z-10" />
+      <div className="absolute inset-0 z-10" style={{ background: "linear-gradient(135deg, rgba(59, 168, 166, 0.95) 0%, rgba(74, 192, 191, 0.9) 100%)" }} />
       <Image
         src="/images/joinus/bg-board.jpg"
-        alt="Careers at TPP"
+        alt="Careers at BJH Bangkok"
         fill
         className="object-cover"
         priority
@@ -19,18 +19,19 @@ const CareersHero = () => {
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 animate-fade-in">
             Limitless Opportunities
           </h1>
-          <h2 className="text-2xl md:text-3xl lg:text-4xl font-semibold mb-8 text-green-300">
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-semibold mb-8 text-white">
             โอกาส..ไร้ขีดจำกัด
           </h2>
           <p className="text-lg md:text-xl leading-relaxed mb-8 text-gray-100">
-            บริษัท ไทยบรรจุภัณฑ์และการพิมพ์ จำกัด (มหาชน) ก่อตั้งมากกว่า 35 ปี
+            BJH Bangkok ศูนย์ศัลยกรรมความงามชั้นนำ
             เราเชื่อในศักยภาพของทุกคน มาร่วมเติบโตไปพร้อมกับเรา
-            เพื่อสร้างสรรค์ผลงานและอนาคตที่ยั่งยืน
+            เพื่อสร้างสรรค์ความงามให้กับลูกค้า
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
               href="#job-listings"
-              className="px-8 py-4 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+              className="px-8 py-4 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+              style={{ backgroundColor: "#2D8A89" }}
             >
               ดูตำแหน่งงานทั้งหมด
             </a>
@@ -60,4 +61,4 @@ const CareersHero = () => {
     </div>
   );
 };
-export default CareersHero;
+export default CareersHero;

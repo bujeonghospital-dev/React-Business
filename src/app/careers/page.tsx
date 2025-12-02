@@ -6,10 +6,10 @@ import JobListings from "@/components/Careers/JobListings";
 import WhyJoinUs from "@/components/Careers/WhyJoinUs";
 import Container from "@/components/Container";
 export const metadata: Metadata = {
-  title: "ร่วมงานกับเรา ",
+  title: "ร่วมงานกับเรา | BJH Bangkok",
   description:
-    "โอกาสในการทำงานกับบริษัท ไทยบรรจุภัณฑ์และการพิมพ์ จำกัด (มหาชน) มากกว่า 35 ปีแห่งความเชี่ยวชาญด้านบรรจุภัณฑ์กระดาษคุณภาพสูง",
-  keywords: "สมัครงาน, ร่วมงาน, อาชีพ, TPP, ไทยบรรจุภัณฑ์, งานว่าง, ตำแหน่งงาน",
+    "โอกาสในการทำงานกับ BJH Bangkok ศูนย์ศัลยกรรมความงามชั้นนำ โดยแพทย์ศัลยกรรมเฉพาะทางมาตรฐานสากล",
+  keywords: "สมัครงาน, ร่วมงาน, อาชีพ, BJH Bangkok, โรงพยาบาล, งานว่าง, ตำแหน่งงาน",
 };
 export default function CareersPage() {
   return (
@@ -48,4 +48,4 @@ export default function CareersPage() {
       </section>
     </div>
   );
-}
+}

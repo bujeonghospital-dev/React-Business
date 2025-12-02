@@ -1738,7 +1738,7 @@ export default function CRMAdvancedPage() {
                       {currentMonth.toLocaleDateString("th-TH", {
                         year: "numeric",
                         month: "short",
-                      }).replace(" ", ".")} 
+                      }).replace(" ", ".")}
                     </h2>
                   </div>
                   <button

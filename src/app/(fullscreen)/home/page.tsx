@@ -94,40 +94,35 @@ export default function FullscreenHomePage() {
   };
 
   const menuItems: MenuItem[] = [
-    {
-      id: "home-system",
-      title: "ระบบหน้าบ้าน",
-      icon: <FaHome className="text-4xl" />,
-      color: "from-blue-500 to-blue-700",
-      gradient: "bg-gradient-to-br from-blue-50 to-blue-100",
-      subItems: [
-        { title: "เปิด OPD", icon: <FaUserMd />, link: "/opd", status: "⚙️" },
-        {
-          title: "ทำ Consent Form",
-          icon: <FaFileSignature />,
-          status: "⚙️",
-          link: "/consent-form",
-        },
-        {
-          title: "ดูประวัติบริการทั้งหมด",
-          icon: <FaHistory />,
-          status: "⚙️",
-          link: "/service-history",
-        },
-        {
-          title: "ระบบ Stock คีย์ / ตัดได้",
-          icon: <FaBoxes />,
-          status: "⚙️",
-          link: "/stock-management",
-        },
-        {
-          title: "สรุปนัดลูกผ่าตัด (CRM)",
-          icon: <FaCalendarCheck />,
-          status: "",
-          link: "/crm-advanced",
-        },
-      ],
-    },
+    // {
+    //   id: "home-system",
+    //   title: "ระบบหน้าบ้าน",
+    //   icon: <FaHome className="text-4xl" />,
+    //   color: "from-blue-500 to-blue-700",
+    //   gradient: "bg-gradient-to-br from-blue-50 to-blue-100",
+    //   subItems: [
+    //     { title: "เปิด OPD", icon: <FaUserMd />, link: "/opd", status: "⚙️" },
+    //     {
+    //       title: "ทำ Consent Form",
+    //       icon: <FaFileSignature />,
+    //       status: "⚙️",
+    //       link: "/consent-form",
+    //     },
+    //     {
+    //       title: "ดูประวัติบริการทั้งหมด",
+    //       icon: <FaHistory />,
+    //       status: "⚙️",
+    //       link: "/service-history",
+    //     },
+    //     {
+    //       title: "ระบบ Stock คีย์ / ตัดได้",
+    //       icon: <FaBoxes />,
+    //       status: "⚙️",
+    //       link: "/stock-management",
+    //     },
+
+    //   ],
+    // },
     {
       id: "customer-relations",
       title: "ลูกค้าสัมพันธ์",
@@ -142,16 +137,10 @@ export default function FullscreenHomePage() {
           link: "/customer-selection",
         },
         {
-          title: "สถานะ ชื่อ เบอร์",
-          icon: <FaPhone />,
-          status: "⚙️",
-          link: "/customer-contacts",
-        },
-        {
-          title: "สถานะ Consult แล้ว",
-          icon: <FaComments />,
-          status: "⚙️",
-          link: "/consulted-customers",
+          title: "สรุปนัดลูกผ่าตัด (CRM)",
+          icon: <FaCalendarCheck />,
+          status: "",
+          link: "/crm-advanced",
         },
       ],
     },
@@ -180,24 +169,7 @@ export default function FullscreenHomePage() {
           status: "",
           link: "/customer-contact-dashboard",
         },
-        {
-          title: "Call Tracking",
-          icon: <FaClipboardList />,
-          status: "⚙️",
-          link: "/call-tracking",
-        },
-        {
-          title: "Chatbot Performance",
-          icon: <FaComments />,
-          status: "⚙️",
-          link: "/chatbot-performance",
-        },
-        {
-          title: "Service Flow Performance",
-          icon: <FaFlask />,
-          status: "⚙️",
-          link: "/service-flow",
-        },
+
       ],
     },
     {
@@ -221,54 +193,8 @@ export default function FullscreenHomePage() {
         },
       ],
     },
-    {
-      id: "documents",
-      title: "เอกสารสำคัญ",
-      icon: <FaFileAlt className="text-4xl" />,
-      color: "from-green-500 to-emerald-700",
-      gradient: "bg-gradient-to-br from-green-50 to-emerald-100",
-      subItems: [
-        {
-          title: "เอกสารลูกค้า Consent PDPA",
-          icon: <FaShieldAlt />,
-          status: "⚙️",
-          link: "/documents/consent-pdpa",
-        },
-        {
-          title: "เอกสารทางกฎหมาย",
-          icon: <FaFileAlt />,
-          status: "⚙️",
-          link: "/documents/legal",
-        },
-        {
-          title: "เอกสารบริษัท",
-          icon: <FaBuilding />,
-          status: "⚙️",
-          link: "/documents/company",
-        },
-        {
-          title: "สัญญา Influencer",
-          icon: <FaHandshake />,
-          status: "⚙️",
-          link: "/documents/influencer",
-        },
-      ],
-    },
-    {
-      id: "accounting",
-      title: "ระบบบัญชี",
-      icon: <FaCalculator className="text-4xl" />,
-      color: "from-teal-500 to-cyan-700",
-      gradient: "bg-gradient-to-br from-teal-50 to-cyan-100",
-      subItems: [
-        {
-          title: "Peak",
-          icon: <FaCoins />,
-          link: "/accounting/peak",
-          status: "⚙️",
-        },
-      ],
-    },
+
+
   ];
 
   const handleMenuClick = (menuId: string) => {
@@ -458,9 +384,8 @@ export default function FullscreenHomePage() {
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className={`bg-white rounded-2xl shadow-2xl overflow-hidden cursor-pointer transform transition-all duration-300 ${
-                  selectedMenu === menu.id ? "ring-4 ring-white" : ""
-                }`}
+                className={`bg-white rounded-2xl shadow-2xl overflow-hidden cursor-pointer transform transition-all duration-300 ${selectedMenu === menu.id ? "ring-4 ring-white" : ""
+                  }`}
                 onClick={() => handleMenuClick(menu.id)}
               >
                 {/* Menu Header */}

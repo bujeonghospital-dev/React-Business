@@ -997,9 +997,8 @@ const CustomerAllDataPage = () => {
               placeholder="ค้นหาลูกค้า (พิมพ์อย่างน้อย 3 ตัวอักษร)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full pl-10 pr-4 py-3 bg-white border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm text-sm ${
-                isTypingSearch ? "border-yellow-400" : "border-slate-200"
-              }`}
+              className={`w-full pl-10 pr-4 py-3 bg-white border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm text-sm ${isTypingSearch ? "border-yellow-400" : "border-slate-200"
+                }`}
             />
             {isTypingSearch && (
               <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-yellow-600">
@@ -2163,7 +2162,10 @@ const CustomerAllDataPage = () => {
       <AddCustomerModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onSave={handleAddCustomer}
+        onSuccess={() => {
+          setIsAddModalOpen(false);
+          fetchData();
+        }}
       />
     </>
   );

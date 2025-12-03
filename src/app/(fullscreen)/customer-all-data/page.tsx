@@ -81,6 +81,7 @@ const CustomerAllDataPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [filterColumn, setFilterColumn] = useState<string>("all");
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -183,6 +184,8 @@ const CustomerAllDataPage = () => {
           "ผลิตภัณฑ์ที่สนใจ",
           "ชื่อ",
           "เบอร์โทร",
+          "เพศ",
+          "แหล่งที่มา",
           "หมายเหตุ",
           "วันที่ได้ชื่อ เบอร์",
           "วันที่ติดตามครั้งล่าสุด",
@@ -192,7 +195,6 @@ const CustomerAllDataPage = () => {
           "วันที่ได้นัดผ่าตัด",
           "วันที่ผ่าตัด",
           "เวลาที่นัด",
-          "แหล่งที่มา",
           "หมอ",
           "ยอดนำเสนอ",
           "รหัสลูกค้า",
@@ -203,16 +205,38 @@ const CustomerAllDataPage = () => {
           "Long",
           "id",
         ];
+        
+        // Mandatory fields that should always be shown even if empty
+        const mandatoryFields = [
+          "สถานะ",
+          "ผลิตภัณฑ์ที่สนใจ",
+          "ชื่อ",
+          "เบอร์โทร",
+          "แหล่งที่มา",
+          "เพศ",
+        ];
+        
         const allHeadersSet = new Set<string>();
         const allHeaders: string[] = [];
-        // First add headers in the desired order
+        
+        // First add mandatory fields in the column order
         columnOrder.forEach((header) => {
-          sanitizedTables.forEach((table) => {
-            if (table.headers.includes(header) && !allHeadersSet.has(header)) {
-              allHeadersSet.add(header);
-              allHeaders.push(header);
-            }
-          });
+          if (mandatoryFields.includes(header) && !allHeadersSet.has(header)) {
+            allHeadersSet.add(header);
+            allHeaders.push(header);
+          }
+        });
+        
+        // Then add other headers in the desired order that exist in data
+        columnOrder.forEach((header) => {
+          if (!allHeadersSet.has(header)) {
+            sanitizedTables.forEach((table) => {
+              if (table.headers.includes(header) && !allHeadersSet.has(header)) {
+                allHeadersSet.add(header);
+                allHeaders.push(header);
+              }
+            });
+          }
         });
         // Then add any remaining headers not in the columnOrder
         sanitizedTables.forEach((table: TableData) => {
@@ -223,11 +247,11 @@ const CustomerAllDataPage = () => {
             }
           });
         });
+        
         const filteredHeaders = allHeaders.filter((header: string) => {
           // Exclude specified columns
           const excludedColumns = [
             "รูป",
-            "เพศ",
             "อายุ",
             "รหัสลูกค้า",
             "อาชีพ",
@@ -249,6 +273,10 @@ const CustomerAllDataPage = () => {
           ];
           if (excludedColumns.includes(header)) {
             return false;
+          }
+          // Always include mandatory fields
+          if (mandatoryFields.includes(header)) {
+            return true;
           }
           return sanitizedTables.some((table: TableData) => {
             return table.data.some(
@@ -428,6 +456,16 @@ const CustomerAllDataPage = () => {
     const interval = setInterval(fetchRealtimeUpdates, 8000);
     return () => clearInterval(interval);
   }, [lastUpdateTimestamp, fetchRealtimeUpdates, tableData.length]);
+
+  // Debounce search term - only update after 300ms of no typing and when 3+ chars
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm.length >= 3 || searchTerm.length === 0) {
+        setDebouncedSearchTerm(searchTerm);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Close all menus when clicking outside
   useEffect(() => {
@@ -677,6 +715,9 @@ const CustomerAllDataPage = () => {
   const filteredAndSortedData = useMemo(() => {
     if (tableData.length === 0) return [];
 
+    // Only consider search term active if it has 3+ characters
+    const effectiveSearchTerm = debouncedSearchTerm.length >= 3 ? debouncedSearchTerm : "";
+
     // Check if any filter is active - if not, return empty for performance
     const hasActiveFilter =
       statusFilter !== "all" ||
@@ -689,7 +730,7 @@ const CustomerAllDataPage = () => {
       getNameDate ||
       getConsultApptDate ||
       getSurgeryApptDate ||
-      searchTerm;
+      effectiveSearchTerm;
 
     // Return empty array if no filters applied (for mobile performance)
     if (!hasActiveFilter) return [];
@@ -807,21 +848,22 @@ const CustomerAllDataPage = () => {
     filterByDate("วันที่ได้ชื่อ เบอร์", getNameDate);
     filterByDate("วันที่ได้นัด Consult", getConsultApptDate);
     filterByDate("วันที่ได้นัดผ่าตัด", getSurgeryApptDate);
-    if (searchTerm) {
+    // Use effective search term (only if 3+ characters)
+    if (effectiveSearchTerm) {
       filtered = filtered.filter((row) => {
         if (filterColumn === "all") {
           return tableData[0].headers.some((header) => {
             const value = row[header];
             return (
               value &&
-              String(value).toLowerCase().includes(searchTerm.toLowerCase())
+              String(value).toLowerCase().includes(effectiveSearchTerm.toLowerCase())
             );
           });
         } else {
           const value = row[filterColumn];
           return (
             value &&
-            String(value).toLowerCase().includes(searchTerm.toLowerCase())
+            String(value).toLowerCase().includes(effectiveSearchTerm.toLowerCase())
           );
         }
       });
@@ -840,7 +882,7 @@ const CustomerAllDataPage = () => {
     return filtered;
   }, [
     tableData,
-    searchTerm,
+    debouncedSearchTerm,
     filterColumn,
     sortColumn,
     sortDirection,
@@ -859,6 +901,7 @@ const CustomerAllDataPage = () => {
 
   // Helper to check if any filter is active (for UI display)
   const hasActiveFilter = useMemo(() => {
+    const effectiveSearch = debouncedSearchTerm.length >= 3;
     return (
       statusFilter !== "all" ||
       productFilter !== "all" ||
@@ -870,9 +913,23 @@ const CustomerAllDataPage = () => {
       getNameDate ||
       getConsultApptDate ||
       getSurgeryApptDate ||
-      searchTerm
+      effectiveSearch
     );
-  }, [statusFilter, productFilter, contactFilter, followUpLastDate, followUpNextDate, consultDate, surgeryDate, getNameDate, getConsultApptDate, getSurgeryApptDate, searchTerm]);
+  }, [statusFilter, productFilter, contactFilter, followUpLastDate, followUpNextDate, consultDate, surgeryDate, getNameDate, getConsultApptDate, getSurgeryApptDate, debouncedSearchTerm]);
+
+  // Check if user is typing but hasn't reached minimum characters yet
+  const isTypingSearch = searchTerm.length > 0 && searchTerm.length < 3;
+
+  // Compact columns to show when filter/search is active
+  const compactColumns = ["สถานะ", "ชื่อ", "เบอร์โทร", "ผลิตภัณฑ์ที่สนใจ"];
+
+  // Get display headers based on filter state
+  const displayHeaders = useMemo(() => {
+    if (hasActiveFilter && tableData.length > 0) {
+      return compactColumns.filter(col => tableData[0].headers.includes(col));
+    }
+    return tableData.length > 0 ? tableData[0].headers : [];
+  }, [hasActiveFilter, tableData]);
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -975,11 +1032,17 @@ const CustomerAllDataPage = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
               type="text"
-              placeholder="ค้นหาลูกค้า..."
+              placeholder="ค้นหาลูกค้า (พิมพ์อย่างน้อย 3 ตัวอักษร)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm text-sm"
+              className={`w-full pl-10 pr-4 py-3 bg-white border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm text-sm ${isTypingSearch ? "border-yellow-400" : "border-slate-200"
+                }`}
             />
+            {isTypingSearch && (
+              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-yellow-600">
+                +{3 - searchTerm.length}
+              </span>
+            )}
           </div>
         </div>
 
@@ -1753,7 +1816,13 @@ const CustomerAllDataPage = () => {
         {!hasActiveFilter && (
           <div className="md:hidden flex-1 flex flex-col items-center justify-center py-16">
             <Filter className="w-16 h-16 text-slate-300 mb-4" />
-            <p className="text-slate-500 text-center text-sm">กรุณาเลือกตัวกรองเพื่อแสดงข้อมูล</p>
+            {isTypingSearch ? (
+              <p className="text-slate-500 text-center text-sm">
+                พิมพ์อีก {3 - searchTerm.length} ตัวอักษรเพื่อค้นหา
+              </p>
+            ) : (
+              <p className="text-slate-500 text-center text-sm">กรุณาเลือกตัวกรองหรือพิมพ์อย่างน้อย 3 ตัวอักษรเพื่อค้นหา</p>
+            )}
             <button
               onClick={() => setShowFilterSheet(true)}
               className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-xl text-sm font-medium hover:bg-blue-600 transition-colors"
@@ -1822,7 +1891,7 @@ const CustomerAllDataPage = () => {
                           title="เลือกทั้งหมด"
                         />
                       </th>
-                      {tableData[0].headers.map((header, idx) => {
+                      {displayHeaders.map((header, idx) => {
                         // Define gradient colors for header date columns
                         const headerGradients: Record<string, string> = {
                           วันที่ติดตามครั้งล่าสุด:
@@ -1868,6 +1937,12 @@ const CustomerAllDataPage = () => {
                           </th>
                         );
                       })}
+                      {/* View More column header - only show when filter is active */}
+                      {hasActiveFilter && (
+                        <th className="px-3 py-2 text-center text-xs font-bold text-gray-900 border-r border-gray-400 whitespace-nowrap bg-blue-300" style={{ fontSize: "11px" }}>
+                          ดูเพิ่มเติม
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -1917,7 +1992,7 @@ const CustomerAllDataPage = () => {
                               className="w-4 h-4 cursor-pointer"
                             />
                           </td>
-                          {tableData[0].headers.map((header, colIdx) => {
+                          {displayHeaders.map((header, colIdx) => {
                             const value = row[header];
                             const hasValue =
                               value !== undefined &&
@@ -1984,6 +2059,23 @@ const CustomerAllDataPage = () => {
                               </td>
                             );
                           })}
+                          {/* View More button - only show when filter is active */}
+                          {hasActiveFilter && (
+                            <td
+                              className="px-3 py-2 text-center border-r border-gray-300"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <button
+                                onClick={() => {
+                                  setEditingCustomer(row);
+                                  setIsEditModalOpen(true);
+                                }}
+                                className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-xs font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+                              >
+                                ดูเพิ่มเติม
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
@@ -1993,8 +2085,22 @@ const CustomerAllDataPage = () => {
             </div>
           )}
 
-        {/* Desktop Data Table - Always visible on desktop */}
-        {tableData.length > 0 && (
+        {/* Desktop: Show message when no filter applied */}
+        {!hasActiveFilter && tableData.length > 0 && (
+          <div className="hidden md:flex flex-col items-center justify-center py-16 bg-white rounded-xl shadow-sm border border-slate-200">
+            <Filter className="w-16 h-16 text-slate-300 mb-4" />
+            {isTypingSearch ? (
+              <p className="text-slate-500 text-center text-sm">
+                พิมพ์อีก {3 - searchTerm.length} ตัวอักษรเพื่อค้นหา
+              </p>
+            ) : (
+              <p className="text-slate-500 text-center text-sm">กรุณาเลือกตัวกรองหรือพิมพ์อย่างน้อย 3 ตัวอักษรเพื่อค้นหา</p>
+            )}
+          </div>
+        )}
+
+        {/* Desktop Data Table - Only visible when filter is active */}
+        {hasActiveFilter && tableData.length > 0 && (
           <div className="hidden md:block bg-white rounded-lg shadow-md overflow-hidden mb-4">
             {/* Horizontal scrollbar on top */}
             <div
@@ -2050,7 +2156,7 @@ const CustomerAllDataPage = () => {
                         title="เลือกทั้งหมด"
                       />
                     </th>
-                    {tableData[0].headers.map((header, idx) => (
+                    {displayHeaders.map((header, idx) => (
                       <th
                         key={idx}
                         className="px-3 py-2 text-center font-bold text-gray-900 whitespace-nowrap border-r border-gray-400"
@@ -2058,6 +2164,10 @@ const CustomerAllDataPage = () => {
                         {header}
                       </th>
                     ))}
+                    {/* View More column header */}
+                    <th className="px-3 py-2 text-center font-bold text-gray-900 whitespace-nowrap border-r border-gray-400 bg-blue-300">
+                      ดูเพิ่มเติม
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2068,11 +2178,7 @@ const CustomerAllDataPage = () => {
                       <tr
                         key={rowIdx}
                         className={`border-b border-gray-200 ${isSelected ? "bg-blue-50" : rowIdx % 2 === 0 ? "bg-white" : "bg-gray-50"
-                          } hover:bg-blue-100 transition-colors cursor-pointer`}
-                        onClick={() => {
-                          setEditingCustomer(row);
-                          setIsEditModalOpen(true);
-                        }}
+                          } hover:bg-blue-100 transition-colors`}
                       >
                         <td
                           className="px-3 py-2 text-center border-r border-gray-200"
@@ -2085,7 +2191,7 @@ const CustomerAllDataPage = () => {
                             className="w-4 h-4 cursor-pointer"
                           />
                         </td>
-                        {tableData[0].headers.map((header, colIdx) => {
+                        {displayHeaders.map((header, colIdx) => {
                           const value = row[header];
                           const hasValue = value !== undefined && value !== null && value !== "";
                           const displayValue = hasValue ? String(value) : "-";
@@ -2099,6 +2205,18 @@ const CustomerAllDataPage = () => {
                             </td>
                           );
                         })}
+                        {/* View More button */}
+                        <td className="px-3 py-2 text-center border-r border-gray-200">
+                          <button
+                            onClick={() => {
+                              setEditingCustomer(row);
+                              setIsEditModalOpen(true);
+                            }}
+                            className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-xs font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+                          >
+                            ดูเพิ่มเติม
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -2117,7 +2235,10 @@ const CustomerAllDataPage = () => {
       <AddCustomerModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onSave={handleAddCustomer}
+        onSuccess={() => {
+          setIsAddModalOpen(false);
+          fetchData();
+        }}
       />
     </>
   );

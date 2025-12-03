@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useRef, useCallback, type PointerEvent } from "react";
-import { X, Save, Loader2, Star, FileText, ClipboardCheck, Briefcase, Calendar } from "lucide-react";
+import { X, Save, Loader2, Star, FileText, ClipboardCheck, Briefcase, Calendar, User } from "lucide-react";
 import { NotificationPopup } from "./NotificationPopup";
 
 interface CustomerData {
@@ -593,6 +593,7 @@ export const EditCustomerModal = ({
   onSave,
 }: EditCustomerModalProps) => {
   const [customerData, setCustomerData] = useState<CustomerData>({});
+  const [activeTab, setActiveTab] = useState<"contact" | "opd" | "consent" | "service" | "appointment">("contact");
   const [statusOptions, setStatusOptions] = useState<
     Array<{ value: string; label: string; color: string }>
   >([]);
@@ -1869,663 +1870,908 @@ export const EditCustomerModal = ({
   console.log("🎨 EditCustomerModal render - isOpen:", isOpen);
 
   if (!isOpen) return null;
-  // ฟิลด์แถวที่ 1: ข้อมูลพื้นฐาน (สีฟ้า)
-  const basicInfoFields = [
-    { value: "id_card", label: "บัตรประชาชน", color: "bg-cyan-500" },
-    { value: "ชื่อ", label: "ชื่อ", color: "bg-cyan-500" },
-    { value: "รหัสลูกค้า", label: "รหัสลูกค้า", color: "bg-cyan-500" },
-    { value: "เบอร์โทร", label: "เบอร์โทร", color: "bg-cyan-500" },
-  ];
-  // ฟิลด์แถวที่ 2: ข้อมูลเพิ่มเติม (สีฟ้า)
-  const additionalInfoFields = [
-    { value: "สถานะ", label: "สถานะ", color: "bg-cyan-500" },
-    {
-      value: "  แหล่งที่มา",
-      label: "แหล่งที่มา",
-      color: "bg-cyan-500",
-    },
-    {
-      value: " ผลิตภัณฑ์ที่สนใจ",
-      label: "ผลิตภัณฑ์ที่สนใจ",
-      color: "bg-cyan-500",
-    },
-    { value: "ติดดาว", label: "ติดดาว", color: "bg-cyan-500" },
-    { value: "ประเทศ", label: "ประเทศ", color: "bg-cyan-500" },
-  ];
-  // ตรวจสอบว่าข้อมูลมีฟิลด์ไหนจริง และใช้ชื่อที่ถูกต้อง
-  const getActualFieldName = (fieldValue: string) => {
-    // หาชื่อฟิลด์จริงจากข้อมูล
-    const keys = Object.keys(customerData);
-    const trimmedFieldValue = fieldValue.trim();
-    // หาฟิลด์ที่ตรงกัน (ไม่คำนึงถึงช่องว่าง)
-    const actualField = keys.find(
-      (key) => key.trim().toLowerCase() === trimmedFieldValue.toLowerCase()
-    );
-    return actualField || fieldValue;
+
+  // Format date value for input (YYYY-MM-DD)
+  const formatDateForInput = (dateValue: any) => {
+    if (!dateValue) return "";
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return "";
+    return date.toISOString().split("T")[0];
   };
-  // ฟิลด์แถวที่ 3: ติดต่อและติดตาม (สีฟ้า)
-  const contactFollowUpFields = [
-    { value: "ผู้ติดต่อ", label: "ผู้ติดต่อ", color: "bg-cyan-500" },
-    {
-      value: "วันที่ติดตามครั้งล่าสุด",
-      label: "วันที่ติดตามครั้งล่าสุด",
-      color: "bg-cyan-500",
-    },
-    {
-      value: "วันที่ติดตามครั้งถัดไป",
-      label: "วันที่ติดตามครั้งถัดไป",
-      color: "bg-cyan-500",
-    },
-  ];
-  // ฟิลด์แถวที่ 4: Consult (สีแดง 3 + สีฟ้า 1)
-  const consultFields = [
-    {
-      value: "วันที่ได้ชื่อ เบอร์ ",
-      label: "วันที่ได้ชื่อ เบอร์",
-      color: "bg-red-600",
-    },
-    {
-      value: "วันที่ได้นัด consult",
-      label: "วันที่ได้นัด consult",
-      color: "bg-red-600",
-    },
-    {
-      value: "  วันที่ Consult",
-      label: "วันที่ Consult",
-      color: "bg-red-600",
-    },
-    { value: "ยอดนำเสนอ", label: "ยอดนำเสนอ", color: "bg-cyan-500" },
-  ];
-  // ฟิลด์แถวที่ 5: ผ่าตัด (สีแดง 3 + สีฟ้า 1)
-  const surgeryFields = [
-    {
-      value: "วันที่ได้นัดผ่าตัด",
-      label: "วันที่ได้นัดผ่าตัด",
-      color: "bg-red-600",
-    },
-    { value: "วันที่ผ่าตัด", label: "วันที่ผ่าตัด", color: "bg-red-600" },
-    { value: "เวลาที่นัด", label: "เวลาที่นัด", color: "bg-red-600" },
-    { value: "หมอ", label: "หมอ", color: "bg-cyan-500" },
-  ];
-  // ฟิลด์เพิ่มเติม
-  const extraFields = [
-    {
-      value: "เวลาให้เรียกรถ",
-      label: "เวลาให้เรียกรถ",
-      color: "bg-cyan-500",
-      isTime: true,
-    },
-    { value: "Lat", label: "Lat", color: "bg-cyan-500", isTime: false },
-    { value: "Long", label: "Long", color: "bg-cyan-500", isTime: false },
-  ];
+
+  // Format time value for input (HH:MM)
+  const formatTimeForInput = (timeValue: any) => {
+    if (!timeValue) return "";
+    if (typeof timeValue === "string" && timeValue.match(/^\d{2}:\d{2}/)) {
+      return timeValue.substring(0, 5);
+    }
+    return timeValue;
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
       <div className="bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden w-full max-w-4xl animate-slideUp transform transition-all">
         {/* Header with Gradient */}
-        <div className="sticky top-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 p-6 flex justify-between items-center z-10 shadow-lg">
-          <div className="flex items-center gap-3">
-            <Save className="w-6 h-6 text-white drop-shadow-lg" />
-            <h1 className="text-2xl font-bold text-white drop-shadow-lg">
-              แก้ไขข้อมูลลูกค้า
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Quick Action Buttons */}
+        <div className="sticky top-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 z-10 shadow-lg">
+          {/* Close button - top right */}
+          <div className="absolute top-3 right-3">
             <button
-              onClick={() => setShowOPDPopup(true)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all duration-200 text-sm font-medium"
-              title="เปิด OPD"
+              onClick={onClose}
+              className="p-2 hover:bg-white hover:bg-opacity-20 rounded-xl transition-all duration-200 group"
             >
-              <FileText className="w-4 h-4" />
-              <span className="hidden sm:inline">OPD</span>
+              <X className="w-5 h-5 text-white group-hover:rotate-90 transition-transform duration-200" />
+            </button>
+          </div>
+
+          {/* Centered Tabs */}
+          <div className="flex justify-center items-center gap-1 sm:gap-2 px-4 py-4">
+            <button
+              onClick={() => setActiveTab("contact")}
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 ${activeTab === "contact" ? "bg-white/30 shadow-inner" : "bg-white/10 hover:bg-white/20"
+                } text-white rounded-xl transition-all duration-200 min-w-[60px] sm:min-w-[80px]`}
+              title="Contact Information"
+            >
+              <User className="w-5 h-5" />
+              <span className="text-xs sm:text-sm font-medium hidden sm:block">Contact</span>
             </button>
             <button
-              onClick={() => setShowConsentPopup(true)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all duration-200 text-sm font-medium"
+              onClick={() => setActiveTab("opd")}
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 ${activeTab === "opd" ? "bg-white/30 shadow-inner" : "bg-white/10 hover:bg-white/20"
+                } text-white rounded-xl transition-all duration-200 min-w-[60px] sm:min-w-[80px]`}
+              title="OPD"
+            >
+              <FileText className="w-5 h-5" />
+              <span className="text-xs sm:text-sm font-medium hidden sm:block">OPD</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("consent")}
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 ${activeTab === "consent" ? "bg-white/30 shadow-inner" : "bg-white/10 hover:bg-white/20"
+                } text-white rounded-xl transition-all duration-200 min-w-[60px] sm:min-w-[80px]`}
               title="Consent"
             >
-              <ClipboardCheck className="w-4 h-4" />
-              <span className="hidden sm:inline">Consent</span>
+              <ClipboardCheck className="w-5 h-5" />
+              <span className="text-xs sm:text-sm font-medium hidden sm:block">Consent</span>
             </button>
             <button
-              onClick={handleOpenServicePopup}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all duration-200 text-sm font-medium"
+              onClick={() => {
+                setActiveTab("service");
+                handleOpenServicePopup();
+              }}
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 ${activeTab === "service" ? "bg-white/30 shadow-inner" : "bg-white/10 hover:bg-white/20"
+                } text-white rounded-xl transition-all duration-200 min-w-[60px] sm:min-w-[80px] relative`}
               title="บริการ"
             >
-              <Briefcase className="w-4 h-4" />
-              <span className="hidden sm:inline">บริการ</span>
+              <Briefcase className="w-5 h-5" />
+              <span className="text-xs sm:text-sm font-medium hidden sm:block">บริการ</span>
               {selectedServices.length > 0 && (
-                <span className="ml-1 bg-emerald-400 text-white text-xs px-1.5 py-0.5 rounded-full">
+                <span className="absolute -top-1 -right-1 bg-emerald-400 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
                   {selectedServices.length}
                 </span>
               )}
             </button>
             <button
-              onClick={() => setShowAppointmentPopup(true)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all duration-200 text-sm font-medium"
+              onClick={() => setActiveTab("appointment")}
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 ${activeTab === "appointment" ? "bg-white/30 shadow-inner" : "bg-white/10 hover:bg-white/20"
+                } text-white rounded-xl transition-all duration-200 min-w-[60px] sm:min-w-[80px]`}
               title="นัดหมาย"
             >
-              <Calendar className="w-4 h-4" />
-              <span className="hidden sm:inline">นัดหมาย</span>
-            </button>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-white hover:bg-opacity-20 rounded-xl transition-all duration-200 group ml-2"
-            >
-              <X className="w-6 h-6 text-white group-hover:rotate-90 transition-transform duration-200" />
+              <Calendar className="w-5 h-5" />
+              <span className="text-xs sm:text-sm font-medium hidden sm:block">นัดหมาย</span>
             </button>
           </div>
         </div>
 
-        {/* Scrollable Content */}
+        {/* Scrollable Content - Show content based on active tab */}
         <div
           className="overflow-y-auto"
           style={{ maxHeight: "calc(90vh - 180px)" }}
         >
-          {/* Main Content */}
-          <div className="p-6 space-y-6">
-            {/* Section 1: ข้อมูลพื้นฐาน */}
-            <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl p-6 border border-cyan-100 shadow-sm hover:shadow-md transition-all duration-300">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-1 h-6 bg-gradient-to-b from-cyan-500 to-blue-500 rounded-full"></div>
-                <h2 className="text-lg font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
-                  ข้อมูลพื้นฐาน
-                </h2>
+          {/* Contact Information Tab Content */}
+          {activeTab === "contact" && (
+            <div className="p-6 space-y-6">
+              {/* Section 1: ข้อมูลส่วนตัว */}
+              <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl p-6 border border-cyan-100 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1 h-6 bg-gradient-to-b from-cyan-500 to-blue-500 rounded-full"></div>
+                  <h2 className="text-lg font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                    ข้อมูลส่วนตัว
+                  </h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {/* status */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">สถานะ</label>
+                    <select
+                      value={customerData["status"] || customerData["สถานะ"] || ""}
+                      onChange={(e) => handleFieldChange("status", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-cyan-200 bg-white rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none cursor-pointer"
+                    >
+                      <option value="">เลือกสถานะ</option>
+                      {statusOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* prefix */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">คำนำหน้า</label>
+                    <select
+                      value={customerData["prefix"] || ""}
+                      onChange={(e) => handleFieldChange("prefix", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-cyan-200 bg-white rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none cursor-pointer"
+                    >
+                      <option value="">เลือกคำนำหน้า</option>
+                      <option value="นาย">นาย</option>
+                      <option value="นาง">นาง</option>
+                      <option value="นางสาว">นางสาว</option>
+                      <option value="Mr.">Mr.</option>
+                      <option value="Mrs.">Mrs.</option>
+                      <option value="Ms.">Ms.</option>
+                    </select>
+                  </div>
+                  {/* name */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">ชื่อ *</label>
+                    <input
+                      type="text"
+                      value={customerData["name"] || customerData["ชื่อ"] || ""}
+                      onChange={(e) => handleFieldChange("name", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-cyan-200 bg-white rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none"
+                      placeholder="กรอกชื่อ"
+                    />
+                  </div>
+                  {/* surname */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">นามสกุล</label>
+                    <input
+                      type="text"
+                      value={customerData["surname"] || ""}
+                      onChange={(e) => handleFieldChange("surname", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-cyan-200 bg-white rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none"
+                      placeholder="กรอกนามสกุล"
+                    />
+                  </div>
+                  {/* nickname */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">ชื่อเล่น</label>
+                    <input
+                      type="text"
+                      value={customerData["nickname"] || ""}
+                      onChange={(e) => handleFieldChange("nickname", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-cyan-200 bg-white rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none"
+                      placeholder="กรอกชื่อเล่น"
+                    />
+                  </div>
+                  {/* gender */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">เพศ</label>
+                    <select
+                      value={customerData["gender"] || ""}
+                      onChange={(e) => handleFieldChange("gender", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-cyan-200 bg-white rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none cursor-pointer"
+                    >
+                      <option value="">เลือกเพศ</option>
+                      <option value="ชาย">ชาย</option>
+                      <option value="หญิง">หญิง</option>
+                      <option value="อื่นๆ">อื่นๆ</option>
+                    </select>
+                  </div>
+                  {/* star_flag */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">ติดดาว</label>
+                    <button
+                      type="button"
+                      onClick={() => handleFieldChange("star_flag", customerData["star_flag"] === "ติดดาว" ? "" : "ติดดาว")}
+                      className="w-full px-4 py-3 border-2 border-cyan-200 bg-white rounded-xl hover:border-cyan-300 transition-all duration-200 flex items-center justify-center gap-2"
+                    >
+                      <Star className={`w-6 h-6 ${customerData["star_flag"] === "ติดดาว" ? "fill-yellow-400 text-yellow-400" : "text-gray-400"}`} />
+                      <span className="text-sm font-medium text-gray-700">
+                        {customerData["star_flag"] === "ติดดาว" ? "ติดดาวแล้ว" : "คลิกเพื่อติดดาว"}
+                      </span>
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {basicInfoFields.map((field) => {
-                  const actualFieldName = getActualFieldName(field.value);
-                  if (field.label === "รหัสลูกค้า") {
-                    return (
-                      <div key={field.value} className="group">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2 transition-colors group-focus-within:text-cyan-600">
-                          {field.label}
-                        </label>
-                        <input
-                          type="text"
-                          value={customerIdAll}
-                          readOnly
-                          className="w-full px-4 py-3 border-2 border-cyan-200 bg-gray-100 rounded-xl outline-none text-gray-700 font-medium transition-all duration-200 shadow-sm"
-                          title="รหัสลูกค้าจะดึงจากระบบและไม่สามารถแก้ไขได้"
-                        />
-                      </div>
-                    );
-                  }
-                  return (
-                    <div key={field.value} className="group">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2 transition-colors group-focus-within:text-cyan-600">
-                        {field.label}
-                      </label>
-                      <input
-                        type="text"
-                        value={customerData[actualFieldName] || ""}
-                        onChange={(e) =>
-                          handleFieldChange(actualFieldName, e.target.value)
-                        }
-                        className="w-full px-4 py-3 border-2 border-cyan-200 bg-white rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none text-gray-900 font-medium placeholder:text-gray-400 transition-all duration-200 hover:border-cyan-300 shadow-sm hover:shadow-md"
-                      />
-                    </div>
-                  );
-                })}
+
+              {/* Section 2: ข้อมูลติดต่อ */}
+              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-100 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1 h-6 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
+                  <h2 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                    ข้อมูลติดต่อ
+                  </h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* phone */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">เบอร์โทร</label>
+                    <input
+                      type="tel"
+                      value={customerData["phone"] || customerData["เบอร์โทร"] || ""}
+                      onChange={(e) => handleFieldChange("phone", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-indigo-200 bg-white rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"
+                      placeholder="กรอกเบอร์โทร"
+                    />
+                  </div>
+                  {/* email */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">อีเมล</label>
+                    <input
+                      type="email"
+                      value={customerData["email"] || ""}
+                      onChange={(e) => handleFieldChange("email", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-indigo-200 bg-white rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"
+                      placeholder="กรอกอีเมล"
+                    />
+                  </div>
+                  {/* lineid */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">ไลน์ไอดี</label>
+                    <input
+                      type="text"
+                      value={customerData["lineid"] || ""}
+                      onChange={(e) => handleFieldChange("lineid", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-indigo-200 bg-white rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"
+                      placeholder="กรอกไลน์ไอดี"
+                    />
+                  </div>
+                  {/* facebook */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">เฟสบุ๊ค</label>
+                    <input
+                      type="text"
+                      value={customerData["facebook"] || ""}
+                      onChange={(e) => handleFieldChange("facebook", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-indigo-200 bg-white rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"
+                      placeholder="กรอกเฟสบุ๊ค"
+                    />
+                  </div>
+                  {/* country */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">ประเทศ</label>
+                    <select
+                      value={customerData["country"] || customerData["ประเทศ"] || ""}
+                      onChange={(e) => handleFieldChange("country", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-indigo-200 bg-white rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none cursor-pointer"
+                    >
+                      <option value="">เลือกประเทศ</option>
+                      {countryOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
-            </div>
-            {/* Section 2: ข้อมูลเพิ่มเติม */}
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-100 shadow-sm hover:shadow-md transition-all duration-300">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-1 h-6 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
-                <h2 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                  ข้อมูลเพิ่มเติม
-                </h2>
+
+              {/* Section 3: ข้อมูลธุรกิจ */}
+              <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-100 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-teal-500 rounded-full"></div>
+                  <h2 className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                    ข้อมูลธุรกิจ
+                  </h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {/* source */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">แหล่งที่มา</label>
+                    <select
+                      value={customerData["source"] || customerData["  แหล่งที่มา"] || ""}
+                      onChange={(e) => handleFieldChange("source", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-emerald-200 bg-white rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-transparent outline-none cursor-pointer"
+                    >
+                      <option value="">เลือกแหล่งที่มา</option>
+                      {sourceOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* interested_product */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">ผลิตภัณฑ์ที่สนใจ</label>
+                    <select
+                      value={customerData["interested_product"] || customerData[" ผลิตภัณฑ์ที่สนใจ"] || ""}
+                      onChange={(e) => handleFieldChange("interested_product", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-emerald-200 bg-white rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-transparent outline-none cursor-pointer"
+                    >
+                      <option value="">เลือกผลิตภัณฑ์</option>
+                      {productOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* contact_staff */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">ผู้ติดต่อ</label>
+                    <select
+                      value={customerData["contact_staff"] || customerData["ผู้ติดต่อ"] || ""}
+                      onChange={(e) => handleFieldChange("contact_staff", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-emerald-200 bg-white rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-transparent outline-none cursor-pointer"
+                    >
+                      <option value="">เลือกผู้ติดต่อ</option>
+                      {contactPersonOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* proposed_amount */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">ยอดนำเสนอ</label>
+                    <input
+                      type="number"
+                      value={customerData["proposed_amount"] || customerData["ยอดนำเสนอ"] || ""}
+                      onChange={(e) => handleFieldChange("proposed_amount", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-emerald-200 bg-white rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-transparent outline-none"
+                      placeholder="กรอกยอดนำเสนอ"
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {additionalInfoFields.map((field) => {
-                  const actualFieldName = getActualFieldName(field.value);
 
-                  if (field.label === "สถานะ") {
-                    const selectedStatus = statusOptions.find(
-                      (opt) => opt.value === customerData[actualFieldName]
-                    );
-                    return (
-                      <div key={field.value} className="group">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2 transition-colors group-focus-within:text-indigo-600">
-                          {field.label} ⭐
-                        </label>
-                        <select
-                          value={customerData[actualFieldName] || ""}
-                          onChange={(e) =>
-                            handleFieldChange(actualFieldName, e.target.value)
-                          }
-                          className="w-full px-4 py-3 border-2 border-indigo-200 bg-gradient-to-r from-white to-indigo-50 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none font-semibold text-gray-900 transition-all duration-200 hover:border-indigo-300 shadow-sm hover:shadow-md cursor-pointer"
-                          style={{
-                            backgroundColor: selectedStatus?.color
-                              ? `${selectedStatus.color}25`
-                              : "white",
-                          }}
-                        >
-                          <option value="">เลือกสถานะ</option>
-                          {statusOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    );
-                  }
-
-                  if (field.label.trim() === "แหล่งที่มา") {
-                    return (
-                      <div key={field.value} className="group">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2 transition-colors group-focus-within:text-indigo-600">
-                          {field.label} ⭐
-                        </label>
-                        <select
-                          value={customerData[actualFieldName] || ""}
-                          onChange={(e) =>
-                            handleFieldChange(actualFieldName, e.target.value)
-                          }
-                          className="w-full px-4 py-3 border-2 border-indigo-200 bg-gradient-to-r from-white to-indigo-50 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none font-semibold text-gray-900 transition-all duration-200 hover:border-indigo-300 shadow-sm hover:shadow-md cursor-pointer"
-                        >
-                          <option value="">เลือกแหล่งที่มา</option>
-                          {sourceOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    );
-                  }
-
-                  if (field.label === "ผลิตภัณฑ์ที่สนใจ") {
-                    return (
-                      <div key={field.value} className="group">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2 transition-colors group-focus-within:text-indigo-600">
-                          {field.label} ⭐
-                        </label>
-                        <select
-                          value={customerData[actualFieldName] || ""}
-                          onChange={(e) =>
-                            handleFieldChange(actualFieldName, e.target.value)
-                          }
-                          className="w-full px-4 py-3 border-2 border-indigo-200 bg-gradient-to-r from-white to-indigo-50 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none font-semibold text-gray-900 transition-all duration-200 hover:border-indigo-300 shadow-sm hover:shadow-md cursor-pointer"
-                        >
-                          <option value="">เลือกผลิตภัณฑ์</option>
-                          {productOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    );
-                  }
-
-                  if (field.label === "ประเทศ") {
-                    return (
-                      <div key={field.value} className="group">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2 transition-colors group-focus-within:text-indigo-600">
-                          {field.label} ⭐
-                        </label>
-                        <select
-                          value={customerData[actualFieldName] || ""}
-                          onChange={(e) =>
-                            handleFieldChange(actualFieldName, e.target.value)
-                          }
-                          className="w-full px-4 py-3 border-2 border-indigo-200 bg-gradient-to-r from-white to-indigo-50 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none font-semibold text-gray-900 transition-all duration-200 hover:border-indigo-300 shadow-sm hover:shadow-md cursor-pointer"
-                        >
-                          <option value="">เลือกประเทศ</option>
-                          {countryOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    );
-                  }
-
-                  if (field.label === "ติดดาว") {
-                    const isStarred = customerData[actualFieldName] === "ติดดาว";
-                    return (
-                      <div key={field.value} className="group">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2 transition-colors group-focus-within:text-cyan-600">
-                          {field.label}
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleFieldChange(
-                              actualFieldName,
-                              isStarred ? "" : "ติดดาว"
-                            )
-                          }
-                          className="w-full px-4 py-3 border-2 border-cyan-200 bg-white rounded-xl hover:border-cyan-300 transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-2 group"
-                        >
-                          <Star
-                            className={`w-6 h-6 transition-all duration-200 ${isStarred
-                              ? "fill-yellow-400 text-yellow-400"
-                              : "text-gray-400 group-hover:text-yellow-400"
-                              }`}
-                          />
-                          <span className="text-sm font-medium text-gray-700">
-                            {isStarred ? "ติดดาวแล้ว" : "คลิกเพื่อติดดาว"}
-                          </span>
-                        </button>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div key={field.value} className="group">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2 transition-colors group-focus-within:text-cyan-600">
-                        {field.label}
-                      </label>
-                      <input
-                        type="text"
-                        value={customerData[actualFieldName] || ""}
-                        onChange={(e) =>
-                          handleFieldChange(actualFieldName, e.target.value)
-                        }
-                        className="w-full px-4 py-3 border-2 border-cyan-200 bg-white rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none text-gray-900 font-medium placeholder:text-gray-400 transition-all duration-200 hover:border-cyan-300 shadow-sm hover:shadow-md"
-                        placeholder={`กรอก${field.label}`}
-                      />
-                    </div>
-                  );
-                })}
+              {/* Section 4: วันที่ติดตาม */}
+              <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl p-6 border border-cyan-100 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1 h-6 bg-gradient-to-b from-cyan-500 to-blue-500 rounded-full"></div>
+                  <h2 className="text-lg font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                    วันที่ติดตาม
+                  </h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* got_contact_date */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                      <span>📅</span> วันที่ได้ชื่อ เบอร์
+                    </label>
+                    <input
+                      type="date"
+                      value={formatDateForInput(customerData["got_contact_date"] || customerData["วันที่ได้ชื่อ เบอร์ "])}
+                      onChange={(e) => handleFieldChange("got_contact_date", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-cyan-200 bg-white rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none cursor-pointer"
+                    />
+                  </div>
+                  {/* last_followup */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                      <span>📅</span> วันที่ติดตามครั้งล่าสุด
+                    </label>
+                    <input
+                      type="date"
+                      value={formatDateForInput(customerData["last_followup"] || customerData["วันที่ติดตามครั้งล่าสุด"])}
+                      onChange={(e) => handleFieldChange("last_followup", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-cyan-200 bg-white rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none cursor-pointer"
+                    />
+                  </div>
+                  {/* next_followup */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                      <span>📅</span> วันที่ติดตามครั้งถัดไป
+                    </label>
+                    <input
+                      type="date"
+                      value={formatDateForInput(customerData["next_followup"] || customerData["วันที่ติดตามครั้งถัดไป"])}
+                      onChange={(e) => handleFieldChange("next_followup", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-cyan-200 bg-white rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none cursor-pointer"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-            {/* Section 3: ติดต่อและติดตาม */}
-            <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl p-6 border border-cyan-100 shadow-sm hover:shadow-md transition-all duration-300">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-1 h-6 bg-gradient-to-b from-cyan-500 to-blue-500 rounded-full"></div>
-                <h2 className="text-lg font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
-                  ติดต่อและติดตาม
-                </h2>
+
+              {/* Section 5: วันที่ Consult */}
+              <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-6 border border-purple-100 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1 h-6 bg-gradient-to-b from-purple-500 to-violet-500 rounded-full"></div>
+                  <h2 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
+                    วันที่ Consult
+                  </h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* booked_consult_date */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                      <span>📅</span> วันที่ได้นัด consult
+                    </label>
+                    <input
+                      type="date"
+                      value={formatDateForInput(customerData["booked_consult_date"] || customerData["วันที่ได้นัด consult"])}
+                      onChange={(e) => handleFieldChange("booked_consult_date", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-purple-200 bg-white rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-transparent outline-none cursor-pointer"
+                    />
+                  </div>
+                  {/* consult_date */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                      <span>📅</span> วันที่ Consult
+                    </label>
+                    <input
+                      type="date"
+                      value={formatDateForInput(customerData["consult_date"] || customerData["  วันที่ Consult"])}
+                      onChange={(e) => handleFieldChange("consult_date", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-purple-200 bg-white rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-transparent outline-none cursor-pointer"
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {contactFollowUpFields.map((field) => {
-                  const actualFieldName = getActualFieldName(field.value);
-                  const isDateField = field.label.includes("วันที่");
 
-                  if (field.label === "ผู้ติดต่อ") {
-                    return (
-                      <div key={field.value} className="group">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2 transition-colors group-focus-within:text-cyan-600">
-                          {field.label} ⭐
-                        </label>
-                        <select
-                          value={customerData[actualFieldName] || ""}
-                          onChange={(e) =>
-                            handleFieldChange(actualFieldName, e.target.value)
-                          }
-                          className="w-full px-4 py-3 border-2 border-cyan-200 bg-gradient-to-r from-white to-cyan-50 rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none font-semibold text-gray-900 transition-all duration-200 hover:border-cyan-300 shadow-sm hover:shadow-md cursor-pointer"
-                        >
-                          <option value="">เลือกผู้ติดต่อ</option>
-                          {contactPersonOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    );
-                  }
-
-                  // Format date value for input (YYYY-MM-DD)
-                  const formatDateForInput = (dateValue: any) => {
-                    if (!dateValue) return "";
-                    const date = new Date(dateValue);
-                    if (isNaN(date.getTime())) return "";
-                    return date.toISOString().split("T")[0];
-                  };
-
-                  return (
-                    <div key={field.value} className="group">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2 transition-colors group-focus-within:text-cyan-600">
-                        <span className="text-lg">📅</span>
-                        {field.label}
-                      </label>
-                      <input
-                        type="date"
-                        value={formatDateForInput(
-                          customerData[actualFieldName]
-                        )}
-                        onChange={(e) =>
-                          handleFieldChange(actualFieldName, e.target.value)
-                        }
-                        className="w-full px-4 py-3 border-2 border-cyan-200 bg-gradient-to-r from-white to-cyan-50 rounded-xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent outline-none text-gray-900 font-semibold hover:border-cyan-300 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md"
-                        style={{
-                          colorScheme: "light",
-                        }}
-                      />
-                    </div>
-                  );
-                })}
+              {/* Section 6: วันที่ผ่าตัด */}
+              <div className="bg-gradient-to-br from-rose-50 to-pink-50 rounded-xl p-6 border border-rose-100 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1 h-6 bg-gradient-to-b from-rose-500 to-pink-500 rounded-full"></div>
+                  <h2 className="text-lg font-bold bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent">
+                    วันที่ผ่าตัด
+                  </h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* booked_surgery_date */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                      <span>📅</span> วันที่ได้นัดผ่าตัด
+                    </label>
+                    <input
+                      type="date"
+                      value={formatDateForInput(customerData["booked_surgery_date"] || customerData["วันที่ได้นัดผ่าตัด"])}
+                      onChange={(e) => handleFieldChange("booked_surgery_date", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-rose-200 bg-white rounded-xl focus:ring-2 focus:ring-rose-400 focus:border-transparent outline-none cursor-pointer"
+                    />
+                  </div>
+                  {/* surgery_date */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                      <span>📅</span> วันที่ผ่าตัด
+                    </label>
+                    <input
+                      type="date"
+                      value={formatDateForInput(customerData["surgery_date"] || customerData["วันที่ผ่าตัด"])}
+                      onChange={(e) => handleFieldChange("surgery_date", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-rose-200 bg-white rounded-xl focus:ring-2 focus:ring-rose-400 focus:border-transparent outline-none cursor-pointer"
+                    />
+                  </div>
+                  {/* appointment_time */}
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                      <span>⏰</span> เวลาที่นัด
+                    </label>
+                    <input
+                      type="time"
+                      value={formatTimeForInput(customerData["appointment_time"] || customerData["เวลาที่นัด"])}
+                      onChange={(e) => handleFieldChange("appointment_time", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-rose-200 bg-white rounded-xl focus:ring-2 focus:ring-rose-400 focus:border-transparent outline-none cursor-pointer"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-            {/* Section 4: สถานะ Consult */}
-            <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-xl p-6 border border-red-100 shadow-sm hover:shadow-md transition-all duration-300">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-1 h-6 bg-gradient-to-b from-red-500 to-pink-500 rounded-full"></div>
-                <h2 className="text-lg font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
-                  สถานะ Consult
-                </h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {consultFields.map((field) => {
-                  const actualFieldName = getActualFieldName(field.value);
-                  const isDateField = field.label.includes("วันที่");
-                  const isAmountField = field.label === "ยอดนำเสนอ";
 
-                  // Format date value for input (YYYY-MM-DD)
-                  const formatDateForInput = (dateValue: any) => {
-                    if (!dateValue) return "";
-                    const date = new Date(dateValue);
-                    if (isNaN(date.getTime())) return "";
-                    return date.toISOString().split("T")[0];
-                  };
-
-                  return (
-                    <div key={field.value} className="group">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2 transition-colors group-focus-within:text-red-600">
-                        {isDateField && <span className="text-lg">📅</span>}
-                        {isAmountField && <span className="text-lg">💰</span>}
-                        {field.label}
-                      </label>
-                      <input
-                        type={isDateField ? "date" : "text"}
-                        value={
-                          isDateField
-                            ? formatDateForInput(customerData[actualFieldName])
-                            : customerData[actualFieldName] || ""
-                        }
-                        onChange={(e) =>
-                          handleFieldChange(actualFieldName, e.target.value)
-                        }
-                        className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:border-transparent outline-none text-gray-900 font-semibold placeholder:text-gray-400 transition-all duration-200 shadow-sm hover:shadow-md ${field.color === "bg-red-600"
-                          ? "border-red-200 bg-gradient-to-r from-white to-red-50 focus:ring-red-400 hover:border-red-300"
-                          : "border-cyan-200 bg-gradient-to-r from-white to-cyan-50 focus:ring-cyan-400 hover:border-cyan-300"
-                          } ${isDateField ? "cursor-pointer" : ""}`}
-                        style={isDateField ? { colorScheme: "light" } : {}}
-                        placeholder={!isDateField ? `กรอก${field.label}` : ""}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            {/* Section 5: สถานะผ่าตัด */}
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-100 shadow-sm hover:shadow-md transition-all duration-300">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-1 h-6 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full"></div>
-                <h2 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  สถานะผ่าตัด
-                </h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {surgeryFields.map((field) => {
-                  const actualFieldName = getActualFieldName(field.value);
-                  const isDateField = field.label.includes("วันที่");
-                  const isTimeField = field.label.includes("เวลา");
-                  const isDoctorField = field.label === "หมอ";
-
-                  // Format date value for input (YYYY-MM-DD)
-                  const formatDateForInput = (dateValue: any) => {
-                    if (!dateValue) return "";
-                    const date = new Date(dateValue);
-                    if (isNaN(date.getTime())) return "";
-                    return date.toISOString().split("T")[0];
-                  };
-
-                  // Format time value for input (HH:MM)
-                  const formatTimeForInput = (timeValue: any) => {
-                    if (!timeValue) return "";
-                    // If it's already in HH:MM format, return as is
-                    if (
-                      typeof timeValue === "string" &&
-                      timeValue.match(/^\d{2}:\d{2}/)
-                    ) {
-                      return timeValue.substring(0, 5);
-                    }
-                    return timeValue;
-                  };
-
-                  return (
-                    <div key={field.value} className="group">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2 transition-colors group-focus-within:text-purple-600">
-                        {isDateField && <span className="text-lg">📅</span>}
-                        {isTimeField && <span className="text-lg">⏰</span>}
-                        {isDoctorField && <span className="text-lg">👨‍⚕️</span>}
-                        {field.label}
-                      </label>
-                      <input
-                        type={
-                          isDateField ? "date" : isTimeField ? "time" : "text"
-                        }
-                        value={
-                          isDateField
-                            ? formatDateForInput(customerData[actualFieldName])
-                            : isTimeField
-                              ? formatTimeForInput(customerData[actualFieldName])
-                              : customerData[actualFieldName] || ""
-                        }
-                        onChange={(e) =>
-                          handleFieldChange(actualFieldName, e.target.value)
-                        }
-                        className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:border-transparent outline-none text-gray-900 font-semibold placeholder:text-gray-400 transition-all duration-200 shadow-sm hover:shadow-md ${field.color === "bg-red-600"
-                          ? "border-purple-200 bg-gradient-to-r from-white to-purple-50 focus:ring-purple-400 hover:border-purple-300"
-                          : "border-cyan-200 bg-gradient-to-r from-white to-cyan-50 focus:ring-cyan-400 hover:border-cyan-300"
-                          } ${isDateField || isTimeField ? "cursor-pointer" : ""
-                          }`}
-                        style={
-                          isDateField || isTimeField
-                            ? { colorScheme: "light" }
-                            : {}
-                        }
-                        placeholder={
-                          !isDateField && !isTimeField
-                            ? `กรอก${field.label}`
-                            : ""
-                        }
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            {/* Section 6: ข้อมูลเพิ่มเติม (Location) */}
-            <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-xl p-6 border border-teal-100 shadow-sm hover:shadow-md transition-all duration-300">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-1 h-6 bg-gradient-to-b from-teal-500 to-cyan-500 rounded-full"></div>
-                <h2 className="text-lg font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
-                  ข้อมูลเพิ่มเติม
-                </h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {extraFields.map((field) => {
-                  const actualFieldName = getActualFieldName(field.value);
-
-                  // Format time value for input (HH:MM)
-                  const formatTimeForInput = (timeValue: any) => {
-                    if (!timeValue) return "";
-                    // If it's already in HH:MM format, return as is
-                    if (
-                      typeof timeValue === "string" &&
-                      timeValue.match(/^\d{2}:\d{2}/)
-                    ) {
-                      return timeValue.substring(0, 5);
-                    }
-                    return timeValue;
-                  };
-
-                  return (
-                    <div key={field.value} className="group">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2 transition-colors group-focus-within:text-teal-600">
-                        {field.isTime && <span className="text-lg">⏰</span>}
-                        {field.label === "Lat" && (
-                          <span className="text-lg">📍</span>
-                        )}
-                        {field.label === "Long" && (
-                          <span className="text-lg">📍</span>
-                        )}
-                        {field.label}
-                      </label>
-                      <input
-                        type={field.isTime ? "time" : "text"}
-                        value={
-                          field.isTime
-                            ? formatTimeForInput(customerData[actualFieldName])
-                            : customerData[actualFieldName] || ""
-                        }
-                        onChange={(e) =>
-                          handleFieldChange(actualFieldName, e.target.value)
-                        }
-                        className={`w-full px-4 py-3 border-2 border-teal-200 bg-gradient-to-r from-white to-teal-50 rounded-xl focus:ring-2 focus:ring-teal-400 focus:border-transparent outline-none text-gray-900 font-semibold placeholder:text-gray-400 hover:border-teal-300 transition-all duration-200 shadow-sm hover:shadow-md ${field.isTime ? "cursor-pointer" : ""
-                          }`}
-                        style={field.isTime ? { colorScheme: "light" } : {}}
-                        placeholder={!field.isTime ? `กรอก${field.label}` : ""}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            {/* Section 7: หมายเหตุ */}
-            <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl p-6 border border-amber-100 shadow-sm hover:shadow-md transition-all duration-300">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-1 h-6 bg-gradient-to-b from-amber-500 to-yellow-500 rounded-full"></div>
-                <h2 className="text-lg font-bold bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent">
-                  หมายเหตุ
-                </h2>
-              </div>
-              <div className="group">
+              {/* Section 7: หมายเหตุ */}
+              <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl p-6 border border-amber-100 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1 h-6 bg-gradient-to-b from-amber-500 to-yellow-500 rounded-full"></div>
+                  <h2 className="text-lg font-bold bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent">
+                    หมายเหตุ
+                  </h2>
+                </div>
                 <textarea
-                  value={customerData["หมายเหตุ"] || ""}
-                  onChange={(e) =>
-                    handleFieldChange("หมายเหตุ", e.target.value)
-                  }
-                  className="w-full px-4 py-3 border-2 border-amber-200 bg-gradient-to-br from-white to-amber-50 rounded-xl focus:ring-2 focus:ring-amber-400 focus:border-transparent outline-none min-h-[150px] text-gray-900 font-medium placeholder:text-gray-400 hover:border-amber-300 transition-all duration-200 shadow-sm hover:shadow-md resize-none"
+                  value={customerData["note"] || customerData["หมายเหตุ"] || ""}
+                  onChange={(e) => handleFieldChange("note", e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-amber-200 bg-white rounded-xl focus:ring-2 focus:ring-amber-400 focus:border-transparent outline-none min-h-[120px] resize-none"
                   placeholder="📝 พิมพ์หมายเหตุ..."
                 />
               </div>
             </div>
-          </div>
+          )}
+
+          {/* OPD Tab Content */}
+          {activeTab === "opd" && (
+            <div className="p-6 space-y-6">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1 h-6 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-full"></div>
+                  <h2 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                    ข้อมูล OPD - ที่อยู่
+                  </h2>
+                </div>
+                {thaiAddressLoading && (
+                  <p className="text-xs text-emerald-600 mb-4">กำลังโหลดข้อมูลจังหวัด/อำเภอ/ตำบล...</p>
+                )}
+                {thaiAddressError && (
+                  <p className="text-xs text-red-600 mb-4">{thaiAddressError}</p>
+                )}
+                <div className="space-y-4">
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">บ้านเลขที่</label>
+                    <input
+                      type="text"
+                      value={customerData["locno"] || ""}
+                      onChange={(e) => handleFieldChange("locno", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-blue-200 bg-white rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none"
+                      placeholder="ระบุบ้านเลขที่"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">จังหวัด</label>
+                      <select
+                        value={selectedProvinceId ? String(selectedProvinceId) : ""}
+                        onChange={(e) => handleProvinceSelect(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-blue-200 bg-white rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none cursor-pointer"
+                      >
+                        <option value="">เลือกจังหวัด</option>
+                        {provinceOptions.map((option) => (
+                          <option key={option.id} value={option.id}>{option.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">อำเภอ / เขต</label>
+                      <select
+                        value={selectedDistrictId ? String(selectedDistrictId) : ""}
+                        onChange={(e) => handleDistrictSelect(e.target.value)}
+                        disabled={!districtOptions.length}
+                        className="w-full px-4 py-3 border-2 border-blue-200 bg-white rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none cursor-pointer disabled:bg-gray-100"
+                      >
+                        <option value="">เลือกอำเภอ / เขต</option>
+                        {districtOptions.map((option) => (
+                          <option key={option.id} value={option.id}>{option.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">ตำบล / แขวง</label>
+                      <select
+                        value={selectedSubdistrictId ? String(selectedSubdistrictId) : ""}
+                        onChange={(e) => handleSubdistrictSelect(e.target.value)}
+                        disabled={!subdistrictOptions.length}
+                        className="w-full px-4 py-3 border-2 border-blue-200 bg-white rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none cursor-pointer disabled:bg-gray-100"
+                      >
+                        <option value="">เลือกตำบล / แขวง</option>
+                        {subdistrictOptions.map((option) => (
+                          <option key={option.id} value={option.id}>{option.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">รหัสไปรษณีย์</label>
+                      <input
+                        type="text"
+                        value={customerData["zipcode"] || ""}
+                        readOnly
+                        className="w-full px-4 py-3 border-2 border-blue-200 bg-gray-100 rounded-xl outline-none text-gray-700"
+                        placeholder="รหัสไปรษณีย์ (อัตโนมัติ)"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Consent Tab Content */}
+          {activeTab === "consent" && (
+            <div className="p-6 space-y-6">
+              <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-100 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-teal-500 rounded-full"></div>
+                  <h2 className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                    Consent Form
+                  </h2>
+                </div>
+                {/* Consent Part Tabs */}
+                <div className="flex gap-2 mb-6">
+                  {consentPartMeta.map((part) => (
+                    <button
+                      key={part.key}
+                      onClick={() => setSelectedConsentPart(part.key)}
+                      className={`px-4 py-2 rounded-lg font-medium transition-all ${selectedConsentPart === part.key
+                        ? "bg-emerald-500 text-white shadow-md"
+                        : "bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                        }`}
+                    >
+                      {part.label}
+                    </button>
+                  ))}
+                </div>
+                {consentLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="group">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">น้ำหนัก (kg)</label>
+                        <input
+                          type="text"
+                          value={consentSections[selectedConsentPart]?.weight || ""}
+                          onChange={(e) => setConsentSections((prev) => ({
+                            ...prev,
+                            [selectedConsentPart]: { ...prev[selectedConsentPart], weight: e.target.value }
+                          }))}
+                          className="w-full px-4 py-3 border-2 border-emerald-200 bg-white rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-transparent outline-none"
+                          placeholder="ระบุน้ำหนัก"
+                        />
+                      </div>
+                      <div className="group">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">ส่วนสูง (cm)</label>
+                        <input
+                          type="text"
+                          value={consentSections[selectedConsentPart]?.height || ""}
+                          onChange={(e) => setConsentSections((prev) => ({
+                            ...prev,
+                            [selectedConsentPart]: { ...prev[selectedConsentPart], height: e.target.value }
+                          }))}
+                          className="w-full px-4 py-3 border-2 border-emerald-200 bg-white rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-transparent outline-none"
+                          placeholder="ระบุส่วนสูง"
+                        />
+                      </div>
+                    </div>
+                    <div className="group">
+                      <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                        <input
+                          type="checkbox"
+                          checked={consentSections[selectedConsentPart]?.hasChronic || false}
+                          onChange={(e) => setConsentSections((prev) => ({
+                            ...prev,
+                            [selectedConsentPart]: { ...prev[selectedConsentPart], hasChronic: e.target.checked }
+                          }))}
+                          className="w-4 h-4 rounded border-gray-300 text-emerald-500 focus:ring-emerald-400"
+                        />
+                        มีโรคประจำตัว
+                      </label>
+                      {consentSections[selectedConsentPart]?.hasChronic && (
+                        <input
+                          type="text"
+                          value={consentSections[selectedConsentPart]?.chronicDiseaseDetail || ""}
+                          onChange={(e) => setConsentSections((prev) => ({
+                            ...prev,
+                            [selectedConsentPart]: { ...prev[selectedConsentPart], chronicDiseaseDetail: e.target.value }
+                          }))}
+                          className="w-full px-4 py-3 border-2 border-emerald-200 bg-white rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-transparent outline-none mt-2"
+                          placeholder="ระบุโรคประจำตัว"
+                        />
+                      )}
+                    </div>
+                    <div className="group">
+                      <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                        <input
+                          type="checkbox"
+                          checked={consentSections[selectedConsentPart]?.hasDrugAllergy || false}
+                          onChange={(e) => setConsentSections((prev) => ({
+                            ...prev,
+                            [selectedConsentPart]: { ...prev[selectedConsentPart], hasDrugAllergy: e.target.checked }
+                          }))}
+                          className="w-4 h-4 rounded border-gray-300 text-emerald-500 focus:ring-emerald-400"
+                        />
+                        มีประวัติแพ้ยา
+                      </label>
+                      {consentSections[selectedConsentPart]?.hasDrugAllergy && (
+                        <input
+                          type="text"
+                          value={consentSections[selectedConsentPart]?.drugAllergyDetail || ""}
+                          onChange={(e) => setConsentSections((prev) => ({
+                            ...prev,
+                            [selectedConsentPart]: { ...prev[selectedConsentPart], drugAllergyDetail: e.target.value }
+                          }))}
+                          className="w-full px-4 py-3 border-2 border-emerald-200 bg-white rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-transparent outline-none mt-2"
+                          placeholder="ระบุยาที่แพ้"
+                        />
+                      )}
+                    </div>
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">ยินยอมรับการรักษา</label>
+                      <select
+                        value={consentSections[selectedConsentPart]?.medicalConsent || ""}
+                        onChange={(e) => setConsentSections((prev) => ({
+                          ...prev,
+                          [selectedConsentPart]: { ...prev[selectedConsentPart], medicalConsent: e.target.value }
+                        }))}
+                        className="w-full px-4 py-3 border-2 border-emerald-200 bg-white rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-transparent outline-none cursor-pointer"
+                      >
+                        <option value="">เลือก</option>
+                        {medicalConsentOptions.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">ยอมรับ PDPA</label>
+                      <select
+                        value={consentSections[selectedConsentPart]?.acceptPdpa || ""}
+                        onChange={(e) => setConsentSections((prev) => ({
+                          ...prev,
+                          [selectedConsentPart]: { ...prev[selectedConsentPart], acceptPdpa: e.target.value }
+                        }))}
+                        className="w-full px-4 py-3 border-2 border-emerald-200 bg-white rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-transparent outline-none cursor-pointer"
+                      >
+                        <option value="">เลือก</option>
+                        {acceptOptions.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">ยินยอมเผยแพร่สื่อ</label>
+                      <select
+                        value={consentSections[selectedConsentPart]?.acceptMedia || ""}
+                        onChange={(e) => setConsentSections((prev) => ({
+                          ...prev,
+                          [selectedConsentPart]: { ...prev[selectedConsentPart], acceptMedia: e.target.value }
+                        }))}
+                        className="w-full px-4 py-3 border-2 border-emerald-200 bg-white rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-transparent outline-none cursor-pointer"
+                      >
+                        <option value="">เลือก</option>
+                        {acceptOptions.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* Signature Pad */}
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">ลายเซ็น</label>
+                      <SignaturePad
+                        value={consentSections[selectedConsentPart]?.signatureUrl || ""}
+                        onChange={(url) => setConsentSections((prev) => ({
+                          ...prev,
+                          [selectedConsentPart]: { ...prev[selectedConsentPart], signatureUrl: url }
+                        }))}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Service Tab Content */}
+          {activeTab === "service" && (
+            <div className="p-6 space-y-6">
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-100 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1 h-6 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full"></div>
+                  <h2 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    บริการ
+                  </h2>
+                </div>
+                {/* Service Group Selection */}
+                <div className="space-y-4">
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">กลุ่มบริการ</label>
+                    <select
+                      value={selectedOpdGroupCode}
+                      onChange={(e) => setSelectedOpdGroupCode(e.target.value)}
+                      disabled={groupsLoading}
+                      className="w-full px-4 py-3 border-2 border-purple-200 bg-white rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-transparent outline-none cursor-pointer"
+                    >
+                      <option value="">เลือกกลุ่มบริการ</option>
+                      {opdGroups.map((group) => (
+                        <option key={group.groupcode} value={group.groupcode}>{group.groupname}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* Service Search */}
+                  {selectedOpdGroupCode && (
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">ค้นหาบริการ</label>
+                      <input
+                        type="text"
+                        value={serviceSearchTerm}
+                        onChange={(e) => setServiceSearchTerm(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-purple-200 bg-white rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-transparent outline-none"
+                        placeholder="พิมพ์ชื่อบริการ..."
+                      />
+                    </div>
+                  )}
+                  {/* Selected Services Summary */}
+                  {selectedServices.length > 0 && (
+                    <div className="bg-purple-100 rounded-xl p-4">
+                      <h3 className="font-semibold text-purple-800 mb-2">บริการที่เลือก ({selectedServices.length})</h3>
+                      <div className="space-y-2">
+                        {selectedServices.map((svc) => (
+                          <div key={svc.id} className="flex justify-between items-center bg-white rounded-lg p-2">
+                            <span className="text-sm text-gray-700">{svc.itemname}</span>
+                            <span className="text-sm font-semibold text-purple-600">
+                              {formatCurrencyDisplay(calculateServiceEntryTotal(svc))} ฿
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Appointment Tab Content */}
+          {activeTab === "appointment" && (
+            <div className="p-6 space-y-6">
+              <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-6 border border-orange-100 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1 h-6 bg-gradient-to-b from-orange-500 to-amber-500 rounded-full"></div>
+                  <h2 className="text-lg font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+                    นัดหมาย
+                  </h2>
+                </div>
+                {appointmentLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {appointmentSections.map((section, idx) => (
+                      <div key={idx} className="space-y-4">
+                        <h3 className="font-semibold text-gray-800">{section.title}</h3>
+                        <div className={`grid ${section.columns || "grid-cols-1 md:grid-cols-2"} gap-4`}>
+                          {section.fields.map((fieldKey) => {
+                            const fieldMeta = appointmentFieldMetaMap[fieldKey];
+                            if (!fieldMeta) return null;
+                            return (
+                              <div key={fieldKey} className={fieldMeta.fullWidth ? "col-span-full" : ""}>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">{fieldMeta.label}</label>
+                                {fieldMeta.type === "textarea" ? (
+                                  <textarea
+                                    value={appointmentForm[fieldKey] || ""}
+                                    onChange={(e) => setAppointmentForm((prev) => ({ ...prev, [fieldKey]: e.target.value }))}
+                                    readOnly={fieldMeta.readOnly}
+                                    className="w-full px-4 py-3 border-2 border-orange-200 bg-white rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-transparent outline-none min-h-[100px] resize-none"
+                                    placeholder={fieldMeta.placeholder}
+                                  />
+                                ) : (
+                                  <input
+                                    type={fieldMeta.type || "text"}
+                                    value={appointmentForm[fieldKey] || ""}
+                                    onChange={(e) => setAppointmentForm((prev) => ({ ...prev, [fieldKey]: e.target.value }))}
+                                    readOnly={fieldMeta.readOnly}
+                                    className={`w-full px-4 py-3 border-2 border-orange-200 ${fieldMeta.readOnly ? "bg-gray-100" : "bg-white"} rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-transparent outline-none`}
+                                    placeholder={fieldMeta.placeholder}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                    {/* Appointment History */}
+                    {appointmentHistory.length > 0 && (
+                      <div className="mt-6">
+                        <h3 className="font-semibold text-gray-800 mb-4">ประวัตินัดหมาย</h3>
+                        <div className="space-y-2">
+                          {appointmentHistory.map((item, idx) => (
+                            <div
+                              key={resolveAppointmentHistoryKey(item, idx)}
+                              className="bg-white border border-orange-200 rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer"
+                              onClick={() => {
+                                const key = resolveAppointmentHistoryKey(item, idx);
+                                setSelectedAppointmentHistoryKey(selectedAppointmentHistoryKey === key ? null : key);
+                              }}
+                            >
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-gray-700">{item.activity || "ไม่ระบุกิจกรรม"}</span>
+                                <span className="text-xs text-gray-500">{formatAppointmentDateTimeLabel(item.start_date)}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer with Gradient */}
-        <div className="sticky bottom-0 bg-gradient-to-t from-gray-50 to-white border-t border-gray-200 p-6 flex justify-end gap-4 shadow-lg">
+        <div className="sticky bottom-0 bg-gradient-to-t from-gray-50 to-white border-t border-gray-200 p-4 sm:p-5 flex justify-center gap-4 shadow-lg">
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-8 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95"
+            className="px-6 sm:px-8 py-2.5 sm:py-3 border-2 border-gray-300 rounded-xl text-gray-700 text-sm sm:text-base font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ยกเลิก
           </button>
           <button
             onClick={() => handleSave()}
             disabled={isLoading}
-            className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
+            className="flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-sm sm:text-base font-semibold rounded-xl transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
           >
             {isLoading ? (
               <>
@@ -2584,17 +2830,6 @@ export const EditCustomerModal = ({
               </div>
 
               <div className="space-y-4">
-                <div className="group">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">บัตรประชาชน</label>
-                  <input
-                    type="text"
-                    value={customerData["id_card"] || ""}
-                    onChange={(event) => handleFieldChange("id_card", event.target.value)}
-                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl bg-white text-gray-900 placeholder:text-slate-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400 outline-none transition"
-                    placeholder="ระบุเลขบัตรประชาชน"
-                  />
-                </div>
-
                 <div className="group">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">บ้านเลขที่</label>
                   <input
@@ -3461,8 +3696,8 @@ export const EditCustomerModal = ({
                         <div
                           key={cardKey}
                           className={`rounded-2xl border bg-white px-3 py-3 shadow-sm transition ${selectedAppointmentHistoryKey === cardKey
-                              ? "border-teal-300 ring-1 ring-teal-200"
-                              : "border-slate-200"
+                            ? "border-teal-300 ring-1 ring-teal-200"
+                            : "border-slate-200"
                             }`}
                         >
                           <div className="flex items-start justify-between gap-3">
@@ -3489,8 +3724,8 @@ export const EditCustomerModal = ({
                                 title={!entry.appoint_code ? "รหัสนัดหมายไม่พร้อม" : "แก้ไขนัดหมายนี้"}
                                 onClick={() => handleSelectAppointmentHistory(entry, cardKey)}
                                 className={`rounded-full px-3 py-1 text-xs font-semibold transition ${entry.appoint_code
-                                    ? "border border-slate-300 text-slate-600 hover:border-slate-400"
-                                    : "border border-slate-200 text-slate-400 cursor-not-allowed"
+                                  ? "border border-slate-300 text-slate-600 hover:border-slate-400"
+                                  : "border border-slate-200 text-slate-400 cursor-not-allowed"
                                   }`}
                               >
                                 แก้ไขนัดหมาย

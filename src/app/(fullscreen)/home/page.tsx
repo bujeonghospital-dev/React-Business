@@ -39,6 +39,7 @@ import {
 interface MenuItem {
   id: string;
   title: string;
+  description: string;
   icon: React.ReactNode;
   color: string;
   gradient: string;
@@ -47,6 +48,7 @@ interface MenuItem {
 
 interface SubMenuItem {
   title: string;
+  description: string;
   icon: React.ReactNode;
   status?: string;
   link?: string;
@@ -124,77 +126,136 @@ export default function FullscreenHomePage() {
     //   ],
     // },
     {
-      id: "customer-relations",
-      title: "ลูกค้าสัมพันธ์",
-      icon: <FaUsers className="text-4xl" />,
+      id: "marketing",
+      title: "Marketing",
+      description: "จัดการโฆษณา คอนเทนต์ และสื่อการตลาด",
+      icon: <FaBullhorn className="text-4xl" />,
       color: "from-pink-500 to-rose-700",
       gradient: "bg-gradient-to-br from-pink-50 to-rose-100",
       subItems: [
         {
-          title: "All สนใจ",
-          icon: <FaCheckCircle />,
+          title: "Branding Dashboard",
+          description: "ภาพรวมการตลาดและแบรนด์",
+          icon: <FaChartLine />,
           status: "",
-          link: "/customer-selection",
+          link: "/branding-dashboard",
         },
-        {
-          title: "สรุปนัดลูกผ่าตัด (CRM)",
-          icon: <FaCalendarCheck />,
-          status: "",
-          link: "/crm-advanced",
-        },
-      ],
-    },
-    {
-      id: "dashboard",
-      title: "Dashboard",
-      icon: <FaChartLine className="text-4xl" />,
-      color: "from-purple-500 to-indigo-700",
-      gradient: "bg-gradient-to-br from-purple-50 to-indigo-100",
-      subItems: [
         {
           title: "Ad Performance",
+          description: "ติดตามประสิทธิภาพโฆษณา",
           icon: <FaAd />,
           status: "",
           link: "/facebook-ads-manager",
         },
         {
-          title: "Sale Performance",
+          title: "Inbox Performance",
+          description: "วิเคราะห์การตอบกลับข้อความ",
+          icon: <FaComments />,
+          status: "",
+          link: "/inbox-performance",
+        },
+        {
+          title: "Content Calendar",
+          description: "ปฏิทินคอนเทนต์และโพสต์",
+          icon: <FaCalendarCheck />,
+          status: "",
+          link: "/content-calendar",
+        },
+        {
+          title: "Production Calendar",
+          description: "ตารางการผลิตสื่อและคลิป",
+          icon: <FaCalendarCheck />,
+          status: "",
+          link: "/star-case-calendar",
+        },
+        {
+          title: "Asset Library",
+          description: "คลังไฟล์รูปภาพและวิดีโอ",
+          icon: <FaImage />,
+          status: "",
+          link: "/all-files-gallery",
+        },
+      ],
+    },
+    {
+      id: "sales-crm",
+      title: "Sales & CRM",
+      description: "ติดตามยอดขาย การจอง และลูกค้าสัมพันธ์",
+      icon: <FaHandshake className="text-4xl" />,
+      color: "from-purple-500 to-indigo-700",
+      gradient: "bg-gradient-to-br from-purple-50 to-indigo-100",
+      subItems: [
+        {
+          title: "Sales Performance",
+          description: "ติดตามยอดขายและเป้าหมาย",
           icon: <FaChartBar />,
           status: "",
           link: "/performance-surgery-schedule",
         },
         {
-          title: "Robo Call - Log",
-          icon: <FaRobot />,
+          title: "Booking Dashboard",
+          description: "ภาพรวมการจองและนัดหมาย",
+          icon: <FaCalendarCheck />,
           status: "",
-          link: "/customer-contact-dashboard",
+          link: "/booking-dashboard",
         },
-
+        {
+          title: "CRM Customers",
+          description: "ข้อมูลลูกค้าและติดตาม",
+          icon: <FaUsers />,
+          status: "",
+          link: "/customer-selection",
+        },
       ],
     },
     {
-      id: "marketing",
-      title: "Marketing",
-      icon: <FaBullhorn className="text-4xl" />,
+      id: "operations",
+      title: "Operations",
+      description: "จัดการตารางงานและสต็อกสินค้า",
+      icon: <FaBriefcase className="text-4xl" />,
+      color: "from-emerald-500 to-teal-700",
+      gradient: "bg-gradient-to-br from-emerald-50 to-teal-100",
+      subItems: [
+        {
+          title: "Employee Work Calendar",
+          description: "ตารางงานพนักงาน",
+          icon: <FaCalendarCheck />,
+          status: "",
+          link: "/employee-calendar",
+        },
+        {
+          title: "Stock Management",
+          description: "จัดการสต็อกสินค้า",
+          icon: <FaBoxes />,
+          status: "",
+          link: "/stock-management",
+        },
+      ],
+    },
+    {
+      id: "automation",
+      title: "Automation",
+      description: "ระบบอัตโนมัติ แชทบอท และโทรอัตโนมัติ",
+      icon: <FaRobot className="text-4xl" />,
       color: "from-orange-500 to-red-700",
       gradient: "bg-gradient-to-br from-orange-50 to-red-100",
       subItems: [
         {
-          title: "รวม File ทั้งหมด (Clip รูป)",
-          icon: <FaImage />,
+          title: "AI Chatbot",
+          description: "ตั้งค่าแชทบอทอัตโนมัติ",
+          icon: <FaRobot />,
           status: "",
-          link: "/all-files-gallery",
+          link: "/ai-chatbot-setup",
         },
         {
-          title: "ตั้ง AI Chatbot",
-          icon: <FaRobot />,
-          status: "⚙️",
-          link: "/ai-chatbot-setup",
+          title: "Robo Call System",
+          description: "ระบบโทรอัตโนมัติ",
+          icon: <FaPhone />,
+          status: "",
+          link: "/customer-contact-dashboard",
         },
       ],
     },
-
-
   ];
 
   const handleMenuClick = (menuId: string) => {
@@ -395,7 +456,10 @@ export default function FullscreenHomePage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       {menu.icon}
-                      <h2 className="text-2xl font-bold">{menu.title}</h2>
+                      <div>
+                        <h2 className="text-2xl font-bold">{menu.title}</h2>
+                        <p className="text-sm text-white/80">{menu.description}</p>
+                      </div>
                     </div>
                     <motion.div
                       animate={{ rotate: selectedMenu === menu.id ? 180 : 0 }}
@@ -449,9 +513,14 @@ export default function FullscreenHomePage() {
                             >
                               {subItem.icon}
                             </motion.div>
-                            <span className="font-medium text-gray-800 group-hover:text-gray-900 transition-colors">
-                              {subItem.title}
-                            </span>
+                            <div>
+                              <span className="font-medium text-gray-800 group-hover:text-gray-900 transition-colors block">
+                                {subItem.title}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {subItem.description}
+                              </span>
+                            </div>
                           </div>
                           {subItem.status && (
                             <motion.span

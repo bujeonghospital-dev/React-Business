@@ -514,8 +514,8 @@ export const AddCustomerModal = ({
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`flex flex-col sm:flex-row items-center justify-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 ${activeTab === tab.id
-                                        ? "bg-white/30 shadow-inner"
-                                        : "bg-white/10 hover:bg-white/20"
+                                    ? "bg-white/30 shadow-inner"
+                                    : "bg-white/10 hover:bg-white/20"
                                     } text-white rounded-xl transition-all duration-200 min-w-[60px] sm:min-w-[80px]`}
                                 title={tab.label}
                             >

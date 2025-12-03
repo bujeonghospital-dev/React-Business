@@ -205,7 +205,7 @@ const CustomerAllDataPage = () => {
           "Long",
           "id",
         ];
-        
+
         // Mandatory fields that should always be shown even if empty
         const mandatoryFields = [
           "สถานะ",
@@ -215,10 +215,10 @@ const CustomerAllDataPage = () => {
           "แหล่งที่มา",
           "เพศ",
         ];
-        
+
         const allHeadersSet = new Set<string>();
         const allHeaders: string[] = [];
-        
+
         // First add mandatory fields in the column order
         columnOrder.forEach((header) => {
           if (mandatoryFields.includes(header) && !allHeadersSet.has(header)) {
@@ -226,7 +226,7 @@ const CustomerAllDataPage = () => {
             allHeaders.push(header);
           }
         });
-        
+
         // Then add other headers in the desired order that exist in data
         columnOrder.forEach((header) => {
           if (!allHeadersSet.has(header)) {
@@ -247,7 +247,7 @@ const CustomerAllDataPage = () => {
             }
           });
         });
-        
+
         const filteredHeaders = allHeaders.filter((header: string) => {
           // Exclude specified columns
           const excludedColumns = [

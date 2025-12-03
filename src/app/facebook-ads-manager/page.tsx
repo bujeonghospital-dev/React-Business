@@ -242,6 +242,64 @@ export default function FacebookAdsManagerPage() {
   const [selectedAdSet, setSelectedAdSet] = useState<AdInsight | null>(null);
   const [showAdSetModal, setShowAdSetModal] = useState(false);
 
+  // ============ Page 2 States ============
+  // Interface สำหรับข้อมูล Page 2 (รองรับ actions สำหรับ messaging)
+  interface Page2AdInsight {
+    ad_id: string;
+    ad_name: string;
+    adset_id: string;
+    adset_name: string;
+    campaign_id: string;
+    campaign_name: string;
+    spend: string;
+    impressions: string;
+    clicks: string;
+    ctr: string;
+    cpc: string;
+    cpm: string;
+    reach?: string;
+    frequency?: string;
+    actions?: Array<{
+      action_type: string;
+      value: string;
+    }>;
+  }
+
+  interface Page2Summary {
+    totalSpend: number;
+    totalImpressions: number;
+    totalClicks: number;
+    totalAds: number;
+    avgCtr: number;
+    avgCpc: number;
+    avgCpm: number;
+    total_messaging_first_reply?: number;
+    total_messaging_connection?: number;
+  }
+
+  const [page2Insights, setPage2Insights] = useState<Page2AdInsight[]>([]);
+  const [page2Loading, setPage2Loading] = useState(false);
+  const [page2Error, setPage2Error] = useState<string | null>(null);
+  const [page2Summary, setPage2Summary] = useState<Page2Summary>({
+    totalSpend: 0,
+    totalImpressions: 0,
+    totalClicks: 0,
+    totalAds: 0,
+    avgCtr: 0,
+    avgCpc: 0,
+    avgCpm: 0,
+    total_messaging_first_reply: 0,
+    total_messaging_connection: 0,
+  });
+  const [page2SortBy, setPage2SortBy] = useState<"spend" | "clicks" | "impressions" | "ctr" | "cpc" | "cpm">("spend");
+  const [page2Limit, setPage2Limit] = useState<5 | 10 | 15 | 20 | 30 | "all">(20);
+
+  // Page 2 Balance State
+  const [page2Balance, setPage2Balance] = useState<number>(0);
+  const [page2BalanceLoading, setPage2BalanceLoading] = useState(false);
+  const [page2AmountSpent, setPage2AmountSpent] = useState<number>(0);
+  const [page2Currency, setPage2Currency] = useState<string>("THB");
+
   // Get ads that belong to a specific adset
   const getAdsByAdSetId = useCallback(
     (adsetId: string) => {
@@ -814,6 +872,111 @@ export default function FacebookAdsManagerPage() {
       setAdsetInsightsLoading(false);
     }
   }, [dateRange, customDateStart, customDateEnd]);
+
+  // ============ Fetch Page 2 Data ============
+  const fetchPage2Insights = useCallback(async () => {
+    try {
+      setPage2Loading(true);
+      setPage2Error(null);
+
+      // ใช้ Railway API แทน local API
+      let url = `https://believable-ambition-production.up.railway.app/api/facebook-ads-campaigns`;
+      const params = new URLSearchParams();
+
+      // Set ad_account_id for Page 2
+      params.append("ad_account_id", "act_869492750129928");
+
+      // Set level to ad
+      params.append("level", "ad");
+
+      // Add filtering for messaging actions
+      const filtering = JSON.stringify([
+        {
+          field: "action_type",
+          operator: "IN",
+          value: [
+            "onsite_conversion.messaging_first_reply",
+            "onsite_conversion.total_messaging_connection",
+          ],
+        },
+      ]);
+      params.append("filtering", filtering);
+      params.append("action_breakdowns", "action_type");
+
+      // ใช้ date range เดียวกับ Page 1
+      if (dateRange === "custom" && customDateStart && customDateEnd) {
+        const timeRange = JSON.stringify({
+          since: customDateStart,
+          until: customDateEnd,
+        });
+        params.append("time_range", timeRange);
+      } else {
+        params.append("date_preset", dateRange);
+      }
+
+      const response = await fetch(`${url}?${params.toString()}`);
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        setPage2Error(result.error || "ไม่สามารถดึงข้อมูล Page 2 ได้");
+        setPage2Insights([]);
+        setPage2Summary({
+          totalSpend: 0,
+          totalImpressions: 0,
+          totalClicks: 0,
+          totalAds: 0,
+          avgCtr: 0,
+          avgCpc: 0,
+          avgCpm: 0,
+          total_messaging_first_reply: 0,
+          total_messaging_connection: 0,
+        });
+      } else {
+        setPage2Insights(result.data || []);
+        // Map API summary fields to state
+        setPage2Summary({
+          totalSpend: result.summary?.total_spend || 0,
+          totalImpressions: result.summary?.total_impressions || 0,
+          totalClicks: result.summary?.total_clicks || 0,
+          totalAds: result.data?.length || 0,
+          avgCtr: result.summary?.total_impressions > 0 ? (result.summary?.total_clicks / result.summary?.total_impressions) * 100 : 0,
+          avgCpc: result.summary?.total_clicks > 0 ? result.summary?.total_spend / result.summary?.total_clicks : 0,
+          avgCpm: result.summary?.total_impressions > 0 ? (result.summary?.total_spend / result.summary?.total_impressions) * 1000 : 0,
+          total_messaging_first_reply: result.summary?.total_messaging_first_reply || 0,
+          total_messaging_connection: result.summary?.total_messaging_connection || 0,
+        });
+      }
+    } catch (err) {
+      setPage2Error(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
+      setPage2Insights([]);
+    } finally {
+      setPage2Loading(false);
+    }
+  }, [dateRange, customDateStart, customDateEnd]);
+
+  // ============ Fetch Page 2 Balance ============
+  const fetchPage2Balance = useCallback(async () => {
+    try {
+      setPage2BalanceLoading(true);
+      const response = await fetch("/api/facebook-ads-balance-page2");
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        setPage2Balance(0);
+        setPage2AmountSpent(0);
+      } else {
+        setPage2Balance(result.data.available_balance || result.data.balance || 0);
+        setPage2AmountSpent(result.data.amount_spent || 0);
+        setPage2Currency(result.data.currency || "THB");
+      }
+    } catch (err) {
+      setPage2Balance(0);
+      setPage2AmountSpent(0);
+    } finally {
+      setPage2BalanceLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const loadAllData = async () => {
       try {
@@ -825,6 +988,8 @@ export default function FacebookAdsManagerPage() {
           fetchPhoneCount(),
           fetchDailySummaryData(),
           fetchAdsetInsights(),
+          fetchPage2Insights(),
+          fetchPage2Balance(),
         ]);
       } catch (error) {
         setError("เกิดข้อผิดพลาดในการโหลดข้อมูล");
@@ -842,6 +1007,8 @@ export default function FacebookAdsManagerPage() {
         fetchPhoneCount(),
         fetchDailySummaryData(),
         fetchAdsetInsights(),
+        fetchPage2Insights(),
+        fetchPage2Balance(),
       ]);
     }, 120000); // 120000ms = 2 minutes (เพิ่มจาก 1 นาที เป็น 2 นาที)
     // Cleanup interval on unmount
@@ -856,6 +1023,8 @@ export default function FacebookAdsManagerPage() {
     fetchPhoneCount,
     fetchDailySummaryData,
     fetchAdsetInsights,
+    fetchPage2Insights,
+    fetchPage2Balance,
   ]);
   // Monitor adCreatives changes
   useEffect(() => {
@@ -2797,10 +2966,10 @@ export default function FacebookAdsManagerPage() {
           </>
         )}
 
-        {/* Page 2 Content - Same structure as Page 1 */}
+        {/* Page 2 Content - โครงสร้างเหมือน Page 1 ทุกประการ */}
         {selectedPage === 2 && (
           <>
-            {/* Performance Cards and Tables in 3-Column Layout */}
+            {/* Performance Cards and Tables in 3-Column Layout - เหมือน Page 1 */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               {/* Column 1: เงินคงเหลือ + ใช้จ่ายรวม */}
               <div className="flex flex-col">
@@ -2809,13 +2978,13 @@ export default function FacebookAdsManagerPage() {
                   <div className="grid grid-cols-2 gap-2 sm:gap-4">
                     <div className="text-center">
                       <div className="text-xs sm:text-base font-semibold opacity-90 mb-1 sm:mb-2">
-                        💵 เงินคงเหลือ (Page 2)
+                        💵 เงินคงเหลือ
                       </div>
                       <div className="text-xl sm:text-3xl font-bold">
-                        {facebookBalanceLoading ? (
+                        {page2BalanceLoading ? (
                           <span className="text-2xl">⏳</span>
                         ) : (
-                          `฿${facebookBalance.toLocaleString("th-TH", {
+                          `฿${page2Balance.toLocaleString("th-TH", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}`
@@ -2827,17 +2996,16 @@ export default function FacebookAdsManagerPage() {
                         💰 ใช้จ่ายรวม
                       </div>
                       <div className="text-xl sm:text-3xl font-bold">
-                        {formatCurrency(
-                          insights.reduce(
-                            (sum, ad) => sum + parseFloat(ad.spend || "0"),
-                            0
-                          )
+                        {page2Loading ? (
+                          <span className="text-2xl">⏳</span>
+                        ) : (
+                          formatCurrency(page2Summary.totalSpend)
                         )}
                       </div>
                     </div>
                   </div>
                 </div>
-                {/* Table */}
+                {/* Table - วันที่ + จ่ายแล้ว */}
                 <div className="bg-white rounded-b-2xl sm:rounded-b-3xl shadow-2xl overflow-hidden border border-gray-100 border-t-0 flex-1 mt-0">
                   <div className="overflow-y-auto max-h-[120px]">
                     <table className="w-full min-w-max text-xs">
@@ -2852,37 +3020,18 @@ export default function FacebookAdsManagerPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {dailySummaryLoading ? (
+                        {page2Loading ? (
                           <tr>
-                            <td colSpan={2} className="px-2 py-4 text-center text-xs">⏳</td>
+                            <td colSpan={2} className="px-2 py-4 text-center text-xs">
+                              ⏳
+                            </td>
                           </tr>
                         ) : (
-                          (() => {
-                            const dailyData = new Map<string, { spend: number }>();
-                            dailySummaryData.forEach((ad) => {
-                              const date = ad.date_start;
-                              const existing = dailyData.get(date) || { spend: 0 };
-                              existing.spend += parseFloat(ad.spend || "0");
-                              dailyData.set(date, existing);
-                            });
-                            const sortedDates = Array.from(dailyData.keys()).sort(
-                              (a, b) => new Date(b).getTime() - new Date(a).getTime()
-                            );
-                            const last30Days = sortedDates.slice(1, 31);
-                            return last30Days.map((date) => {
-                              const data = dailyData.get(date)!;
-                              return (
-                                <tr key={date} className="hover:bg-blue-50 border-b">
-                                  <td className="px-2 py-2 text-center text-xs text-gray-900">
-                                    {new Date(date).toLocaleDateString("th-TH", { month: "short", day: "numeric" })}
-                                  </td>
-                                  <td className="px-2 py-2 text-center text-xs font-semibold text-blue-600">
-                                    {formatCurrency(data.spend)}
-                                  </td>
-                                </tr>
-                              );
-                            });
-                          })()
+                          <tr>
+                            <td colSpan={2} className="px-2 py-4 text-center text-xs text-gray-400">
+                              ไม่มีข้อมูลรายวัน
+                            </td>
+                          </tr>
                         )}
                       </tbody>
                     </table>
@@ -2900,7 +3049,11 @@ export default function FacebookAdsManagerPage() {
                         New Inbox
                       </div>
                       <div className="text-xl sm:text-4xl font-bold">
-                        {getTotalResults()}
+                        {page2Loading ? (
+                          <span className="text-2xl">⏳</span>
+                        ) : (
+                          formatNumber(page2Summary.total_messaging_first_reply || 0)
+                        )}
                       </div>
                     </div>
                     <div className="text-center">
@@ -2908,50 +3061,45 @@ export default function FacebookAdsManagerPage() {
                         Total Inbox
                       </div>
                       <div className="text-xl sm:text-4xl font-bold">
-                        {getTotalMessagingConnection()}
+                        {page2Loading ? (
+                          <span className="text-2xl">⏳</span>
+                        ) : (
+                          formatNumber(page2Summary.total_messaging_connection || 0)
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
-                {/* Table */}
+                {/* Table - วันที่ + New Inbox + Total Inbox */}
                 <div className="bg-white rounded-b-2xl sm:rounded-b-3xl shadow-2xl overflow-hidden border border-gray-100 border-t-0 flex-1 mt-0">
                   <div className="overflow-y-auto max-h-[120px]">
                     <table className="w-full min-w-max text-xs">
                       <thead className="bg-teal-50 sticky top-0">
                         <tr>
-                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">วันที่</th>
-                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">New Inbox</th>
-                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">Total Inbox</th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
+                            วันที่
+                          </th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
+                            New Inbox
+                          </th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
+                            Total Inbox
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {dailySummaryLoading ? (
-                          <tr><td colSpan={3} className="px-2 py-4 text-center text-xs">⏳</td></tr>
+                        {page2Loading ? (
+                          <tr>
+                            <td colSpan={3} className="px-2 py-4 text-center text-xs">
+                              ⏳
+                            </td>
+                          </tr>
                         ) : (
-                          (() => {
-                            const dailyData = new Map<string, { newInbox: number; totalInbox: number }>();
-                            dailySummaryData.forEach((ad) => {
-                              const date = ad.date_start;
-                              const existing = dailyData.get(date) || { newInbox: 0, totalInbox: 0 };
-                              existing.newInbox += getResultsByActionType(ad.actions, "onsite_conversion.messaging_first_reply");
-                              existing.totalInbox += getResultsByActionType(ad.actions, "onsite_conversion.total_messaging_connection");
-                              dailyData.set(date, existing);
-                            });
-                            const sortedDates = Array.from(dailyData.keys()).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-                            const last30Days = sortedDates.slice(1, 31);
-                            return last30Days.map((date) => {
-                              const data = dailyData.get(date)!;
-                              return (
-                                <tr key={date} className="hover:bg-teal-50 border-b">
-                                  <td className="px-2 py-2 text-center text-xs text-gray-900">
-                                    {new Date(date).toLocaleDateString("th-TH", { month: "short", day: "numeric" })}
-                                  </td>
-                                  <td className="px-2 py-2 text-center text-xs font-semibold text-green-600">{data.newInbox}</td>
-                                  <td className="px-2 py-2 text-center text-xs font-semibold text-teal-600">{data.totalInbox}</td>
-                                </tr>
-                              );
-                            });
-                          })()
+                          <tr>
+                            <td colSpan={3} className="px-2 py-4 text-center text-xs text-gray-400">
+                              ไม่มีข้อมูล Inbox
+                            </td>
+                          </tr>
                         )}
                       </tbody>
                     </table>
@@ -2963,36 +3111,44 @@ export default function FacebookAdsManagerPage() {
               <div className="flex flex-col">
                 {/* Card */}
                 <div className="bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-2xl text-center">
-                  <div className="text-base sm:text-xl font-semibold mb-2 sm:mb-3 opacity-90">📞 ชื่อ - เบอร์</div>
+                  <div className="text-base sm:text-xl font-semibold mb-2 sm:mb-3 opacity-90">
+                    📞 ชื่อ - เบอร์
+                  </div>
                   <div className="text-2xl sm:text-4xl font-bold">
-                    {phoneCountLoading ? <span className="text-3xl">⏳</span> : <div>{phoneCountData.total.toLocaleString()}</div>}
+                    {page2Loading ? (
+                      <span className="text-3xl">⏳</span>
+                    ) : (
+                      "—"
+                    )}
                   </div>
                 </div>
-                {/* Table */}
+                {/* Table - วันที่ + เบอร์ */}
                 <div className="bg-white rounded-b-2xl sm:rounded-b-3xl shadow-2xl overflow-hidden border border-gray-100 border-t-0 flex-1 mt-0">
                   <div className="overflow-y-auto max-h-[120px]">
                     <table className="w-full min-w-max text-xs">
                       <thead className="bg-purple-50 sticky top-0">
                         <tr>
-                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">วันที่</th>
-                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">เบอร์</th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
+                            วันที่
+                          </th>
+                          <th className="px-2 py-2 text-center font-semibold text-gray-700 border-b text-xs whitespace-nowrap">
+                            เบอร์
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {phoneLeadsLoading ? (
-                          <tr><td colSpan={2} className="px-2 py-4 text-center text-xs">⏳</td></tr>
+                        {page2Loading ? (
+                          <tr>
+                            <td colSpan={2} className="px-2 py-4 text-center text-xs">
+                              ⏳
+                            </td>
+                          </tr>
                         ) : (
-                          Object.entries(phoneLeadsData)
-                            .sort(([dateA], [dateB]) => new Date(dateB).getTime() - new Date(dateA).getTime())
-                            .slice(1)
-                            .map(([date, count]) => (
-                              <tr key={date} className="hover:bg-purple-50 border-b">
-                                <td className="px-2 py-2 text-center text-xs text-gray-900">
-                                  {new Date(date).toLocaleDateString("th-TH", { month: "short", day: "numeric" })}
-                                </td>
-                                <td className="px-2 py-2 text-center text-xs font-semibold text-purple-600">{count}</td>
-                              </tr>
-                            ))
+                          <tr>
+                            <td colSpan={2} className="px-2 py-4 text-center text-xs text-gray-400">
+                              ไม่มีข้อมูลเบอร์โทร
+                            </td>
+                          </tr>
                         )}
                       </tbody>
                     </table>
@@ -3001,38 +3157,435 @@ export default function FacebookAdsManagerPage() {
               </div>
             </div>
 
-            {/* TOP Ads Section - Two Column Layout */}
+            {/* TOP Ads Section - Two Column Layout - เหมือน Page 1 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-8">
-              {/* Placeholder for Page 2 specific content */}
+              {/* Left Column - TOP Ads Table */}
               <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 border border-gray-100">
                 <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 px-4 sm:px-8 py-4 sm:py-6 -m-4 sm:-m-8 mb-4 sm:mb-8 relative overflow-hidden rounded-t-2xl sm:rounded-t-3xl">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 transition-opacity duration-500"></div>
                 </div>
                 <div className="flex flex-col gap-3 mb-3 sm:mb-4">
                   <h2 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-2">
-                    📊 Page 2 - Analytics Dashboard
+                    🏆 TOP {page2Limit === "all" ? "ทั้งหมด" : page2Limit} Ads{" "}
+                    <span className="bg-gradient-to-r from-yellow-400 via-orange-400 to-red-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full text-base sm:text-xl font-bold shadow-xl">
+                      นักเตะยอดเยี่ยม
+                    </span>
                   </h2>
-                  <p className="text-gray-600 text-sm">Page 2 content area - Same structure as Page 1</p>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full">
+                    {/* Sort By Buttons - เหมือน Page 1 แต่ใช้ field ที่มี */}
+                    <div className="flex gap-2 flex-1">
+                      <button
+                        onClick={() => setPage2SortBy("spend")}
+                        className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${page2SortBy === "spend"
+                          ? "bg-purple-600 text-white shadow-lg"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          }`}
+                      >
+                        <span className="hidden sm:inline">
+                          💰 Spend (มาก → น้อย)
+                        </span>
+                        <span className="sm:hidden">💰 Spend</span>
+                      </button>
+                      <button
+                        onClick={() => setPage2SortBy("clicks")}
+                        className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${page2SortBy === "clicks"
+                          ? "bg-purple-600 text-white shadow-lg"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          }`}
+                      >
+                        <span className="hidden sm:inline">
+                          🖱️ Clicks (มาก → น้อย)
+                        </span>
+                        <span className="sm:hidden">🖱️ Clicks</span>
+                      </button>
+                      <button
+                        onClick={() => setPage2SortBy("ctr")}
+                        className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${page2SortBy === "ctr"
+                          ? "bg-purple-600 text-white shadow-lg"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          }`}
+                      >
+                        <span className="hidden sm:inline">
+                          📈 CTR (มาก → น้อย)
+                        </span>
+                        <span className="sm:hidden">📈 CTR</span>
+                      </button>
+                      <button
+                        onClick={() => setPage2SortBy("impressions")}
+                        className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${page2SortBy === "impressions"
+                          ? "bg-purple-600 text-white shadow-lg"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          }`}
+                      >
+                        <span className="hidden sm:inline">
+                          👁️ Impressions (มาก → น้อย)
+                        </span>
+                        <span className="sm:hidden">👁️ Impr</span>
+                      </button>
+                    </div>
+                    {/* Top Ads Limit Dropdown */}
+                    <select
+                      value={page2Limit}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setPage2Limit(
+                          value === "all"
+                            ? "all"
+                            : (Number(value) as 5 | 10 | 15 | 20 | 30)
+                        );
+                      }}
+                      className="flex-1 sm:flex-none sm:min-w-[140px] px-3 py-2 rounded-lg font-medium text-xs sm:text-sm bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-800 hover:from-yellow-500 hover:to-orange-500 transition-all border-2 border-yellow-500 shadow-lg cursor-pointer"
+                    >
+                      <option value={5}>⭐ Top 5</option>
+                      <option value={10}>⭐ Top 10</option>
+                      <option value={15}>⭐ Top 15</option>
+                      <option value={20}>⭐ Top 20</option>
+                      <option value={30}>⭐ Top 30</option>
+                      <option value="all">⭐ Top ทั้งหมด</option>
+                    </select>
+                  </div>
                 </div>
-                <div className="p-8 text-center text-gray-500">
-                  <div className="text-6xl mb-4">📈</div>
-                  <p className="text-lg">Page 2 specific content will be displayed here</p>
+                <div className="overflow-x-auto">
+                  {/* Loading State */}
+                  {page2Loading && page2Insights.length === 0 && (
+                    <div className="bg-blue-50 border-l-4 border-blue-500 p-3 mb-4 rounded">
+                      <p className="text-blue-700 text-sm font-medium">
+                        ⏳ กำลังโหลดข้อมูล...
+                      </p>
+                    </div>
+                  )}
+                  {page2Error && (
+                    <div className="bg-red-50 border-l-4 border-red-500 p-3 mb-4 rounded">
+                      <p className="text-red-700 text-sm font-medium">
+                        ❌ {page2Error}
+                      </p>
+                    </div>
+                  )}
+                  <table className="w-full" key={`page2-table-${page2Insights.length}`}>
+                    <thead>
+                      <tr className="border-b-2 border-gradient-to-r from-blue-200 via-purple-200 to-pink-200">
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          #
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          Ad Image
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          จ่ายแล้ว
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          New Inbox
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          Total Inbox
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          ชื่อ - เบอร์
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          ThruPlay
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          ต้นทุน Inbox
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {page2Insights
+                        .sort((a, b) => {
+                          switch (page2SortBy) {
+                            case "spend":
+                              return parseFloat(b.spend || "0") - parseFloat(a.spend || "0");
+                            case "clicks":
+                              return parseInt(b.clicks || "0") - parseInt(a.clicks || "0");
+                            case "impressions":
+                              return parseInt(b.impressions || "0") - parseInt(a.impressions || "0");
+                            case "ctr":
+                              return parseFloat(b.ctr || "0") - parseFloat(a.ctr || "0");
+                            case "cpc":
+                              return parseFloat(b.cpc || "0") - parseFloat(a.cpc || "0");
+                            case "cpm":
+                              return parseFloat(b.cpm || "0") - parseFloat(a.cpm || "0");
+                            default:
+                              return parseFloat(b.spend || "0") - parseFloat(a.spend || "0");
+                          }
+                        })
+                        .slice(0, page2Limit === "all" ? undefined : page2Limit)
+                        .map((ad, index) => {
+                          return (
+                            <tr
+                              key={ad.ad_id}
+                              className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:via-purple-50 hover:to-pink-50 transition-all duration-300 hover:shadow-md"
+                            >
+                              <td className="py-2 px-1 text-center">
+                                <div className="text-gray-700 font-bold text-lg">
+                                  {index + 1}
+                                </div>
+                              </td>
+                              <td className="py-2 px-1 text-center">
+                                <div className="relative group cursor-pointer flex justify-center items-center">
+                                  {/* ไม่มี Ad Image - แสดง placeholder */}
+                                  <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
+                                    <span className="text-gray-400 text-xs">
+                                      📷
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-2 px-1 text-center text-gray-700 font-semibold text-xl">
+                                {formatCurrency(ad.spend)}
+                              </td>
+                              <td className="py-2 px-1 text-center font-semibold text-green-700 text-xl">
+                                {(() => {
+                                  const newInbox = ad.actions?.find(
+                                    (action) => action.action_type === "onsite_conversion.messaging_first_reply"
+                                  );
+                                  return newInbox ? formatNumber(newInbox.value) : "—";
+                                })()}
+                              </td>
+                              <td className="py-2 px-1 text-center font-semibold text-blue-700 text-xl">
+                                {(() => {
+                                  const totalInbox = ad.actions?.find(
+                                    (action) => action.action_type === "onsite_conversion.total_messaging_connection"
+                                  );
+                                  return totalInbox ? formatNumber(totalInbox.value) : "—";
+                                })()}
+                              </td>
+                              <td className="py-2 px-1 text-center font-semibold text-purple-700 text-xl">
+                                {/* ไม่มี phone leads - แสดง — */}
+                                —
+                              </td>
+                              <td className="py-2 px-1 text-center text-gray-700 text-xl">
+                                {/* ไม่มี ThruPlay - แสดง — */}
+                                —
+                              </td>
+                              <td className="py-2 px-1 text-center text-gray-700 text-xl">
+                                {(() => {
+                                  const totalInbox = ad.actions?.find(
+                                    (action) => action.action_type === "onsite_conversion.total_messaging_connection"
+                                  );
+                                  const spend = parseFloat(ad.spend || "0");
+                                  const inboxCount = parseInt(totalInbox?.value || "0");
+                                  if (inboxCount > 0) {
+                                    return formatCurrency(spend / inboxCount);
+                                  }
+                                  return "—";
+                                })()}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
+              {/* Right Column - TOP Ad Set Table */}
               <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 border border-gray-100">
                 <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 px-4 sm:px-8 py-4 sm:py-6 -m-4 sm:-m-8 mb-4 sm:mb-8 relative overflow-hidden rounded-t-2xl sm:rounded-t-3xl">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 transition-opacity duration-500"></div>
                 </div>
                 <div className="flex flex-col gap-3 mb-3 sm:mb-4">
                   <h2 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-2">
-                    📋 Page 2 - Reports
+                    🏆 TOP {page2Limit === "all" ? "ทั้งหมด" : page2Limit} Ad Set{" "}
+                    <span className="bg-gradient-to-r from-yellow-400 via-orange-400 to-red-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full text-base sm:text-xl font-bold shadow-xl">
+                      พื้นที่ลูกค้ายอดเยี่ยม
+                    </span>
                   </h2>
-                  <p className="text-gray-600 text-sm">Page 2 reports area</p>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full">
+                    {/* Sort By Buttons */}
+                    <div className="flex gap-2 flex-1">
+                      <button
+                        onClick={() => setPage2SortBy("spend")}
+                        className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${page2SortBy === "spend"
+                          ? "bg-purple-600 text-white shadow-lg"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          }`}
+                      >
+                        <span className="hidden sm:inline">
+                          💰 Spend (มาก → น้อย)
+                        </span>
+                        <span className="sm:hidden">💰 Spend</span>
+                      </button>
+                      <button
+                        onClick={() => setPage2SortBy("clicks")}
+                        className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${page2SortBy === "clicks"
+                          ? "bg-purple-600 text-white shadow-lg"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          }`}
+                      >
+                        <span className="hidden sm:inline">
+                          🖱️ Clicks (มาก → น้อย)
+                        </span>
+                        <span className="sm:hidden">🖱️ Clicks</span>
+                      </button>
+                      <button
+                        onClick={() => setPage2SortBy("impressions")}
+                        className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${page2SortBy === "impressions"
+                          ? "bg-purple-600 text-white shadow-lg"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          }`}
+                      >
+                        <span className="hidden sm:inline">
+                          👁️ Impressions (มาก → น้อย)
+                        </span>
+                        <span className="sm:hidden">👁️ Impr</span>
+                      </button>
+                    </div>
+                    {/* Top Ad Set Limit Dropdown */}
+                    <select
+                      value={page2Limit}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setPage2Limit(
+                          value === "all"
+                            ? "all"
+                            : (Number(value) as 5 | 10 | 15 | 20 | 30)
+                        );
+                      }}
+                      className="flex-1 sm:flex-none sm:min-w-[140px] px-3 py-2 rounded-lg font-medium text-xs sm:text-sm bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-800 hover:from-yellow-500 hover:to-orange-500 transition-all border-2 border-yellow-500 shadow-lg cursor-pointer"
+                    >
+                      <option value={5}>⭐ Top 5</option>
+                      <option value={10}>⭐ Top 10</option>
+                      <option value={15}>⭐ Top 15</option>
+                      <option value={20}>⭐ Top 20</option>
+                      <option value={30}>⭐ Top 30</option>
+                      <option value="all">⭐ Top ทั้งหมด</option>
+                    </select>
+                  </div>
                 </div>
-                <div className="p-8 text-center text-gray-500">
-                  <div className="text-6xl mb-4">📊</div>
-                  <p className="text-lg">Page 2 reports will be displayed here</p>
+                <div className="overflow-x-auto">
+                  {page2Loading && (
+                    <div className="bg-blue-50 border-l-4 border-blue-500 p-3 mb-4 rounded">
+                      <p className="text-blue-700 text-sm font-medium">
+                        ⏳ กำลังโหลดข้อมูล Ad Set...
+                      </p>
+                    </div>
+                  )}
+                  <table className="w-full" key={`page2-adset-table-${page2Insights.length}`}>
+                    <thead>
+                      <tr className="border-b-2 border-gradient-to-r from-blue-200 via-purple-200 to-pink-200">
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          #
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          Ad Set
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          จ่ายแล้ว
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          New Inbox
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          Total Inbox
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          ชื่อ - เบอร์
+                        </th>
+                        <th className="text-center py-2 px-1 font-semibold text-gray-700 text-sm">
+                          ThruPlay
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        // Group by adset with actions data
+                        const adsetData = new Map<string, {
+                          adset_id: string;
+                          adset_name: string;
+                          campaign_name: string;
+                          spend: number;
+                          clicks: number;
+                          impressions: number;
+                          newInbox: number;
+                          totalInbox: number;
+                        }>();
+
+                        page2Insights.forEach((ad) => {
+                          const existing = adsetData.get(ad.adset_id) || {
+                            adset_id: ad.adset_id,
+                            adset_name: ad.adset_name,
+                            campaign_name: ad.campaign_name,
+                            spend: 0,
+                            clicks: 0,
+                            impressions: 0,
+                            newInbox: 0,
+                            totalInbox: 0,
+                          };
+                          existing.spend += parseFloat(ad.spend || "0");
+                          existing.clicks += parseInt(ad.clicks || "0");
+                          existing.impressions += parseInt(ad.impressions || "0");
+
+                          // Sum up actions
+                          if (ad.actions) {
+                            const newInboxAction = ad.actions.find(
+                              (action) => action.action_type === "onsite_conversion.messaging_first_reply"
+                            );
+                            const totalInboxAction = ad.actions.find(
+                              (action) => action.action_type === "onsite_conversion.total_messaging_connection"
+                            );
+                            existing.newInbox += parseInt(newInboxAction?.value || "0");
+                            existing.totalInbox += parseInt(totalInboxAction?.value || "0");
+                          }
+
+                          adsetData.set(ad.adset_id, existing);
+                        });
+
+                        return Array.from(adsetData.values())
+                          .sort((a, b) => {
+                            switch (page2SortBy) {
+                              case "spend":
+                                return b.spend - a.spend;
+                              case "clicks":
+                                return b.clicks - a.clicks;
+                              case "impressions":
+                                return b.impressions - a.impressions;
+                              default:
+                                return b.spend - a.spend;
+                            }
+                          })
+                          .slice(0, page2Limit === "all" ? undefined : page2Limit)
+                          .map((adset, index) => (
+                            <tr
+                              key={adset.adset_id}
+                              className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:via-purple-50 hover:to-pink-50 transition-all duration-300 hover:shadow-md cursor-pointer"
+                            >
+                              <td className="py-2 px-1 text-center">
+                                <div className="text-gray-700 font-bold text-lg">
+                                  {index + 1}
+                                </div>
+                              </td>
+                              <td className="py-2 px-1 text-center">
+                                <div
+                                  className="text-gray-700 font-medium text-sm max-w-[150px] truncate mx-auto hover:text-purple-600"
+                                  title={adset.adset_name}
+                                >
+                                  {adset.adset_name || "—"}
+                                </div>
+                              </td>
+                              <td className="py-2 px-1 text-center text-gray-700 font-semibold text-xl">
+                                {formatCurrency(adset.spend)}
+                              </td>
+                              <td className="py-2 px-1 text-center font-semibold text-green-700 text-xl">
+                                {adset.newInbox > 0 ? formatNumber(adset.newInbox) : "—"}
+                              </td>
+                              <td className="py-2 px-1 text-center font-semibold text-blue-700 text-xl">
+                                {adset.totalInbox > 0 ? formatNumber(adset.totalInbox) : "—"}
+                              </td>
+                              <td className="py-2 px-1 text-center font-semibold text-purple-700 text-xl">
+                                {/* ไม่มี phone leads - แสดง — */}
+                                —
+                              </td>
+                              <td className="py-2 px-1 text-center text-gray-700 text-xl">
+                                {/* ไม่มี ThruPlay - แสดง — */}
+                                —
+                              </td>
+                            </tr>
+                          ));
+                      })()}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
